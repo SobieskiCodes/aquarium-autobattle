@@ -194,11 +194,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
         
         // Apply damage
         target.currentHealth = Math.max(0, target.currentHealth - damage);
-        if (target.currentHealth <= 0) {
-          target.isAlive = false;
-        }
         
-        // Create battle event
+        // Create attack event
         const targetType = target.type === 'fish' ? '' : ` (${target.type})`;
         events.push({
           type: 'attack',
@@ -207,6 +204,20 @@ export const BattleView: React.FC<BattleViewProps> = ({
           value: damage,
           round
         });
+        
+        if (target.currentHealth <= 0) {
+          target.isAlive = false;
+          
+          // Add KO event
+          const koText = target.type === 'fish' ? 'KO!' : 'Destroyed!';
+          events.push({
+            type: 'attack',
+            source: `${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}`,
+            target: `${koText} ${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType}`,
+            value: 0,
+            round
+          });
+        }
         
         // Add floating text
         addFloatingText(`-${damage}`, attacker.side === 'player' ? 'opponent' : 'player', 'text-red-500');
