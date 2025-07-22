@@ -40,7 +40,7 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
   const newPieces: GamePiece[] = [...currentPieces];
   
   // AI strategy based on round
-  const maxPieces = Math.min(6, 2 + round); // Start with 2, add 1 per round, max 6
+  const maxPieces = Math.min(12, 3 + Math.floor(round * 1.5)); // More aggressive scaling, max 12
   const targetSpending = Math.min(gold, round * 3 + 5); // Spend more as rounds progress
   
   // Filter affordable pieces from shop
@@ -74,9 +74,6 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
   affordablePieces.sort((a, b) => getAIPriority(b!) - getAIPriority(a!));
   
   // Buy pieces until we hit our limits
-  for (const piece of affordablePieces) {
-    if (!piece || newPieces.length >= maxPieces || gold < piece.cost) continue;
-    
     // Add piece with random position
     const availablePositions: Position[] = [];
     for (let y = 0; y < 6; y++) {
@@ -87,6 +84,20 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
           const newY = y + offset.y;
           return newX >= 0 && newX < 8 && newY >= 0 && newY < 6;
         });
+        
+        // Check if target died and add KO event
+        if (target.currentHealth <= 0) {
+          target.isAlive = false;
+          
+          const koText = target.type === 'fish' ? 'KO!' : 'Destroyed!';
+          events.push({
+            type: 'attack',
+            source: `${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}`,
+            target: `${koText} ${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType}`,
+            value: 0,
+            round
+          });
+        }
         
         if (canPlace) {
           availablePositions.push({ x, y });
