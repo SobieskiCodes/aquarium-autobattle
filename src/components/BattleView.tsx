@@ -51,8 +51,12 @@ export const BattleView: React.FC<BattleViewProps> = ({
 
   // Initialize health values
   useEffect(() => {
-    const playerMaxHealth = calculateTotalHealth(playerPieces);
-    const opponentMaxHealth = calculateTotalHealth(opponentPieces);
+    // Apply bonuses to pieces before calculating health
+    const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
+    const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
+    
+    const playerMaxHealth = calculateTotalHealth(enhancedPlayerPieces);
+    const opponentMaxHealth = calculateTotalHealth(enhancedOpponentPieces);
     
     setBattleState(prev => ({
       ...prev,
@@ -63,6 +67,97 @@ export const BattleView: React.FC<BattleViewProps> = ({
     }));
   }, [playerPieces, opponentPieces]);
 
+  // Apply all active bonuses to pieces
+  const applyBonusesToPieces = (pieces: GamePiece[]) => {
+    const GRID_WIDTH = 8;
+    const GRID_HEIGHT = 6;
+    
+    // Create grid with piece occupancy
+    const grid = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null));
+    pieces.forEach(piece => {
+      if (piece.position) {
+        piece.shape.forEach(offset => {
+          const x = piece.position!.x + offset.x;
+          const y = piece.position!.y + offset.y;
+          if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
+            grid[y][x] = piece;
+          }
+        });
+      }
+    });
+
+    return pieces.map(piece => {
+      if (!piece.position) return piece;
+      
+      let bonusAttack = 0;
+      let bonusHealth = 0;
+      let bonusSpeed = 0;
+      
+      // Check adjacent cells for bonus sources
+      const adjacentPositions = [
+        { x: piece.position.x - 1, y: piece.position.y },
+        { x: piece.position.x + 1, y: piece.position.y },
+        { x: piece.position.x, y: piece.position.y - 1 },
+        { x: piece.position.x, y: piece.position.y + 1 }
+      ];
+      
+      adjacentPositions.forEach(pos => {
+        if (pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT) {
+          const adjacentPiece = grid[pos.y][pos.x];
+          if (adjacentPiece && adjacentPiece.id !== piece.id) {
+            // Java Fern bonus
+            if (adjacentPiece.id.includes('java-fern')) {
+              bonusHealth += 1;
+            }
+            // Anubias bonus
+            if (adjacentPiece.id.includes('anubias')) {
+              bonusAttack += 1;
+              bonusHealth += 1;
+            }
+            // Consumable bonus (if piece is fish)
+            if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
+              bonusAttack += 1;
+              bonusHealth += 1;
+            }
+          }
+        }
+      });
+      
+      // Check for schooling bonuses
+      if (piece.tags.includes('schooling')) {
+        const schoolingCount = adjacentPositions.filter(pos => {
+          if (pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT) {
+            const adjacentPiece = grid[pos.y][pos.x];
+            return adjacentPiece && adjacentPiece.tags.includes('schooling') && adjacentPiece.id !== piece.id;
+          }
+          return false;
+        }).length;
+        
+        if (schoolingCount > 0) {
+          if (piece.id.includes('neon-tetra')) {
+            bonusAttack += schoolingCount;
+            if (schoolingCount >= 3) {
+              bonusSpeed += piece.stats.speed; // Double speed
+            }
+          } else if (piece.id.includes('cardinal-tetra')) {
+            bonusAttack += schoolingCount * 2;
+          }
+        }
+      }
+      
+      // Apply bonuses to piece stats
+      return {
+        ...piece,
+        stats: {
+          ...piece.stats,
+          attack: piece.stats.attack + bonusAttack,
+          health: piece.stats.health + bonusHealth,
+          maxHealth: piece.stats.maxHealth + bonusHealth,
+          speed: piece.stats.speed + bonusSpeed
+        }
+      };
+    });
+  };
   const calculateTotalHealth = (pieces: GamePiece[]) => {
     // Include fish, plants, and equipment health in the total pool
     return pieces.filter(piece => 
@@ -104,14 +199,17 @@ export const BattleView: React.FC<BattleViewProps> = ({
   };
 
   const simulateBattle = () => {
-    // Create battle copies of pieces with current health
-    let playerBattlePieces = playerPieces.map(piece => ({
+    // Apply bonuses first, then create battle copies
+    const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
+    const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
+    
+    let playerBattlePieces = enhancedPlayerPieces.map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
     }));
     
-    let opponentBattlePieces = opponentPieces.map(piece => ({
+    let opponentBattlePieces = enhancedOpponentPieces.map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
