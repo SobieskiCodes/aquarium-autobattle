@@ -208,8 +208,9 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
                       const fishPieces = gameState.playerTank.pieces.filter(piece => piece.type === 'fish');
                       if (fishPieces.length === 0) return <span>0</span>;
                       
+                     const enhancedPlayerFish = applyBonusesToPieces(fishPieces, gameState.playerTank.pieces);
                       const baseSpeed = Math.round(fishPieces.reduce((total, piece) => total + piece.stats.speed, 0) / fishPieces.length);
-                      const totalSpeed = Math.round(enhancedPieces.reduce((total, piece) => total + piece.stats.speed, 0) / fishPieces.length);
+                     const totalSpeed = Math.round(enhancedPlayerFish.reduce((total, piece) => total + piece.stats.speed, 0) / fishPieces.length);
                       const bonusSpeed = totalSpeed - baseSpeed;
                       
                       return (
