@@ -29,6 +29,98 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   onSelectPiece,
   onCancelPlacement
 }) => {
+  // Helper function for applying bonuses to pieces
+  const applyBonusesToPieces = (pieces: any[], allPieces: any[]) => {
+    const GRID_WIDTH = 8;
+    const GRID_HEIGHT = 6;
+    
+    // Create grid with piece occupancy
+    const grid = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null));
+    allPieces.forEach(piece => {
+      if (piece.position) {
+        piece.shape.forEach((offset: any) => {
+          const x = piece.position.x + offset.x;
+          const y = piece.position.y + offset.y;
+          if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
+            grid[y][x] = piece;
+          }
+        });
+      }
+    });
+
+    return pieces.map(piece => {
+      if (!piece.position) return piece;
+      
+      let bonusAttack = 0;
+      let bonusHealth = 0;
+      let bonusSpeed = 0;
+      
+      // Check adjacent cells for bonus sources
+      const adjacentPositions = [
+        { x: piece.position.x - 1, y: piece.position.y },
+        { x: piece.position.x + 1, y: piece.position.y },
+        { x: piece.position.x, y: piece.position.y - 1 },
+        { x: piece.position.x, y: piece.position.y + 1 }
+      ];
+      
+      adjacentPositions.forEach(pos => {
+        if (pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT) {
+          const adjacentPiece = grid[pos.y][pos.x];
+          if (adjacentPiece && adjacentPiece.id !== piece.id) {
+            // Java Fern bonus
+            if (adjacentPiece.id.includes('java-fern')) {
+              bonusHealth += 1;
+            }
+            // Anubias bonus
+            if (adjacentPiece.id.includes('anubias')) {
+              bonusAttack += 1;
+              bonusHealth += 1;
+            }
+            // Consumable bonus (if piece is fish)
+            if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
+              bonusAttack += 1;
+              bonusHealth += 1;
+            }
+          }
+        }
+      });
+      
+      // Check for schooling bonuses
+      if (piece.tags.includes('schooling')) {
+        const schoolingCount = adjacentPositions.filter(pos => {
+          if (pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT) {
+            const adjacentPiece = grid[pos.y][pos.x];
+            return adjacentPiece && adjacentPiece.tags.includes('schooling') && adjacentPiece.id !== piece.id;
+          }
+          return false;
+        }).length;
+        
+        if (schoolingCount > 0) {
+          if (piece.id.includes('neon-tetra')) {
+            bonusAttack += schoolingCount;
+            if (schoolingCount >= 3) {
+              bonusSpeed += piece.stats.speed; // Double speed
+            }
+          } else if (piece.id.includes('cardinal-tetra')) {
+            bonusAttack += schoolingCount * 2;
+          }
+        }
+      }
+      
+      // Apply bonuses to piece stats
+      return {
+        ...piece,
+        stats: {
+          ...piece.stats,
+          attack: piece.stats.attack + bonusAttack,
+          health: piece.stats.health + bonusHealth,
+          maxHealth: piece.stats.maxHealth + bonusHealth,
+          speed: piece.stats.speed + bonusSpeed
+        }
+      };
+    });
+  };
+
   const renderShopPhase = () => (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-teal-500 to-blue-600 text-white p-4 rounded-lg">
@@ -223,102 +315,6 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
         </div>
       </div>
       
-      {/* Helper function for applying bonuses */}
-      {(() => {
-        // Define the bonus calculation function in the component scope
-        window.applyBonusesToPieces = (pieces, allPieces) => {
-          const GRID_WIDTH = 8;
-          const GRID_HEIGHT = 6;
-          
-          // Create grid with piece occupancy
-          const grid = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null));
-          allPieces.forEach(piece => {
-            if (piece.position) {
-              piece.shape.forEach(offset => {
-                const x = piece.position.x + offset.x;
-                const y = piece.position.y + offset.y;
-                if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
-                  grid[y][x] = piece;
-                }
-              });
-            }
-          });
-
-          return pieces.map(piece => {
-            if (!piece.position) return piece;
-            
-            let bonusAttack = 0;
-            let bonusHealth = 0;
-            let bonusSpeed = 0;
-            
-            // Check adjacent cells for bonus sources
-            const adjacentPositions = [
-              { x: piece.position.x - 1, y: piece.position.y },
-              { x: piece.position.x + 1, y: piece.position.y },
-              { x: piece.position.x, y: piece.position.y - 1 },
-              { x: piece.position.x, y: piece.position.y + 1 }
-            ];
-            
-            adjacentPositions.forEach(pos => {
-              if (pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT) {
-                const adjacentPiece = grid[pos.y][pos.x];
-                if (adjacentPiece && adjacentPiece.id !== piece.id) {
-                  // Java Fern bonus
-                  if (adjacentPiece.id.includes('java-fern')) {
-                    bonusHealth += 1;
-                  }
-                  // Anubias bonus
-                  if (adjacentPiece.id.includes('anubias')) {
-                    bonusAttack += 1;
-                    bonusHealth += 1;
-                  }
-                  // Consumable bonus (if piece is fish)
-                  if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-                    bonusAttack += 1;
-                    bonusHealth += 1;
-                  }
-                }
-              }
-            });
-            
-            // Check for schooling bonuses
-            if (piece.tags.includes('schooling')) {
-              const schoolingCount = adjacentPositions.filter(pos => {
-                if (pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT) {
-                  const adjacentPiece = grid[pos.y][pos.x];
-                  return adjacentPiece && adjacentPiece.tags.includes('schooling') && adjacentPiece.id !== piece.id;
-                }
-                return false;
-              }).length;
-              
-              if (schoolingCount > 0) {
-                if (piece.id.includes('neon-tetra')) {
-                  bonusAttack += schoolingCount;
-                  if (schoolingCount >= 3) {
-                    bonusSpeed += piece.stats.speed; // Double speed
-                  }
-                } else if (piece.id.includes('cardinal-tetra')) {
-                  bonusAttack += schoolingCount * 2;
-                }
-              }
-            }
-            
-            // Apply bonuses to piece stats
-            return {
-              ...piece,
-              stats: {
-                ...piece.stats,
-                attack: piece.stats.attack + bonusAttack,
-                health: piece.stats.health + bonusHealth,
-                maxHealth: piece.stats.maxHealth + bonusHealth,
-                speed: piece.stats.speed + bonusSpeed
-              }
-            };
-          });
-        };
-        return null;
-      })()}
-
       <Shop
         pieces={gameState.shop}
         gold={gameState.gold}
