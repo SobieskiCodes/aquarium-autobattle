@@ -86,16 +86,15 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
           const newX = x + offset.x;
           const newY = y + offset.y;
           return newX >= 0 && newX < 8 && newY >= 0 && newY < 6;
-          
-          // Add KO event to battle log
-          const koMessage = target.type === 'fish' ? 'KO!' : 'Destroyed!';
-            type: 'attack',
-            source: `${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}`,
-            target: `${koMessage} ${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType}`,
-            value: 0,
-            round
-          });
         });
+        
+        if (canPlace) {
+          availablePositions.push({ x, y });
+        }
+      }
+    }
+    
+    if (availablePositions.length > 0) {
       const randomPos = availablePositions[Math.floor(Math.random() * availablePositions.length)];
       newPieces.push({
         ...piece,
@@ -124,6 +123,7 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
     waterQuality
   };
 };
+
 export const useGame = () => {
   const [gameState, setGameState] = useState<GameState>(INITIAL_STATE);
 
@@ -212,8 +212,10 @@ export const useGame = () => {
         piece.shape.forEach(offset => {
           const x = piece.position!.x + offset.x;
           const y = piece.position!.y + offset.y;
+          if (x >= 0 && x < 8 && y >= 0 && y < 6) {
             newGrid[y][x] = null;
-          });
+          }
+        });
       }
       
       // Check if new position is valid
