@@ -296,27 +296,40 @@ export const BattleView: React.FC<BattleViewProps> = ({
         // Apply damage
         target.currentHealth = Math.max(0, target.currentHealth - damage);
         
-        // Create attack event with enhanced damage indication
+        // Create attack event with detailed damage breakdown
         const targetType = target.type === 'fish' ? '' : ` (${target.type})`;
         const baseDamage = attacker.stats.attack;
         const originalAttacker = (attacker.side === 'player' ? playerPieces : opponentPieces).find(p => p.id === attacker.id);
         const baseAttack = originalAttacker ? originalAttacker.stats.attack : baseDamage;
         const attackBonus = baseDamage - baseAttack;
         
-        let damageText = `${damage}`;
+        // Build detailed damage breakdown
+        let damageBreakdown = '';
+        let waterQualityNote = '';
+        
         if (attackBonus > 0) {
-          damageText = `${baseAttack}+${attackBonus}=${damage}`;
+          damageBreakdown = `${baseAttack}+${attackBonus}=${baseDamage}`;
+        } else {
+          damageBreakdown = `${baseDamage}`;
         }
+        
+        // Add water quality modification
         if (waterQuality < 3) {
-          damageText += ' (weakened)';
+          const originalDamage = Math.floor(baseDamage / 0.7);
+          waterQualityNote = ` → ${damage} (-30% water quality)`;
         } else if (waterQuality > 7) {
-          damageText += ' (enhanced)';
+          const originalDamage = Math.floor(baseDamage / 1.2);
+          waterQualityNote = ` → ${damage} (+20% water quality)`;
+        } else if (damage !== baseDamage) {
+          waterQualityNote = ` → ${damage}`;
         }
+        
+        const fullDamageText = damageBreakdown + waterQualityNote;
         
         events.push({
           type: 'attack',
           source: `${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}`,
-          target: `${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType} for ${damageText} damage`,
+          target: `${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType} for ${fullDamageText} damage`,
           value: damage,
           round
         });
@@ -597,15 +610,30 @@ export const BattleView: React.FC<BattleViewProps> = ({
                   const totalAttack = enhancedPlayerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
                   const bonusAttack = totalAttack - baseAttack;
                   
+                  // Calculate water quality modifier
+                  let waterQualityMultiplier = 1;
+                  let waterQualityText = '';
+                  if (playerWaterQuality < 3) {
+                    waterQualityMultiplier = 0.7;
+                    waterQualityText = ' (-30%)';
+                  } else if (playerWaterQuality > 7) {
+                    waterQualityMultiplier = 1.2;
+                    waterQualityText = ' (+20%)';
+                  }
+                  
+                  const finalAttack = Math.max(1, Math.floor(totalAttack * waterQualityMultiplier));
+                  
                   return (
                     <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
-                      <span>{baseAttack}</span>
+                      <span>{finalAttack}</span>
                       {bonusAttack > 0 && <span className="text-green-500">(+{bonusAttack})</span>}
-                      {(() => {
-                        if (playerWaterQuality < 3) return <span className="text-xs text-red-500 ml-1">(-30%)</span>;
-                        if (playerWaterQuality > 7) return <span className="text-xs text-green-500 ml-1">(+20%)</span>;
-                        return null;
-                      })()}
+                      {waterQualityText && (
+                        <span className={`text-xs ml-1 ${
+                          playerWaterQuality < 3 ? 'text-red-500' : 'text-green-500'
+                        }`}>
+                          {waterQualityText}
+                        </span>
+                      )}
                     </div>
                   );
                 })()}
@@ -688,15 +716,30 @@ export const BattleView: React.FC<BattleViewProps> = ({
                   const totalAttack = enhancedOpponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
                   const bonusAttack = totalAttack - baseAttack;
                   
+                  // Calculate water quality modifier
+                  let waterQualityMultiplier = 1;
+                  let waterQualityText = '';
+                  if (opponentWaterQuality < 3) {
+                    waterQualityMultiplier = 0.7;
+                    waterQualityText = ' (-30%)';
+                  } else if (opponentWaterQuality > 7) {
+                    waterQualityMultiplier = 1.2;
+                    waterQualityText = ' (+20%)';
+                  }
+                  
+                  const finalAttack = Math.max(1, Math.floor(totalAttack * waterQualityMultiplier));
+                  
                   return (
                     <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
-                      <span>{baseAttack}</span>
+                      <span>{finalAttack}</span>
                       {bonusAttack > 0 && <span className="text-green-500">(+{bonusAttack})</span>}
-                      {(() => {
-                        if (opponentWaterQuality < 3) return <span className="text-xs text-red-500 ml-1">(-30%)</span>;
-                        if (opponentWaterQuality > 7) return <span className="text-xs text-green-500 ml-1">(+20%)</span>;
-                        return null;
-                      })()}
+                      {waterQualityText && (
+                        <span className={`text-xs ml-1 ${
+                          opponentWaterQuality < 3 ? 'text-red-500' : 'text-green-500'
+                        }`}>
+                          {waterQualityText}
+                        </span>
+                      )}
                     </div>
                   );
                 })()}
