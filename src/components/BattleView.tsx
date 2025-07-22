@@ -236,19 +236,29 @@ export const BattleView: React.FC<BattleViewProps> = ({
       if (!playerHasUnits || !opponentHasUnits || (alivePlayerFish.length === 0 && aliveOpponentFish.length === 0)) {
         clearInterval(battleInterval);
         
-        // Determine winner: if both have no fish, whoever has more total health wins
+        // Determine winner: check for draw first, then compare health
         let playerWon;
+        let isDraw = false;
         if (alivePlayerFish.length === 0 && aliveOpponentFish.length === 0) {
           const playerTotalHealth = alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0);
           const opponentTotalHealth = aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0);
-          playerWon = playerTotalHealth > opponentTotalHealth;
+          if (playerTotalHealth === opponentTotalHealth) {
+            isDraw = true;
+            playerWon = false; // Will be overridden by draw logic
+          } else {
+            playerWon = playerTotalHealth > opponentTotalHealth;
+          }
+        } else if (!playerHasUnits && !opponentHasUnits) {
+          // Both sides have no units left - it's a draw
+          isDraw = true;
+          playerWon = false;
         } else {
           playerWon = playerHasUnits && !opponentHasUnits;
         }
         
         setBattleState(prev => ({
           ...prev,
-          winner: playerWon ? 'player' : 'opponent',
+          winner: isDraw ? 'draw' : (playerWon ? 'player' : 'opponent'),
           battleActive: false,
           playerHealth: alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0),
           opponentHealth: aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0)
@@ -384,18 +394,26 @@ export const BattleView: React.FC<BattleViewProps> = ({
       // Max 10 rounds to prevent infinite battles
       if (round > 10) {
         clearInterval(battleInterval);
-        const playerWon = currentPlayerHealth > currentOpponentHealth;
+        // Check for draw in timeout scenario
+        let playerWon;
+        let isDraw = false;
+        if (currentPlayerHealth === currentOpponentHealth) {
+          isDraw = true;
+          playerWon = false;
+        } else {
+          playerWon = currentPlayerHealth > currentOpponentHealth;
+        }
         
         setBattleState(prev => ({
           ...prev,
-          winner: playerWon ? 'player' : 'opponent',
+          winner: isDraw ? 'draw' : (playerWon ? 'player' : 'opponent'),
           battleActive: false
         }));
 
         events.push({
           type: 'status',
           source: 'Time Limit',
-          target: 'Battle Ended',
+          target: isDraw ? 'Draw! Battle Ended' : 'Battle Ended',
           value: 0,
           round
         });
@@ -440,13 +458,14 @@ export const BattleView: React.FC<BattleViewProps> = ({
               <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-lg">
                 <Trophy size={20} />
                 <span className="font-bold">
-                  {battleState.winner === 'player' ? 'Victory!' : 'Defeat!'}
+                  {battleState.winner === 'player' ? 'Victory!' : 
+                   battleState.winner === 'draw' ? 'Draw!' : 'Defeat!'}
                 </span>
               </div>
             )}
             {battleState.winner && (
               <button
-                onClick={() => onBattleComplete(battleState.winner === 'player')}
+                onClick={() => onBattleComplete(battleState.winner)}
                 className="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-100 transition-colors ml-4"
               >
                 Continue to Next Round
@@ -920,12 +939,16 @@ export const BattleView: React.FC<BattleViewProps> = ({
             
             {battleState.winner && (
               <div className={`text-sm p-3 rounded font-bold text-center ${
-                battleState.winner === 'player' 
+                battleState.winner === 'draw'
+                  ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+                  : battleState.winner === 'player' 
                   ? 'bg-green-100 text-green-800 border border-green-300' 
                   : 'bg-red-100 text-red-800 border border-red-300'
               }`}>
-                🏆 {battleState.winner === 'player' ? 'VICTORY!' : 'DEFEAT!'} 
-                {battleState.winner === 'player' ? ' Your tank dominated the battlefield!' : ' Better luck next time!'}
+                {battleState.winner === 'draw' ? '🤝 DRAW!' : '🏆'} 
+                {battleState.winner === 'draw' ? ' Both tanks fought valiantly!' :
+                 battleState.winner === 'player' ? ' VICTORY! Your tank dominated the battlefield!' : 
+                 ' DEFEAT! Better luck next time!'}
               </div>
             )}
           </div>

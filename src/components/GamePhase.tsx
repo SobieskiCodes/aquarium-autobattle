@@ -13,7 +13,7 @@ interface GamePhaseProps {
   onMovePiece: (piece: any, position: any) => void;
   onRerollShop: () => void;
   onStartBattle: () => void;
-  onCompleteBattle: (playerWon: boolean) => void;
+  onCompleteBattle: (result: 'player' | 'opponent' | 'draw') => void;
   onSelectPiece: (piece: any) => void;
   onCancelPlacement: () => void;
 }

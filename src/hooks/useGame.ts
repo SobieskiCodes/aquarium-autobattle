@@ -404,29 +404,41 @@ export const useGame = () => {
     });
   }, []);
 
-  const completeBattle = useCallback((playerWon: boolean) => {
+  const completeBattle = useCallback((result: 'player' | 'opponent' | 'draw') => {
     setGameState(prev => {
+      const playerWon = result === 'player';
+      const isDraw = result === 'draw';
+      
       // Calculate loss streak bonuses
-      const playerLossStreak = playerWon ? 0 : prev.lossStreak + 1;
-      const opponentLossStreak = playerWon ? prev.opponentLossStreak + 1 : 0;
+      const playerLossStreak = (playerWon || isDraw) ? 0 : prev.lossStreak + 1;
+      const opponentLossStreak = (playerWon && !isDraw) ? prev.opponentLossStreak + 1 : 0;
       
       // Update win/loss records
       const newWins = playerWon ? prev.wins + 1 : prev.wins;
-      const newLosses = playerWon ? prev.losses : prev.losses + 1;
-      const newOpponentWins = playerWon ? prev.opponentWins : prev.opponentWins + 1;
-      const newOpponentLosses = playerWon ? prev.opponentLosses + 1 : prev.opponentLosses;
+      const newLosses = (playerWon || isDraw) ? prev.losses : prev.losses + 1;
+      const newOpponentWins = (playerWon || isDraw) ? prev.opponentWins : prev.opponentWins + 1;
+      const newOpponentLosses = (playerWon && !isDraw) ? prev.opponentLosses + 1 : prev.opponentLosses;
       
-      // Base rewards
-      let goldReward = playerWon ? 5 + prev.round : 3;
-      let opponentGoldReward = playerWon ? 3 : 5 + prev.round;
+      // Base rewards - draws give both players moderate gold
+      let goldReward, opponentGoldReward;
+      if (isDraw) {
+        goldReward = 4 + Math.floor(prev.round / 2); // Draw reward
+        opponentGoldReward = 4 + Math.floor(prev.round / 2); // Same for opponent
+      } else if (playerWon) {
+        goldReward = 5 + prev.round;
+        opponentGoldReward = 3;
+      } else {
+        goldReward = 3;
+        opponentGoldReward = 5 + prev.round;
+      }
       
       // Loss streak bonuses (exponential catch-up)
-      if (!playerWon && playerLossStreak >= 2) {
+      if (!playerWon && !isDraw && playerLossStreak >= 2) {
         const lossBonus = Math.min(playerLossStreak * 2, 10); // Max 10 bonus gold
         goldReward += lossBonus;
       }
       
-      if (playerWon && opponentLossStreak >= 2) {
+      if (playerWon && !isDraw && opponentLossStreak >= 2) {
         const lossBonus = Math.min(opponentLossStreak * 2, 10);
         opponentGoldReward += lossBonus;
       }
