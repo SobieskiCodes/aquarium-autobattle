@@ -186,63 +186,6 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
       />
     </div>
   );
-                <strong>
-                  {gameState.selectedPiece.position ? 'Move mode:' : 'Placement mode:'}
-                </strong> 
-                Click on the grid to {gameState.selectedPiece.position ? 'move' : 'place'} your {gameState.selectedPiece.name}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Tank Pieces</h2>
-          {gameState.playerTank.pieces.length > 0 ? (
-            <div className="grid gap-2">
-              {gameState.playerTank.pieces.map((piece, index) => (
-                <PieceCard
-                  key={`${piece.id}-${index}`}
-                  piece={piece}
-                  onSelect={onSelectPiece}
-                  isSelected={gameState.selectedPiece?.id === piece.id}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <p>No pieces in your tank yet.</p>
-              <p className="text-sm">Purchase some from the shop below!</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <Shop
-        pieces={gameState.shop}
-        gold={gameState.gold}
-        onPurchase={onPurchasePiece}
-        onReroll={onRerollShop}
-        rerollCost={2}
-      />
-    </div>
-  );
-
-  const renderPlacementPhase = () => (
-    <div className="space-y-6">
-      <div className="bg-yellow-500 text-white p-4 rounded-lg">
-        <h2 className="text-xl font-bold">Place Your Piece</h2>
-        <p>Click on the grid to place your {gameState.selectedPiece?.name}</p>
-      </div>
-      
-      <TankGrid
-        pieces={gameState.playerTank.pieces}
-        onPiecePlace={onPlacePiece}
-        onPieceMove={onMovePiece}
-        selectedPiece={gameState.selectedPiece}
-        waterQuality={gameState.playerTank.waterQuality}
-      />
-    </div>
-  );
 
   const renderBattlePhase = () => (
     <BattleView
