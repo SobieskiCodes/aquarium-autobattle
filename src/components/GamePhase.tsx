@@ -161,30 +161,8 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   );
 
   const renderPlacementPhase = () => (
-    <div className="space-y-6">
-      <div className="bg-yellow-500 text-white p-4 rounded-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold">Place Your Piece</h2>
-            <p>Click on the grid to place your {gameState.selectedPiece?.name}</p>
-          </div>
-          <button
-            onClick={onCancelPlacement}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
-          >
-            Cancel & Refund
-          </button>
-        </div>
-      </div>
-      
-      <TankGrid
-        pieces={gameState.playerTank.pieces}
-        onPiecePlace={onPlacePiece}
-        onPieceMove={onMovePiece}
-        selectedPiece={gameState.selectedPiece}
-        waterQuality={gameState.playerTank.waterQuality}
-      />
-    </div>
+    // Just render the shop phase - placement instructions are already shown there
+    renderShopPhase()
   );
 
   const renderBattlePhase = () => (
