@@ -357,8 +357,13 @@ export const BattleView: React.FC<BattleViewProps> = ({
             <h4 className="font-bold text-blue-900 mb-3 text-center">Your Tank</h4>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">
-                  {playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0)}
+                <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
+                  <span>{playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0)}</span>
+                  {(() => {
+                    if (playerWaterQuality < 3) return <span className="text-xs text-red-500">(-30%)</span>;
+                    if (playerWaterQuality > 7) return <span className="text-xs text-green-500">(+20%)</span>;
+                    return null;
+                  })()}
                 </div>
                 <div className="text-gray-600">Total Attack</div>
               </div>
@@ -375,9 +380,27 @@ export const BattleView: React.FC<BattleViewProps> = ({
                 <div className="text-gray-600">Avg Speed</div>
               </div>
             </div>
-            <div className="mt-3 text-xs text-gray-600 flex justify-between">
-              <span>Fish: {playerPieces.filter(piece => piece.type === 'fish').length}</span>
-              <span>Water Quality: {playerWaterQuality}/10</span>
+            <div className="mt-3 text-xs text-gray-600">
+              <div className="flex justify-between mb-1">
+                <span>Fish: {playerPieces.filter(piece => piece.type === 'fish').length}</span>
+                <span className={`font-bold ${
+                  playerWaterQuality < 3 ? 'text-red-600' : 
+                  playerWaterQuality > 7 ? 'text-green-600' : 
+                  'text-gray-600'
+                }`}>
+                  Water Quality: {playerWaterQuality}/10
+                </span>
+              </div>
+              {playerWaterQuality < 3 && (
+                <div className="text-red-600 font-medium text-center">
+                  ⚠️ Poor water quality: -30% attack damage & poison damage each round
+                </div>
+              )}
+              {playerWaterQuality > 7 && (
+                <div className="text-green-600 font-medium text-center">
+                  ✨ Excellent water quality: +20% attack damage
+                </div>
+              )}
             </div>
           </div>
 
@@ -386,8 +409,13 @@ export const BattleView: React.FC<BattleViewProps> = ({
             <h4 className="font-bold text-red-900 mb-3 text-center">Opponent Tank</h4>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">
-                  {opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0)}
+                <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
+                  <span>{opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0)}</span>
+                  {(() => {
+                    if (opponentWaterQuality < 3) return <span className="text-xs text-red-500">(-30%)</span>;
+                    if (opponentWaterQuality > 7) return <span className="text-xs text-green-500">(+20%)</span>;
+                    return null;
+                  })()}
                 </div>
                 <div className="text-gray-600">Total Attack</div>
               </div>
@@ -404,9 +432,27 @@ export const BattleView: React.FC<BattleViewProps> = ({
                 <div className="text-gray-600">Avg Speed</div>
               </div>
             </div>
-            <div className="mt-3 text-xs text-gray-600 flex justify-between">
-              <span>Fish: {opponentPieces.filter(piece => piece.type === 'fish').length}</span>
-              <span>Water Quality: {opponentWaterQuality}/10</span>
+            <div className="mt-3 text-xs text-gray-600">
+              <div className="flex justify-between mb-1">
+                <span>Fish: {opponentPieces.filter(piece => piece.type === 'fish').length}</span>
+                <span className={`font-bold ${
+                  opponentWaterQuality < 3 ? 'text-red-600' : 
+                  opponentWaterQuality > 7 ? 'text-green-600' : 
+                  'text-gray-600'
+                }`}>
+                  Water Quality: {opponentWaterQuality}/10
+                </span>
+              </div>
+              {opponentWaterQuality < 3 && (
+                <div className="text-red-600 font-medium text-center">
+                  ⚠️ Poor water quality: -30% attack damage & poison damage each round
+                </div>
+              )}
+              {opponentWaterQuality > 7 && (
+                <div className="text-green-600 font-medium text-center">
+                  ✨ Excellent water quality: +20% attack damage
+                </div>
+              )}
             </div>
           </div>
         </div>
