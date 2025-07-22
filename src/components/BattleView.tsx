@@ -494,8 +494,78 @@ export const BattleView: React.FC<BattleViewProps> = ({
       </div>
 
       {/* Stats Comparison */}
-      <div className="bg-white rounded-lg shadow-lg p-4">
+      <div className="bg-white rounded-lg shadow-lg p-4 relative group">
         <h3 className="text-lg font-bold text-gray-900 mb-4 text-center">Battle Stats Comparison</h3>
+        
+        {/* Detailed breakdown tooltip */}
+        <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 text-white p-4 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+          <div className="text-sm font-bold mb-2">Detailed Battle Breakdown:</div>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <div className="font-bold text-blue-400 mb-2">Your Tank:</div>
+              <div className="space-y-1 text-xs">
+                {(() => {
+                  const fishPieces = playerPieces.filter(piece => piece.type === 'fish');
+                  const enhancedPieces = applyBonusesToPieces(fishPieces);
+                  return enhancedPieces.map(piece => {
+                    const originalPiece = fishPieces.find(p => p.id === piece.id);
+                    const attackBonus = piece.stats.attack - originalPiece!.stats.attack;
+                    const healthBonus = piece.stats.health - originalPiece!.stats.health;
+                    const speedBonus = piece.stats.speed - originalPiece!.stats.speed;
+                    
+                    return (
+                      <div key={piece.id} className="flex justify-between">
+                        <span>{piece.name}:</span>
+                        <span>
+                          <span className="text-red-400">{originalPiece!.stats.attack}</span>
+                          {attackBonus > 0 && <span className="text-green-400">(+{attackBonus})</span>}
+                          {' / '}
+                          <span className="text-green-400">{originalPiece!.stats.health}</span>
+                          {healthBonus > 0 && <span className="text-green-400">(+{healthBonus})</span>}
+                          {' / '}
+                          <span className="text-blue-400">{originalPiece!.stats.speed}</span>
+                          {speedBonus > 0 && <span className="text-cyan-400">(+{speedBonus})</span>}
+                        </span>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+            <div>
+              <div className="font-bold text-red-400 mb-2">Opponent Tank:</div>
+              <div className="space-y-1 text-xs">
+                {(() => {
+                  const fishPieces = opponentPieces.filter(piece => piece.type === 'fish');
+                  const enhancedPieces = applyBonusesToPieces(fishPieces);
+                  return enhancedPieces.map(piece => {
+                    const originalPiece = fishPieces.find(p => p.id === piece.id);
+                    const attackBonus = piece.stats.attack - originalPiece!.stats.attack;
+                    const healthBonus = piece.stats.health - originalPiece!.stats.health;
+                    const speedBonus = piece.stats.speed - originalPiece!.stats.speed;
+                    
+                    return (
+                      <div key={piece.id} className="flex justify-between">
+                        <span>{piece.name}:</span>
+                        <span>
+                          <span className="text-red-400">{originalPiece!.stats.attack}</span>
+                          {attackBonus > 0 && <span className="text-green-400">(+{attackBonus})</span>}
+                          {' / '}
+                          <span className="text-green-400">{originalPiece!.stats.health}</span>
+                          {healthBonus > 0 && <span className="text-green-400">(+{healthBonus})</span>}
+                          {' / '}
+                          <span className="text-blue-400">{originalPiece!.stats.speed}</span>
+                          {speedBonus > 0 && <span className="text-cyan-400">(+{speedBonus})</span>}
+                        </span>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div className="grid grid-cols-2 gap-6">
           {/* Player Stats */}
           <div className="bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg border border-blue-200 p-4">

@@ -71,34 +71,61 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
               <h3 className="font-bold text-gray-900 mb-2">Tank Summary</h3>
               <div className="grid grid-cols-3 gap-4 text-sm relative">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600 cursor-help">
+                  <div className="text-2xl font-bold text-red-600 cursor-help flex items-center justify-center gap-1">
                     {(() => {
                       const fishPieces = gameState.playerTank.pieces.filter(piece => piece.type === 'fish');
                       const enhancedPieces = applyBonusesToPieces(fishPieces, gameState.playerTank.pieces);
-                      return enhancedPieces.reduce((total, piece) => total + piece.stats.attack, 0);
+                      const baseAttack = fishPieces.reduce((total, piece) => total + piece.stats.attack, 0);
+                      const totalAttack = enhancedPieces.reduce((total, piece) => total + piece.stats.attack, 0);
+                      const bonusAttack = totalAttack - baseAttack;
+                      
+                      return (
+                        <>
+                          <span>{baseAttack}</span>
+                          {bonusAttack > 0 && <span className="text-green-500">(+{bonusAttack})</span>}
+                        </>
+                      );
                     })()}
                   </div>
                   <div className="text-gray-600">Total Attack</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600 cursor-help">
+                  <div className="text-2xl font-bold text-green-600 cursor-help flex items-center justify-center gap-1">
                     {(() => {
                       const allPieces = gameState.playerTank.pieces.filter(piece => 
                         piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
                       );
                       const enhancedPieces = applyBonusesToPieces(allPieces, gameState.playerTank.pieces);
-                      return enhancedPieces.reduce((total, piece) => total + piece.stats.health, 0);
+                      const baseHealth = allPieces.reduce((total, piece) => total + piece.stats.health, 0);
+                      const totalHealth = enhancedPieces.reduce((total, piece) => total + piece.stats.health, 0);
+                      const bonusHealth = totalHealth - baseHealth;
+                      
+                      return (
+                        <>
+                          <span>{baseHealth}</span>
+                          {bonusHealth > 0 && <span className="text-green-500">(+{bonusHealth})</span>}
+                        </>
+                      );
                     })()}
                   </div>
                   <div className="text-gray-600">Tank Health</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600 cursor-help">
+                  <div className="text-2xl font-bold text-blue-600 cursor-help flex items-center justify-center gap-1">
                     {(() => {
                       const fishPieces = gameState.playerTank.pieces.filter(piece => piece.type === 'fish');
-                      if (fishPieces.length === 0) return 0;
-                      const enhancedPieces = applyBonusesToPieces(fishPieces, gameState.playerTank.pieces);
-                      return Math.round(enhancedPieces.reduce((total, piece) => total + piece.stats.speed, 0) / fishPieces.length);
+                      if (fishPieces.length === 0) return <span>0</span>;
+                      
+                      const baseSpeed = Math.round(fishPieces.reduce((total, piece) => total + piece.stats.speed, 0) / fishPieces.length);
+                      const totalSpeed = Math.round(enhancedPieces.reduce((total, piece) => total + piece.stats.speed, 0) / fishPieces.length);
+                      const bonusSpeed = totalSpeed - baseSpeed;
+                      
+                      return (
+                        <>
+                          <span>{baseSpeed}</span>
+                          {bonusSpeed > 0 && <span className="text-green-500">(+{bonusSpeed})</span>}
+                        </>
+                      );
                     })()}
                   </div>
                   <div className="text-gray-600">Avg Speed</div>
