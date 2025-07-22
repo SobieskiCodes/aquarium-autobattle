@@ -619,13 +619,34 @@ export const BattleView: React.FC<BattleViewProps> = ({
             {battleState.battleEvents.map((event, index) => (
               <div 
                 key={index} 
-                className={`text-sm p-2 rounded ${
-                  event.type === 'attack' 
-                    ? 'bg-red-50 border-l-4 border-red-400' 
-                    : event.type === 'status'
-                    ? 'bg-purple-50 border-l-4 border-purple-400'
-                    : 'bg-blue-50 border-l-4 border-blue-400'
-                }`}
+                className={`text-sm p-2 rounded ${(() => {
+                  // Color code based on what happened to whom
+                  const isPlayerAction = event.source.includes('Your');
+                  const isEnemyTarget = event.target?.includes('Enemy');
+                  const isPlayerTarget = event.target?.includes('Your');
+                  const isKO = event.target?.includes('KO!') || event.target?.includes('Destroyed!');
+                  
+                  if (event.type === 'status') {
+                    return 'bg-purple-50 border-l-4 border-purple-400';
+                  }
+                  
+                  // Good events (your fish attacking/killing enemies)
+                  if (isPlayerAction && isEnemyTarget) {
+                    return isKO 
+                      ? 'bg-green-100 border-l-4 border-green-500 text-green-800' 
+                      : 'bg-green-50 border-l-4 border-green-400 text-green-700';
+                  }
+                  
+                  // Bad events (enemy fish attacking/killing yours)
+                  if (!isPlayerAction && isPlayerTarget) {
+                    return isKO 
+                      ? 'bg-red-100 border-l-4 border-red-500 text-red-800' 
+                      : 'bg-red-50 border-l-4 border-red-400 text-red-700';
+                  }
+                  
+                  // Neutral/default
+                  return 'bg-gray-50 border-l-4 border-gray-400';
+                })()}`}
               >
                 <div className="flex justify-between items-center">
                   <span className="font-medium">
@@ -633,9 +654,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
                     {event.target && ` → ${event.target}`}
                   </span>
                   {event.value > 0 && (
-                    <span className={`font-bold ${
-                      event.type === 'attack' ? 'text-red-600' : 'text-purple-600'
-                    }`}>
+                    <span className="font-bold text-current opacity-80">
                       -{event.value} HP
                     </span>
                   )}
