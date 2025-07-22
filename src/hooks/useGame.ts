@@ -77,6 +77,22 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
   for (const piece of affordablePieces) {
     if (!piece || gold < piece.cost || newPieces.length >= maxPieces) continue;
     
+    // Find available positions for this piece
+    const availablePositions: Position[] = [];
+    for (let y = 0; y < 6; y++) {
+      for (let x = 0; x < 8; x++) {
+        const canPlace = piece.shape.every(offset => {
+          const px = x + offset.x;
+          const py = y + offset.y;
+          return px >= 0 && px < 8 && py >= 0 && py < 6 && 
+                 !newPieces.some(p => p.position && 
+                   p.shape.some(pOffset => 
+                     p.position!.x + pOffset.x === px && 
+                     p.position!.y + pOffset.y === py
+                   )
+                 );
+        });
+        
         if (canPlace) {
           availablePositions.push({ x, y });
         }
@@ -92,7 +108,6 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
       });
       gold -= piece.cost;
     }
-  }
   }
   
   // Calculate water quality for opponent
