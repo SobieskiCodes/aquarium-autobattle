@@ -395,7 +395,24 @@ export const useGame = () => {
   const selectPiece = useCallback((piece: GamePiece) => {
     setGameState(prev => ({
       ...prev,
-      selectedPiece: prev.selectedPiece?.id === piece.id ? null : piece
+      selectedPiece: prev.selectedPiece?.id === piece.id ? null : piece,
+      phase: prev.selectedPiece?.id === piece.id ? 'shop' as const : prev.phase
+    }));
+  }, []);
+
+  const cancelPlacement = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      selectedPiece: null,
+      phase: 'shop' as const,
+      // Refund the gold since we're canceling the purchase
+      gold: prev.selectedPiece && !prev.selectedPiece.position ? prev.gold + prev.selectedPiece.cost : prev.gold,
+      // Put the piece back in the shop if it was a new purchase
+      shop: prev.selectedPiece && !prev.selectedPiece.position 
+        ? prev.shop.map((shopPiece, index) => 
+            shopPiece === null && index < 5 ? prev.selectedPiece : shopPiece
+          )
+        : prev.shop
     }));
   }, []);
 
@@ -407,6 +424,7 @@ export const useGame = () => {
     rerollShop,
     startBattle,
     completeBattle,
-    selectPiece
+    selectPiece,
+    cancelPlacement
   };
 };

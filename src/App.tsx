@@ -12,7 +12,8 @@ function App() {
     rerollShop,
     startBattle,
     completeBattle,
-    selectPiece
+    selectPiece,
+    cancelPlacement
   } = useGame();
 
   return (
@@ -82,6 +83,7 @@ function App() {
           onStartBattle={startBattle}
           onCompleteBattle={completeBattle}
           onSelectPiece={selectPiece}
+          onCancelPlacement={cancelPlacement}
         />
       </main>
 

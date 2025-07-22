@@ -15,6 +15,7 @@ interface GamePhaseProps {
   onStartBattle: () => void;
   onCompleteBattle: (playerWon: boolean) => void;
   onSelectPiece: (piece: any) => void;
+  onCancelPlacement: () => void;
 }
 
 export const GamePhase: React.FC<GamePhaseProps> = ({
@@ -25,7 +26,8 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   onRerollShop,
   onStartBattle,
   onCompleteBattle,
-  onSelectPiece
+  onSelectPiece,
+  onCancelPlacement
 }) => {
   const renderShopPhase = () => (
     <div className="space-y-6">
@@ -108,7 +110,82 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           
           {gameState.selectedPiece && (
             <div className="mt-4 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-              <p className="text-sm text-blue-800">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-blue-800">
+                  <strong>
+                    {gameState.selectedPiece.position ? 'Move mode:' : 'Placement mode:'}
+                  </strong> 
+                  Click on the grid to {gameState.selectedPiece.position ? 'move' : 'place'} your {gameState.selectedPiece.name}
+                </p>
+                <button
+                  onClick={onCancelPlacement}
+                  className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Tank Pieces</h2>
+          {gameState.playerTank.pieces.length > 0 ? (
+            <div className="grid gap-2">
+              {gameState.playerTank.pieces.map((piece, index) => (
+                <PieceCard
+                  key={`${piece.id}-${index}`}
+                  piece={piece}
+                  onSelect={onSelectPiece}
+                  isSelected={gameState.selectedPiece?.id === piece.id}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p>No pieces in your tank yet.</p>
+              <p className="text-sm">Purchase some from the shop below!</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Shop
+        pieces={gameState.shop}
+        gold={gameState.gold}
+        onPurchase={onPurchasePiece}
+        onReroll={onRerollShop}
+        rerollCost={2}
+      />
+    </div>
+  );
+
+  const renderPlacementPhase = () => (
+    <div className="space-y-6">
+      <div className="bg-yellow-500 text-white p-4 rounded-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold">Place Your Piece</h2>
+            <p>Click on the grid to place your {gameState.selectedPiece?.name}</p>
+          </div>
+          <button
+            onClick={onCancelPlacement}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+          >
+            Cancel & Refund
+          </button>
+        </div>
+      </div>
+      
+      <TankGrid
+        pieces={gameState.playerTank.pieces}
+        onPiecePlace={onPlacePiece}
+        onPieceMove={onMovePiece}
+        selectedPiece={gameState.selectedPiece}
+        waterQuality={gameState.playerTank.waterQuality}
+      />
+    </div>
+  );
                 <strong>
                   {gameState.selectedPiece.position ? 'Move mode:' : 'Placement mode:'}
                 </strong> 
