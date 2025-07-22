@@ -169,17 +169,10 @@ export const BattleView: React.FC<BattleViewProps> = ({
       allPieces.forEach((attacker, index) => {
         if (!attacker.isAlive) return;
         
-        // First try to target enemy fish, then plants/equipment if no fish remain
-        let targets = attacker.side === 'player' ? 
-          opponentBattlePieces.filter(p => p.isAlive && p.type === 'fish') : 
-          playerBattlePieces.filter(p => p.isAlive && p.type === 'fish');
-        
-        // If no enemy fish, target plants/equipment
-        if (targets.length === 0) {
-          targets = attacker.side === 'player' ? 
-            opponentBattlePieces.filter(p => p.isAlive && (p.type === 'plant' || p.type === 'equipment')) : 
-            playerBattlePieces.filter(p => p.isAlive && (p.type === 'plant' || p.type === 'equipment'));
-        }
+        // Target any alive enemy piece randomly (fish, plants, equipment)
+        const targets = attacker.side === 'player' ? 
+          opponentBattlePieces.filter(p => p.isAlive && (p.type === 'fish' || p.type === 'plant' || p.type === 'equipment')) : 
+          playerBattlePieces.filter(p => p.isAlive && (p.type === 'fish' || p.type === 'plant' || p.type === 'equipment'));
           
         if (targets.length === 0) return;
         
