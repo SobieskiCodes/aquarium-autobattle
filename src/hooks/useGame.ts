@@ -209,9 +209,20 @@ export const useGame = () => {
 
       if (!canPlace) return prev;
 
-      // Add piece to tank (including consumables)
-      const newPiece = { ...piece, position };
-      const newPieces = [...prev.playerTank.pieces, newPiece];
+      // Check if piece is already in tank (from inventory) or is new (from shop)
+      const existingPieceIndex = prev.playerTank.pieces.findIndex(p => p.id === piece.id);
+      let newPieces;
+      
+      if (existingPieceIndex >= 0) {
+        // Update existing piece position (from inventory)
+        newPieces = prev.playerTank.pieces.map((p, index) => 
+          index === existingPieceIndex ? { ...p, position } : p
+        );
+      } else {
+        // Add new piece to tank (from shop)
+        const newPiece = { ...piece, position };
+        newPieces = [...prev.playerTank.pieces, newPiece];
+      }
       
       const newGrid = prev.playerTank.grid.map(row => [...row]);
       
