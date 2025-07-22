@@ -76,9 +76,11 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">
-                    {gameState.playerTank.pieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.health, 0)}
+                    {gameState.playerTank.pieces.filter(piece => 
+                      piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
+                    ).reduce((total, piece) => total + piece.stats.health, 0)}
                   </div>
-                  <div className="text-gray-600">Total Health</div>
+                  <div className="text-gray-600">Tank Health</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-600">
