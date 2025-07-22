@@ -74,31 +74,9 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
   affordablePieces.sort((a, b) => getAIPriority(b!) - getAIPriority(a!));
   
   // Buy pieces until we hit our limits
-    // Add piece with random position
-    const availablePositions: Position[] = [];
-    for (let y = 0; y < 6; y++) {
-      for (let x = 0; x < 8; x++) {
-        // Check if piece can fit at this position
-        const canPlace = piece.shape.every(offset => {
-          const newX = x + offset.x;
-          const newY = y + offset.y;
-          return newX >= 0 && newX < 8 && newY >= 0 && newY < 6;
-        });
-        
-        // Check if target died and add KO event
-        if (target.currentHealth <= 0) {
-          target.isAlive = false;
-          
-          const koText = target.type === 'fish' ? 'KO!' : 'Destroyed!';
-          events.push({
-            type: 'attack',
-            source: `${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}`,
-            target: `${koText} ${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType}`,
-            value: 0,
-            round
-          });
-        }
-        
+  for (const piece of affordablePieces) {
+    if (!piece || gold < piece.cost || newPieces.length >= maxPieces) continue;
+    
         if (canPlace) {
           availablePositions.push({ x, y });
         }
@@ -114,6 +92,7 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
       });
       gold -= piece.cost;
     }
+  }
   }
   
   // Calculate water quality for opponent
