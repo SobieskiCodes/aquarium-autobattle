@@ -962,18 +962,36 @@ export const BattleView: React.FC<BattleViewProps> = ({
                       : 'bg-red-50 border-l-4 border-red-400 text-red-700';
                   }
                   
+                // Apply water quality modifier to attack for display
+                let finalAttack = piece.stats.attack;
+                let waterQualityText = '';
+                if (playerWaterQuality < 3) {
+                  finalAttack = Math.max(1, Math.floor(finalAttack * 0.7));
+                  waterQualityText = ` → ${finalAttack} (-30% water)`;
+                } else if (playerWaterQuality > 7) {
+                  finalAttack = Math.max(1, Math.floor(finalAttack * 1.2));
+                  waterQualityText = ` → ${finalAttack} (+20% water)`;
+                }
+                
                   // Neutral/default
                   return 'bg-gray-50 border-l-4 border-gray-400';
-                })()}`}
+              // Apply water quality to each fish individually, then sum
+              const finalAttack = enhancedPlayerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => {
+                return total + Math.max(1, Math.floor(piece.stats.attack * waterQualityMultiplier));
+              // Apply water quality to each fish individually, then sum
+              const finalAttack = enhancedOpponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => {
+                return total + Math.max(1, Math.floor(piece.stats.attack * waterQualityMultiplier));
+              }, 0);
               >
-                <div className="flex justify-between items-center">
+                      <span className="text-red-400">{piece.stats.attack}</span>
                   <span className="font-medium">
+                  <span>{totalAttack}</span>
                     Round {event.round}: {event.source}
-                    {event.target && ` → ${event.target}`}
+                  {waterQualityText && finalAttack !== totalAttack && (
                   </span>
                   {event.value > 0 && (
                     <span className="font-bold text-current opacity-80">
-                      -{event.value} HP
+                      → {finalAttack}
                     </span>
                   )}
                 </div>
