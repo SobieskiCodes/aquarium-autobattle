@@ -966,14 +966,21 @@ export const BattleView: React.FC<BattleViewProps> = ({
                   return 'bg-gray-50 border-l-4 border-gray-400';
                 })()}`}
               >
-                <span className="font-medium">
-                  Round {event.round}: {event.source}
-                </span>
-                {event.value > 0 && (
-                  <span className="font-bold text-current opacity-80">
-                    → {event.target}
+                <div>
+                  <span className="font-medium">
+                    Round {event.round}: {event.source}
                   </span>
-                )}
+                  {event.value > 0 && (
+                    <span className="font-bold text-current opacity-80">
+                      → {event.target}
+                    </span>
+                  )}
+                  {event.value === 0 && event.target && (
+                    <span className="font-bold text-current opacity-80">
+                      → {event.target}
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
             
