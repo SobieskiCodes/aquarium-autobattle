@@ -67,28 +67,74 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           
           {/* Board Stats Summary */}
           {gameState.playerTank.pieces.length > 0 && (
-            <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg border border-blue-200">
+            <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg border border-blue-200 relative group">
               <h3 className="font-bold text-gray-900 mb-2">Tank Summary</h3>
-              <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-3 gap-4 text-sm relative">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">
-                    {gameState.playerTank.pieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0)}
+                  <div className="text-2xl font-bold text-red-600 cursor-help">
+                    {(() => {
+                      const fishPieces = gameState.playerTank.pieces.filter(piece => piece.type === 'fish');
+                      const enhancedPieces = applyBonusesToPieces(fishPieces, gameState.playerTank.pieces);
+                      return enhancedPieces.reduce((total, piece) => total + piece.stats.attack, 0);
+                    })()}
                   </div>
                   <div className="text-gray-600">Total Attack</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {gameState.playerTank.pieces.filter(piece => 
-                      piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
-                    ).reduce((total, piece) => total + piece.stats.health, 0)}
+                  <div className="text-2xl font-bold text-green-600 cursor-help">
+                    {(() => {
+                      const allPieces = gameState.playerTank.pieces.filter(piece => 
+                        piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
+                      );
+                      const enhancedPieces = applyBonusesToPieces(allPieces, gameState.playerTank.pieces);
+                      return enhancedPieces.reduce((total, piece) => total + piece.stats.health, 0);
+                    })()}
                   </div>
                   <div className="text-gray-600">Tank Health</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {Math.round(gameState.playerTank.pieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, gameState.playerTank.pieces.filter(piece => piece.type === 'fish').length))}
+                  <div className="text-2xl font-bold text-blue-600 cursor-help">
+                    {(() => {
+                      const fishPieces = gameState.playerTank.pieces.filter(piece => piece.type === 'fish');
+                      if (fishPieces.length === 0) return 0;
+                      const enhancedPieces = applyBonusesToPieces(fishPieces, gameState.playerTank.pieces);
+                      return Math.round(enhancedPieces.reduce((total, piece) => total + piece.stats.speed, 0) / fishPieces.length);
+                    })()}
                   </div>
                   <div className="text-gray-600">Avg Speed</div>
+                </div>
+              </div>
+              
+              {/* Detailed breakdown tooltip */}
+              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 text-white p-3 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                <div className="text-sm font-bold mb-2">Detailed Breakdown:</div>
+                <div className="space-y-1 text-xs">
+                  {(() => {
+                    const fishPieces = gameState.playerTank.pieces.filter(piece => piece.type === 'fish');
+                    const enhancedPieces = applyBonusesToPieces(fishPieces, gameState.playerTank.pieces);
+                    return enhancedPieces.map(piece => {
+                      const originalPiece = fishPieces.find(p => p.id === piece.id);
+                      const attackBonus = piece.stats.attack - originalPiece!.stats.attack;
+                      const healthBonus = piece.stats.health - originalPiece!.stats.health;
+                      const speedBonus = piece.stats.speed - originalPiece!.stats.speed;
+                      
+                      return (
+                        <div key={piece.id} className="flex justify-between">
+                          <span>{piece.name}:</span>
+                          <span>
+                            <span className="text-red-400">{piece.stats.attack}</span>
+                            {attackBonus > 0 && <span className="text-green-400"> (+{attackBonus})</span>}
+                            {' / '}
+                            <span className="text-green-400">{piece.stats.health}</span>
+                            {healthBonus > 0 && <span className="text-green-400"> (+{healthBonus})</span>}
+                            {' / '}
+                            <span className="text-blue-400">{piece.stats.speed}</span>
+                            {speedBonus > 0 && <span className="text-cyan-400"> (+{speedBonus})</span>}
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
               <div className="mt-3 text-xs text-gray-600">
@@ -149,6 +195,102 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           )}
         </div>
       </div>
+      
+      {/* Helper function for applying bonuses */}
+      {(() => {
+        // Define the bonus calculation function in the component scope
+        window.applyBonusesToPieces = (pieces, allPieces) => {
+          const GRID_WIDTH = 8;
+          const GRID_HEIGHT = 6;
+          
+          // Create grid with piece occupancy
+          const grid = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null));
+          allPieces.forEach(piece => {
+            if (piece.position) {
+              piece.shape.forEach(offset => {
+                const x = piece.position.x + offset.x;
+                const y = piece.position.y + offset.y;
+                if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
+                  grid[y][x] = piece;
+                }
+              });
+            }
+          });
+
+          return pieces.map(piece => {
+            if (!piece.position) return piece;
+            
+            let bonusAttack = 0;
+            let bonusHealth = 0;
+            let bonusSpeed = 0;
+            
+            // Check adjacent cells for bonus sources
+            const adjacentPositions = [
+              { x: piece.position.x - 1, y: piece.position.y },
+              { x: piece.position.x + 1, y: piece.position.y },
+              { x: piece.position.x, y: piece.position.y - 1 },
+              { x: piece.position.x, y: piece.position.y + 1 }
+            ];
+            
+            adjacentPositions.forEach(pos => {
+              if (pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT) {
+                const adjacentPiece = grid[pos.y][pos.x];
+                if (adjacentPiece && adjacentPiece.id !== piece.id) {
+                  // Java Fern bonus
+                  if (adjacentPiece.id.includes('java-fern')) {
+                    bonusHealth += 1;
+                  }
+                  // Anubias bonus
+                  if (adjacentPiece.id.includes('anubias')) {
+                    bonusAttack += 1;
+                    bonusHealth += 1;
+                  }
+                  // Consumable bonus (if piece is fish)
+                  if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
+                    bonusAttack += 1;
+                    bonusHealth += 1;
+                  }
+                }
+              }
+            });
+            
+            // Check for schooling bonuses
+            if (piece.tags.includes('schooling')) {
+              const schoolingCount = adjacentPositions.filter(pos => {
+                if (pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT) {
+                  const adjacentPiece = grid[pos.y][pos.x];
+                  return adjacentPiece && adjacentPiece.tags.includes('schooling') && adjacentPiece.id !== piece.id;
+                }
+                return false;
+              }).length;
+              
+              if (schoolingCount > 0) {
+                if (piece.id.includes('neon-tetra')) {
+                  bonusAttack += schoolingCount;
+                  if (schoolingCount >= 3) {
+                    bonusSpeed += piece.stats.speed; // Double speed
+                  }
+                } else if (piece.id.includes('cardinal-tetra')) {
+                  bonusAttack += schoolingCount * 2;
+                }
+              }
+            }
+            
+            // Apply bonuses to piece stats
+            return {
+              ...piece,
+              stats: {
+                ...piece.stats,
+                attack: piece.stats.attack + bonusAttack,
+                health: piece.stats.health + bonusHealth,
+                maxHealth: piece.stats.maxHealth + bonusHealth,
+                speed: piece.stats.speed + bonusSpeed
+              }
+            };
+          });
+        };
+        return null;
+      })()}
 
       <Shop
         pieces={gameState.shop}

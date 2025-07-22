@@ -242,9 +242,46 @@ export const TankGrid: React.FC<TankGridProps> = ({
           }}
         >
           <div className="text-sm font-bold mb-1">{hoveredPiece.name}</div>
-          <div className="text-xs text-gray-300 mb-2">
-            ATK: {hoveredPiece.stats.attack} | HP: {hoveredPiece.stats.health} | SPD: {hoveredPiece.stats.speed}
-          </div>
+          {(() => {
+            const bonuses = calculateBonuses(hoveredPiece);
+            const bonusAttack = bonuses.filter(b => b.effect.includes('ATK')).reduce((sum, b) => {
+              const match = b.effect.match(/\+(\d+) ATK/);
+              return sum + (match ? parseInt(match[1]) : 0);
+            }, 0);
+            const bonusHealth = bonuses.filter(b => b.effect.includes('HP')).reduce((sum, b) => {
+              const match = b.effect.match(/\+(\d+) HP/);
+              return sum + (match ? parseInt(match[1]) : 0);
+            }, 0);
+            const bonusSpeed = bonuses.some(b => b.effect.includes('Double Speed')) ? hoveredPiece.stats.speed : 0;
+            
+            const finalAttack = hoveredPiece.stats.attack + bonusAttack;
+            const finalHealth = hoveredPiece.stats.health + bonusHealth;
+            const finalSpeed = hoveredPiece.stats.speed + bonusSpeed;
+            
+            return (
+              <div className="text-xs text-gray-300 mb-2">
+                <div className="flex gap-4">
+                  <span>
+                    ATK: <span className="text-red-400 font-bold">{finalAttack}</span>
+                    {bonusAttack > 0 && <span className="text-green-400"> (+{bonusAttack})</span>}
+                  </span>
+                  <span>
+                    HP: <span className="text-green-400 font-bold">{finalHealth}</span>
+                    {bonusHealth > 0 && <span className="text-green-400"> (+{bonusHealth})</span>}
+                  </span>
+                  <span>
+                    SPD: <span className="text-blue-400 font-bold">{finalSpeed}</span>
+                    {bonusSpeed > 0 && <span className="text-cyan-400"> (+{bonusSpeed})</span>}
+                  </span>
+                </div>
+                {(bonusAttack > 0 || bonusHealth > 0 || bonusSpeed > 0) && (
+                  <div className="text-xs text-gray-400 mt-1">
+                    Base: {hoveredPiece.stats.attack}/{hoveredPiece.stats.health}/{hoveredPiece.stats.speed}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           
           {hoveredPiece.abilities && hoveredPiece.abilities.length > 0 && (
             <div className="text-xs text-gray-300 mb-2">

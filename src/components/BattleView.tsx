@@ -286,12 +286,27 @@ export const BattleView: React.FC<BattleViewProps> = ({
         // Apply damage
         target.currentHealth = Math.max(0, target.currentHealth - damage);
         
-        // Create attack event
+        // Create attack event with enhanced damage indication
         const targetType = target.type === 'fish' ? '' : ` (${target.type})`;
+        const baseDamage = attacker.stats.attack;
+        const originalAttacker = (attacker.side === 'player' ? playerPieces : opponentPieces).find(p => p.id === attacker.id);
+        const baseAttack = originalAttacker ? originalAttacker.stats.attack : baseDamage;
+        const attackBonus = baseDamage - baseAttack;
+        
+        let damageText = `${damage}`;
+        if (attackBonus > 0) {
+          damageText = `${baseAttack}+${attackBonus}=${damage}`;
+        }
+        if (waterQuality < 3) {
+          damageText += ' (weakened)';
+        } else if (waterQuality > 7) {
+          damageText += ' (enhanced)';
+        }
+        
         events.push({
           type: 'attack',
           source: `${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}`,
-          target: `${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType}`,
+          target: `${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType} for ${damageText} damage`,
           value: damage,
           round
         });
