@@ -69,11 +69,11 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           if (adjacentPiece && adjacentPiece.id !== piece.id) {
             // Java Fern bonus
             if (adjacentPiece.id.includes('java-fern')) {
+              bonusAttack += 1;
               bonusHealth += 1;
             }
             // Anubias bonus
             if (adjacentPiece.id.includes('anubias')) {
-              bonusAttack += 1;
               bonusHealth += 1;
             }
             // Consumable bonus (if piece is fish)

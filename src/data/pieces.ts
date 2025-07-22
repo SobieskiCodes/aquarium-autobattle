@@ -85,7 +85,7 @@ export const PIECE_LIBRARY: GamePiece[] = [
     stats: { attack: 0, health: 8, speed: 0, maxHealth: 8 },
     tags: ['plant', 'freshwater'],
     cost: 3,
-    abilities: ['Adjacent fish +1 HP (stacks)']
+    abilities: ['Adjacent fish +1 ATK and +1 HP']
   },
   {
     id: 'anubias',
@@ -96,7 +96,7 @@ export const PIECE_LIBRARY: GamePiece[] = [
     stats: { attack: 0, health: 6, speed: 0, maxHealth: 6 },
     tags: ['plant', 'freshwater'],
     cost: 4,
-    abilities: ['Adjacent fish +1 ATK and +1 HP']
+    abilities: ['Adjacent fish +1 HP (stacks)']
   },
 
   // Equipment

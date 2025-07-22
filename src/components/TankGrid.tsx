@@ -62,11 +62,11 @@ export const TankGrid: React.FC<TankGridProps> = ({
         if (adjacentPiece && adjacentPiece.id !== piece.id) {
           // Java Fern bonus
           if (adjacentPiece.id.includes('java-fern')) {
-            bonuses.push({ source: 'Java Fern', effect: '+1 HP', color: 'text-green-500' });
+            bonuses.push({ source: 'Java Fern', effect: '+1 ATK +1 HP', color: 'text-green-600' });
           }
           // Anubias bonus
           if (adjacentPiece.id.includes('anubias')) {
-            bonuses.push({ source: 'Anubias', effect: '+1 ATK +1 HP', color: 'text-green-600' });
+            bonuses.push({ source: 'Anubias', effect: '+1 HP', color: 'text-green-500' });
           }
           // Consumable bonus (if piece is fish)
           if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
