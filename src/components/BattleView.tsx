@@ -502,28 +502,65 @@ export const BattleView: React.FC<BattleViewProps> = ({
             <h4 className="font-bold text-blue-900 mb-3 text-center">Your Tank</h4>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
-                  <span>{playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0)}</span>
-                  {(() => {
-                    if (playerWaterQuality < 3) return <span className="text-xs text-red-500">(-30%)</span>;
-                    if (playerWaterQuality > 7) return <span className="text-xs text-green-500">(+20%)</span>;
-                    return null;
-                  })()}
-                </div>
+                {(() => {
+                  const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
+                  const baseAttack = playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
+                  const totalAttack = enhancedPlayerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
+                  const bonusAttack = totalAttack - baseAttack;
+                  
+                  return (
+                    <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
+                      <span>{baseAttack}</span>
+                      {bonusAttack > 0 && <span className="text-green-500">(+{bonusAttack})</span>}
+                      {(() => {
+                        if (playerWaterQuality < 3) return <span className="text-xs text-red-500 ml-1">(-30%)</span>;
+                        if (playerWaterQuality > 7) return <span className="text-xs text-green-500 ml-1">(+20%)</span>;
+                        return null;
+                      })()}
+                    </div>
+                  );
+                })()}
                 <div className="text-gray-600">Total Attack</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {playerPieces.filter(piece => 
+                {(() => {
+                  const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
+                  const baseHealth = playerPieces.filter(piece => 
                     piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
-                  ).reduce((total, piece) => total + piece.stats.health, 0)}
-                </div>
+                  ).reduce((total, piece) => total + piece.stats.health, 0);
+                  const totalHealth = enhancedPlayerPieces.filter(piece => 
+                    piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
+                  ).reduce((total, piece) => total + piece.stats.health, 0);
+                  const bonusHealth = totalHealth - baseHealth;
+                  
+                  return (
+                    <div className="text-2xl font-bold text-green-600 flex items-center justify-center gap-1">
+                      <span>{baseHealth}</span>
+                      {bonusHealth > 0 && <span className="text-green-500">(+{bonusHealth})</span>}
+                    </div>
+                  );
+                })()}
                 <div className="text-gray-600">Tank Health</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {Math.round(playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, playerPieces.filter(piece => piece.type === 'fish').length))}
-                </div>
+                {(() => {
+                  const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
+                  const playerFish = playerPieces.filter(piece => piece.type === 'fish');
+                  const enhancedPlayerFish = enhancedPlayerPieces.filter(piece => piece.type === 'fish');
+                  
+                  if (playerFish.length === 0) return <div className="text-2xl font-bold text-blue-600">0</div>;
+                  
+                  const baseSpeed = Math.round(playerFish.reduce((total, piece) => total + piece.stats.speed, 0) / playerFish.length);
+                  const totalSpeed = Math.round(enhancedPlayerFish.reduce((total, piece) => total + piece.stats.speed, 0) / enhancedPlayerFish.length);
+                  const bonusSpeed = totalSpeed - baseSpeed;
+                  
+                  return (
+                    <div className="text-2xl font-bold text-blue-600 flex items-center justify-center gap-1">
+                      <span>{baseSpeed}</span>
+                      {bonusSpeed > 0 && <span className="text-green-500">(+{bonusSpeed})</span>}
+                    </div>
+                  );
+                })()}
                 <div className="text-gray-600">Avg Speed</div>
               </div>
             </div>
@@ -556,28 +593,65 @@ export const BattleView: React.FC<BattleViewProps> = ({
             <h4 className="font-bold text-red-900 mb-3 text-center">Opponent Tank</h4>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
-                  <span>{opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0)}</span>
-                  {(() => {
-                    if (opponentWaterQuality < 3) return <span className="text-xs text-red-500">(-30%)</span>;
-                    if (opponentWaterQuality > 7) return <span className="text-xs text-green-500">(+20%)</span>;
-                    return null;
-                  })()}
-                </div>
+                {(() => {
+                  const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
+                  const baseAttack = opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
+                  const totalAttack = enhancedOpponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
+                  const bonusAttack = totalAttack - baseAttack;
+                  
+                  return (
+                    <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
+                      <span>{baseAttack}</span>
+                      {bonusAttack > 0 && <span className="text-green-500">(+{bonusAttack})</span>}
+                      {(() => {
+                        if (opponentWaterQuality < 3) return <span className="text-xs text-red-500 ml-1">(-30%)</span>;
+                        if (opponentWaterQuality > 7) return <span className="text-xs text-green-500 ml-1">(+20%)</span>;
+                        return null;
+                      })()}
+                    </div>
+                  );
+                })()}
                 <div className="text-gray-600">Total Attack</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {opponentPieces.filter(piece => 
+                {(() => {
+                  const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
+                  const baseHealth = opponentPieces.filter(piece => 
                     piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
-                  ).reduce((total, piece) => total + piece.stats.health, 0)}
-                </div>
+                  ).reduce((total, piece) => total + piece.stats.health, 0);
+                  const totalHealth = enhancedOpponentPieces.filter(piece => 
+                    piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
+                  ).reduce((total, piece) => total + piece.stats.health, 0);
+                  const bonusHealth = totalHealth - baseHealth;
+                  
+                  return (
+                    <div className="text-2xl font-bold text-green-600 flex items-center justify-center gap-1">
+                      <span>{baseHealth}</span>
+                      {bonusHealth > 0 && <span className="text-green-500">(+{bonusHealth})</span>}
+                    </div>
+                  );
+                })()}
                 <div className="text-gray-600">Tank Health</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {Math.round(opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, opponentPieces.filter(piece => piece.type === 'fish').length))}
-                </div>
+                {(() => {
+                  const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
+                  const opponentFish = opponentPieces.filter(piece => piece.type === 'fish');
+                  const enhancedOpponentFish = enhancedOpponentPieces.filter(piece => piece.type === 'fish');
+                  
+                  if (opponentFish.length === 0) return <div className="text-2xl font-bold text-blue-600">0</div>;
+                  
+                  const baseSpeed = Math.round(opponentFish.reduce((total, piece) => total + piece.stats.speed, 0) / opponentFish.length);
+                  const totalSpeed = Math.round(enhancedOpponentFish.reduce((total, piece) => total + piece.stats.speed, 0) / enhancedOpponentFish.length);
+                  const bonusSpeed = totalSpeed - baseSpeed;
+                  
+                  return (
+                    <div className="text-2xl font-bold text-blue-600 flex items-center justify-center gap-1">
+                      <span>{baseSpeed}</span>
+                      {bonusSpeed > 0 && <span className="text-green-500">(+{bonusSpeed})</span>}
+                    </div>
+                  );
+                })()}
                 <div className="text-gray-600">Avg Speed</div>
               </div>
             </div>
@@ -611,8 +685,10 @@ export const BattleView: React.FC<BattleViewProps> = ({
           <div className="text-center">
             <div className="font-medium text-gray-700 mb-1">Attack Advantage</div>
             {(() => {
-              const playerAttack = playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
-              const opponentAttack = opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
+              const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
+              const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
+              const playerAttack = enhancedPlayerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
+              const opponentAttack = enhancedOpponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
               const diff = playerAttack - opponentAttack;
               if (diff > 0) {
                 return <div className="text-green-600 font-bold">+{diff} You</div>;
@@ -626,6 +702,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
           <div className="text-center">
             <div className="font-medium text-gray-700 mb-1">Health Advantage</div>
             {(() => {
+              const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
+              const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
               const playerHealth = playerPieces.filter(piece => 
                 piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
               ).reduce((total, piece) => total + piece.stats.health, 0);
@@ -645,6 +723,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
           <div className="text-center">
             <div className="font-medium text-gray-700 mb-1">Speed Advantage</div>
             {(() => {
+              const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
+              const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
               const playerFish = playerPieces.filter(piece => piece.type === 'fish');
               const opponentFish = opponentPieces.filter(piece => piece.type === 'fish');
               const playerSpeed = Math.round(playerFish.reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, playerFish.length));
