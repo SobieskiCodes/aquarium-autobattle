@@ -64,11 +64,11 @@ export const BattleView: React.FC<BattleViewProps> = ({
   }, [playerPieces, opponentPieces]);
 
   const calculateTotalHealth = (pieces: GamePiece[]) => {
-    return pieces.reduce((total, piece) => total + piece.stats.health, 0);
+    return pieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.health, 0);
   };
 
   const calculateTotalAttack = (pieces: GamePiece[], waterQuality: number) => {
-    let totalAttack = pieces.reduce((total, piece) => total + piece.stats.attack, 0);
+    let totalAttack = pieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
     
     // Apply water quality modifier
     if (waterQuality < 3) totalAttack *= 0.7;
@@ -123,25 +123,28 @@ export const BattleView: React.FC<BattleViewProps> = ({
       const aliveOpponentPieces = opponentBattlePieces.filter(p => p.isAlive);
       
       // Check if battle should end
-      if (alivePlayerPieces.length === 0 || aliveOpponentPieces.length === 0) {
+      const alivePlayerFish = alivePlayerPieces.filter(p => p.type === 'fish');
+      const aliveOpponentFish = aliveOpponentPieces.filter(p => p.type === 'fish');
+      
+      if (alivePlayerFish.length === 0 || aliveOpponentFish.length === 0) {
         clearInterval(battleInterval);
-        const playerWon = alivePlayerPieces.length > 0;
+        const playerWon = alivePlayerFish.length > 0;
         
         setBattleState(prev => ({
           ...prev,
           winner: playerWon ? 'player' : 'opponent',
           battleActive: false,
-          playerHealth: alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0),
-          opponentHealth: aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0)
+          playerHealth: alivePlayerFish.reduce((total, p) => total + p.currentHealth, 0),
+          opponentHealth: aliveOpponentFish.reduce((total, p) => total + p.currentHealth, 0)
         }));
         return;
       }
       
       // Sort pieces by speed for turn order
       const allPieces = [
-        ...alivePlayerPieces.map(p => ({ ...p, side: 'player' as const })),
-        ...aliveOpponentPieces.map(p => ({ ...p, side: 'opponent' as const }))
-      ].filter(p => p.type === 'fish' || p.tags.includes('aggressive'))
+        ...alivePlayerPieces.filter(p => p.type === 'fish').map(p => ({ ...p, side: 'player' as const })),
+        ...aliveOpponentPieces.filter(p => p.type === 'fish').map(p => ({ ...p, side: 'opponent' as const }))
+      ]
        .sort((a, b) => b.stats.speed - a.stats.speed);
       
       // Each piece attacks in speed order
@@ -149,8 +152,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
         if (!attacker.isAlive) return;
         
         const targets = attacker.side === 'player' ? 
-          opponentBattlePieces.filter(p => p.isAlive) : 
-          playerBattlePieces.filter(p => p.isAlive);
+          opponentBattlePieces.filter(p => p.isAlive && p.type === 'fish') : 
+          playerBattlePieces.filter(p => p.isAlive && p.type === 'fish');
           
         if (targets.length === 0) return;
         
@@ -188,7 +191,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
 
       // Apply environmental effects
       if (playerWaterQuality < 3) {
-        alivePlayerPieces.forEach(piece => {
+        alivePlayerPieces.filter(p => p.type === 'fish').forEach(piece => {
           const poisonDamage = Math.max(1, Math.floor(piece.stats.health * 0.1));
           piece.currentHealth = Math.max(0, piece.currentHealth - poisonDamage);
           if (piece.currentHealth <= 0) piece.isAlive = false;
@@ -204,7 +207,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
       }
 
       if (opponentWaterQuality < 3) {
-        aliveOpponentPieces.forEach(piece => {
+        aliveOpponentPieces.filter(p => p.type === 'fish').forEach(piece => {
           const poisonDamage = Math.max(1, Math.floor(piece.stats.health * 0.1));
           piece.currentHealth = Math.max(0, piece.currentHealth - poisonDamage);
           if (piece.currentHealth <= 0) piece.isAlive = false;
@@ -220,8 +223,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
       }
 
       // Update battle state
-      const currentPlayerHealth = alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0);
-      const currentOpponentHealth = aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0);
+      const currentPlayerHealth = alivePlayerPieces.filter(p => p.type === 'fish').reduce((total, p) => total + p.currentHealth, 0);
+      const currentOpponentHealth = aliveOpponentPieces.filter(p => p.type === 'fish').reduce((total, p) => total + p.currentHealth, 0);
 
       setBattleState(prev => ({
         ...prev,
@@ -355,25 +358,25 @@ export const BattleView: React.FC<BattleViewProps> = ({
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div className="text-center">
                 <div className="text-2xl font-bold text-red-600">
-                  {playerPieces.reduce((total, piece) => total + piece.stats.attack, 0)}
+                  {playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0)}
                 </div>
                 <div className="text-gray-600">Total Attack</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {playerPieces.reduce((total, piece) => total + piece.stats.health, 0)}
+                  {playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.health, 0)}
                 </div>
                 <div className="text-gray-600">Total Health</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {Math.round(playerPieces.reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, playerPieces.length))}
+                  {Math.round(playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, playerPieces.filter(piece => piece.type === 'fish').length))}
                 </div>
                 <div className="text-gray-600">Avg Speed</div>
               </div>
             </div>
             <div className="mt-3 text-xs text-gray-600 flex justify-between">
-              <span>Pieces: {playerPieces.length}</span>
+              <span>Fish: {playerPieces.filter(piece => piece.type === 'fish').length}</span>
               <span>Water Quality: {playerWaterQuality}/10</span>
             </div>
           </div>
@@ -384,25 +387,25 @@ export const BattleView: React.FC<BattleViewProps> = ({
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div className="text-center">
                 <div className="text-2xl font-bold text-red-600">
-                  {opponentPieces.reduce((total, piece) => total + piece.stats.attack, 0)}
+                  {opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0)}
                 </div>
                 <div className="text-gray-600">Total Attack</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {opponentPieces.reduce((total, piece) => total + piece.stats.health, 0)}
+                  {opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.health, 0)}
                 </div>
                 <div className="text-gray-600">Total Health</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {Math.round(opponentPieces.reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, opponentPieces.length))}
+                  {Math.round(opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, opponentPieces.filter(piece => piece.type === 'fish').length))}
                 </div>
                 <div className="text-gray-600">Avg Speed</div>
               </div>
             </div>
             <div className="mt-3 text-xs text-gray-600 flex justify-between">
-              <span>Pieces: {opponentPieces.length}</span>
+              <span>Fish: {opponentPieces.filter(piece => piece.type === 'fish').length}</span>
               <span>Water Quality: {opponentWaterQuality}/10</span>
             </div>
           </div>
@@ -413,8 +416,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
           <div className="text-center">
             <div className="font-medium text-gray-700 mb-1">Attack Advantage</div>
             {(() => {
-              const playerAttack = playerPieces.reduce((total, piece) => total + piece.stats.attack, 0);
-              const opponentAttack = opponentPieces.reduce((total, piece) => total + piece.stats.attack, 0);
+              const playerAttack = playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
+              const opponentAttack = opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
               const diff = playerAttack - opponentAttack;
               if (diff > 0) {
                 return <div className="text-green-600 font-bold">+{diff} You</div>;
@@ -428,8 +431,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
           <div className="text-center">
             <div className="font-medium text-gray-700 mb-1">Health Advantage</div>
             {(() => {
-              const playerHealth = playerPieces.reduce((total, piece) => total + piece.stats.health, 0);
-              const opponentHealth = opponentPieces.reduce((total, piece) => total + piece.stats.health, 0);
+              const playerHealth = playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.health, 0);
+              const opponentHealth = opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.health, 0);
               const diff = playerHealth - opponentHealth;
               if (diff > 0) {
                 return <div className="text-green-600 font-bold">+{diff} You</div>;
@@ -443,8 +446,10 @@ export const BattleView: React.FC<BattleViewProps> = ({
           <div className="text-center">
             <div className="font-medium text-gray-700 mb-1">Speed Advantage</div>
             {(() => {
-              const playerSpeed = Math.round(playerPieces.reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, playerPieces.length));
-              const opponentSpeed = Math.round(opponentPieces.reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, opponentPieces.length));
+              const playerFish = playerPieces.filter(piece => piece.type === 'fish');
+              const opponentFish = opponentPieces.filter(piece => piece.type === 'fish');
+              const playerSpeed = Math.round(playerFish.reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, playerFish.length));
+              const opponentSpeed = Math.round(opponentFish.reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, opponentFish.length));
               const diff = playerSpeed - opponentSpeed;
               if (diff > 0) {
                 return <div className="text-green-600 font-bold">+{diff} You</div>;

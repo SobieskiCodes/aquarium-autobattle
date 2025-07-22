@@ -70,26 +70,26 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-red-600">
-                    {gameState.playerTank.pieces.reduce((total, piece) => total + piece.stats.attack, 0)}
+                    {gameState.playerTank.pieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0)}
                   </div>
                   <div className="text-gray-600">Total Attack</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">
-                    {gameState.playerTank.pieces.reduce((total, piece) => total + piece.stats.health, 0)}
+                    {gameState.playerTank.pieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.health, 0)}
                   </div>
                   <div className="text-gray-600">Total Health</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-600">
-                    {Math.round(gameState.playerTank.pieces.reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, gameState.playerTank.pieces.length))}
+                    {Math.round(gameState.playerTank.pieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, gameState.playerTank.pieces.filter(piece => piece.type === 'fish').length))}
                   </div>
                   <div className="text-gray-600">Avg Speed</div>
                 </div>
               </div>
               <div className="mt-3 text-xs text-gray-600">
                 <div className="flex justify-between">
-                  <span>Pieces: {gameState.playerTank.pieces.length}</span>
+                  <span>Total Pieces: {gameState.playerTank.pieces.length} | Fish: {gameState.playerTank.pieces.filter(piece => piece.type === 'fish').length}</span>
                   <span>Water Quality: {gameState.playerTank.waterQuality}/10</span>
                 </div>
               </div>
