@@ -81,7 +81,7 @@ function App() {
           onMovePiece={movePiece}
           onRerollShop={rerollShop}
           onStartBattle={startBattle}
-          onCompleteBattle={completeBattle}
+          onCompleteBattle={(result) => completeBattle(result)}
           onSelectPiece={selectPiece}
           onCancelPlacement={cancelPlacement}
         />

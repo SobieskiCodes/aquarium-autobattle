@@ -38,6 +38,8 @@ export interface BattleEvent {
   round: number;
 }
 
+export type BattleResult = 'player' | 'opponent' | 'draw';
+
 export interface GameState {
   phase: 'shop' | 'placement' | 'battle' | 'results';
   round: number;
