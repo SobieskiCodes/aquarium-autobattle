@@ -46,7 +46,7 @@ function App() {
               </div>
               <div className="flex items-center gap-2 bg-gradient-to-r from-green-400 to-emerald-400 text-white px-3 py-1 rounded-full font-bold">
                 <span>📊</span>
-                <span>{gameState.wins}W-{gameState.losses}L</span>
+                <span>{gameState.wins}W-{gameState.losses}L-0D</span>
                 {gameState.wins + gameState.losses > 0 && (
                   <span className="text-green-100 text-xs ml-1">
                     ({Math.round((gameState.wins / (gameState.wins + gameState.losses)) * 100)}%)
@@ -55,16 +55,12 @@ function App() {
               </div>
               <div className="flex items-center gap-2 bg-gradient-to-r from-red-400 to-pink-400 text-white px-3 py-1 rounded-full font-bold">
                 <span>🤖</span>
-                <span>{gameState.opponentWins}W-{gameState.opponentLosses}L</span>
+                <span>{gameState.opponentGold}g</span>
                 {gameState.opponentLossStreak > 0 && (
                   <span className="text-red-200 text-xs ml-1">
                     (L{gameState.opponentLossStreak})
                   </span>
                 )}
-              </div>
-              <div className="flex items-center gap-2 bg-gradient-to-r from-gray-400 to-slate-400 text-white px-3 py-1 rounded-full font-bold">
-                <span>💰</span>
-                <span>You: {gameState.gold}g | Opp: {gameState.opponentGold}g</span>
               </div>
               <div className="flex items-center gap-2 bg-gradient-to-r from-purple-400 to-pink-400 text-white px-3 py-1 rounded-full font-bold">
                 <span>🏆</span>
