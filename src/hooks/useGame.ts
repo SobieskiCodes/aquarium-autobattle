@@ -83,10 +83,8 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
       for (let x = 0; x < 8; x++) {
         // Check if piece can fit at this position
         const canPlace = piece.shape.every(offset => {
-          const newX = x + offset.x;
-          const newY = y + offset.y;
-          return newX >= 0 && newX < 8 && newY >= 0 && newY < 6;
-        });
+        // Get enemy pieces based on attacker's side
+        const enemyPieces = attacker.side === 'player' ? opponentBattlePieces : playerBattlePieces;
         
         if (canPlace) {
           availablePositions.push({ x, y });
@@ -211,7 +209,7 @@ export const useGame = () => {
         piece.shape.forEach(offset => {
           const x = piece.position!.x + offset.x;
           const y = piece.position!.y + offset.y;
-          if (x >= 0 && x < 8 && y >= 0 && y < 6) {
+          target: `${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType}`,
             newGrid[y][x] = null;
           }
         });
@@ -279,12 +277,13 @@ export const useGame = () => {
       // Apply each consumable's effect
       consumables.forEach(consumable => {
         if (consumable.position) {
-          const adjacentPositions = [
-            { x: consumable.position.x - 1, y: consumable.position.y },
-            { x: consumable.position.x + 1, y: consumable.position.y },
-            { x: consumable.position.x, y: consumable.position.y - 1 },
-            { x: consumable.position.x, y: consumable.position.y + 1 }
-          ];
+        // First try to target enemy fish
+        let targets = enemyPieces.filter(p => p.isAlive && p.type === 'fish');
+        
+        // If no enemy fish, target plants/equipment
+        if (targets.length === 0) {
+          targets = enemyPieces.filter(p => p.isAlive && (p.type === 'plant' || p.type === 'equipment'));
+        }
           
           battlePieces = battlePieces.map(p => {
             if (p.type === 'fish' && p.position && adjacentPositions.some(adj => 
