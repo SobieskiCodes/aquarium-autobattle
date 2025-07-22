@@ -128,17 +128,32 @@ export const BattleView: React.FC<BattleViewProps> = ({
       // Check if battle should end
       const alivePlayerFish = alivePlayerPieces.filter(p => p.type === 'fish');
       const aliveOpponentFish = aliveOpponentPieces.filter(p => p.type === 'fish');
+      const alivePlayerStructures = alivePlayerPieces.filter(p => p.type === 'plant' || p.type === 'equipment');
+      const aliveOpponentStructures = aliveOpponentPieces.filter(p => p.type === 'plant' || p.type === 'equipment');
       
-      if (alivePlayerFish.length === 0 || aliveOpponentFish.length === 0) {
+      // Battle ends when one side has no fish AND no structures, OR when both sides have no fish
+      const playerHasUnits = alivePlayerFish.length > 0 || alivePlayerStructures.length > 0;
+      const opponentHasUnits = aliveOpponentFish.length > 0 || aliveOpponentStructures.length > 0;
+      
+      if (!playerHasUnits || !opponentHasUnits || (alivePlayerFish.length === 0 && aliveOpponentFish.length === 0)) {
         clearInterval(battleInterval);
-        const playerWon = alivePlayerFish.length > 0;
+        
+        // Determine winner: if both have no fish, whoever has more total health wins
+        let playerWon;
+        if (alivePlayerFish.length === 0 && aliveOpponentFish.length === 0) {
+          const playerTotalHealth = alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0);
+          const opponentTotalHealth = aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0);
+          playerWon = playerTotalHealth > opponentTotalHealth;
+        } else {
+          playerWon = playerHasUnits && !opponentHasUnits;
+        }
         
         setBattleState(prev => ({
           ...prev,
           winner: playerWon ? 'player' : 'opponent',
           battleActive: false,
-          playerHealth: alivePlayerFish.reduce((total, p) => total + p.currentHealth, 0),
-          opponentHealth: aliveOpponentFish.reduce((total, p) => total + p.currentHealth, 0)
+          playerHealth: alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0),
+          opponentHealth: aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0)
         }));
         return;
       }
@@ -154,9 +169,17 @@ export const BattleView: React.FC<BattleViewProps> = ({
       allPieces.forEach((attacker, index) => {
         if (!attacker.isAlive) return;
         
-        const targets = attacker.side === 'player' ? 
+        // First try to target enemy fish, then plants/equipment if no fish remain
+        let targets = attacker.side === 'player' ? 
           opponentBattlePieces.filter(p => p.isAlive && p.type === 'fish') : 
           playerBattlePieces.filter(p => p.isAlive && p.type === 'fish');
+        
+        // If no enemy fish, target plants/equipment
+        if (targets.length === 0) {
+          targets = attacker.side === 'player' ? 
+            opponentBattlePieces.filter(p => p.isAlive && (p.type === 'plant' || p.type === 'equipment')) : 
+            playerBattlePieces.filter(p => p.isAlive && (p.type === 'plant' || p.type === 'equipment'));
+        }
           
         if (targets.length === 0) return;
         
@@ -176,10 +199,11 @@ export const BattleView: React.FC<BattleViewProps> = ({
         }
         
         // Create battle event
+        const targetType = target.type === 'fish' ? '' : ` (${target.type})`;
         events.push({
           type: 'attack',
           source: `${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}`,
-          target: `${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}`,
+          target: `${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType}`,
           value: damage,
           round
         });
@@ -188,7 +212,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
         addFloatingText(`-${damage}`, attacker.side === 'player' ? 'opponent' : 'player', 'text-red-500');
         
         if (!target.isAlive) {
-          addFloatingText('KO!', attacker.side === 'player' ? 'opponent' : 'player', 'text-red-700');
+          const koText = target.type === 'fish' ? 'KO!' : 'Destroyed!';
+          addFloatingText(koText, attacker.side === 'player' ? 'opponent' : 'player', 'text-red-700');
         }
       });
 
@@ -226,8 +251,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
       }
 
       // Update battle state
-      const currentPlayerHealth = alivePlayerPieces.filter(p => p.type === 'fish').reduce((total, p) => total + p.currentHealth, 0);
-      const currentOpponentHealth = aliveOpponentPieces.filter(p => p.type === 'fish').reduce((total, p) => total + p.currentHealth, 0);
+      const currentPlayerHealth = alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0);
+      const currentOpponentHealth = aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0);
 
       setBattleState(prev => ({
         ...prev,
