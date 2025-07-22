@@ -86,15 +86,16 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
           const newX = x + offset.x;
           const newY = y + offset.y;
           return newX >= 0 && newX < 8 && newY >= 0 && newY < 6;
+          
+          // Add KO event to battle log
+          const koMessage = target.type === 'fish' ? 'KO!' : 'Destroyed!';
+            type: 'attack',
+            source: `${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}`,
+            target: `${koMessage} ${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType}`,
+            value: 0,
+            round
+          });
         });
-        
-        if (canPlace) {
-          availablePositions.push({ x, y });
-        }
-      }
-    }
-    
-    if (availablePositions.length > 0) {
       const randomPos = availablePositions[Math.floor(Math.random() * availablePositions.length)];
       newPieces.push({
         ...piece,
