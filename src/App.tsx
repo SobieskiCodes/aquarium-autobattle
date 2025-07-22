@@ -44,21 +44,21 @@ function App() {
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 bg-gradient-to-r from-green-400 to-emerald-400 text-white px-3 py-1 rounded-full font-bold">
-                <span>📊</span>
-                <span>{gameState.wins}W-{gameState.losses}L-0D</span>
-                {gameState.wins + gameState.losses > 0 && (
-                  <span className="text-green-100 text-xs ml-1">
-                    ({Math.round((gameState.wins / (gameState.wins + gameState.losses)) * 100)}%)
-                  </span>
-                )}
-              </div>
               <div className="flex items-center gap-2 bg-gradient-to-r from-red-400 to-pink-400 text-white px-3 py-1 rounded-full font-bold">
                 <span>🤖</span>
                 <span>{gameState.opponentGold}g</span>
                 {gameState.opponentLossStreak > 0 && (
                   <span className="text-red-200 text-xs ml-1">
                     (L{gameState.opponentLossStreak})
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 bg-gradient-to-r from-green-400 to-emerald-400 text-white px-3 py-1 rounded-full font-bold">
+                <span>📊</span>
+                <span>{gameState.wins}W-{gameState.losses}L-0D</span>
+                {gameState.wins + gameState.losses > 0 && (
+                  <span className="text-green-100 text-xs ml-1">
+                    ({Math.round((gameState.wins / (gameState.wins + gameState.losses)) * 100)}%)
                   </span>
                 )}
               </div>
