@@ -39,12 +39,37 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
   let gold = opponentGold;
   const newPieces: GamePiece[] = [...currentPieces];
   
+  // AI reroll strategy - reroll if shop is bad and we have gold
+  let currentShop = shop;
+  const rerollCost = 2;
+  let rerollsUsed = 0;
+  const maxRerolls = Math.min(Math.floor(gold / 4), 2); // Don't spend more than half gold on rerolls
+  
+  while (rerollsUsed < maxRerolls && gold >= rerollCost) {
+    const affordablePieces = currentShop.filter(piece => piece && piece.cost <= (gold - rerollCost));
+    const goodPieces = affordablePieces.filter(piece => {
+      if (!piece) return false;
+      // Consider a piece "good" if it's rare+ or has good stats for cost
+      const efficiency = (piece.stats.attack + piece.stats.health) / piece.cost;
+      return piece.rarity === 'rare' || piece.rarity === 'epic' || piece.rarity === 'legendary' || efficiency > 2;
+    });
+    
+    // Reroll if less than 2 good pieces available
+    if (goodPieces.length < 2) {
+      currentShop = getRandomShop();
+      gold -= rerollCost;
+      rerollsUsed++;
+    } else {
+      break;
+    }
+  }
+  
   // AI strategy based on round
-  const maxPieces = Math.min(12, 3 + Math.floor(round * 1.5)); // More aggressive scaling, max 12
-  const targetSpending = Math.min(gold, round * 3 + 5); // Spend more as rounds progress
+  const maxPieces = Math.min(15, 4 + Math.floor(round * 1.2)); // Scale up to 15 pieces
+  const targetSpending = Math.min(gold, Math.max(round * 2, 8)); // Always spend at least 8 gold if available
   
   // Filter affordable pieces from shop
-  const affordablePieces = shop.filter(piece => piece && piece.cost <= gold);
+  const affordablePieces = currentShop.filter(piece => piece && piece.cost <= gold);
   
   // AI preferences (weighted by round)
   const getAIPriority = (piece: GamePiece) => {
@@ -56,16 +81,25 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
       priority += piece.stats.attack + piece.stats.health; // Basic stats
     }
     // Mid game: prefer synergies and utility
-    else if (round <= 6) {
+    else if (round <= 8) {
       priority += piece.stats.attack * 2 + piece.stats.health; // Favor attack
       if (piece.tags.includes('schooling')) priority += 5;
       if (piece.type === 'plant' || piece.type === 'equipment') priority += 3;
+      if (piece.rarity === 'rare') priority += 4;
     }
     // Late game: prefer high-value pieces
     else {
       priority += piece.stats.attack * 3 + piece.stats.health * 2;
-      if (piece.rarity === 'rare' || piece.rarity === 'epic') priority += 8;
+      if (piece.rarity === 'rare') priority += 6;
+      if (piece.rarity === 'epic' || piece.rarity === 'legendary') priority += 10;
+      if (piece.cost >= 6) priority += 3; // Prefer expensive pieces late game
     }
+    
+    // Bonus for synergies with existing pieces
+    const existingTags = newPieces.flatMap(p => p.tags);
+    piece.tags.forEach(tag => {
+      if (existingTags.includes(tag)) priority += 2;
+    });
     
     return priority;
   };
@@ -73,9 +107,10 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
   // Sort by AI priority
   affordablePieces.sort((a, b) => getAIPriority(b!) - getAIPriority(a!));
   
-  // Buy pieces until we hit our limits
+  // Buy pieces until we hit our limits or target spending
+  let totalSpent = rerollsUsed * rerollCost;
   for (const piece of affordablePieces) {
-    if (!piece || gold < piece.cost || newPieces.length >= maxPieces) continue;
+    if (!piece || gold < piece.cost || newPieces.length >= maxPieces || totalSpent >= targetSpending) continue;
     
     // Find available positions for this piece
     const availablePositions: Position[] = [];
@@ -107,6 +142,7 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
         position: randomPos
       });
       gold -= piece.cost;
+      totalSpent += piece.cost;
     }
   }
   
@@ -136,6 +172,13 @@ export const useGame = () => {
     setGameState(prev => {
       if (prev.gold < piece.cost) return prev;
       
+      // If we already have a selected piece, place it in inventory first
+      let updatedPieces = prev.playerTank.pieces;
+      if (prev.selectedPiece && !prev.selectedPiece.position) {
+        // Add the previously selected piece to inventory without position
+        updatedPieces = [...prev.playerTank.pieces, prev.selectedPiece];
+      }
+      
       // Remove the purchased piece from shop
       const newShop = prev.shop.map(shopPiece => 
         shopPiece?.id === piece.id ? null : shopPiece
@@ -145,6 +188,10 @@ export const useGame = () => {
         ...prev,
         gold: prev.gold - piece.cost,
         shop: newShop,
+        playerTank: {
+          ...prev.playerTank,
+          pieces: updatedPieces
+        },
         selectedPiece: piece,
         phase: 'placement' as const
       };
