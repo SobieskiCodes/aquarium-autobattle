@@ -467,9 +467,14 @@ export const useGame = () => {
       gold: prev.selectedPiece && !prev.selectedPiece.position ? prev.gold + prev.selectedPiece.cost : prev.gold,
       // Put the piece back in the shop if it was a new purchase
       shop: prev.selectedPiece && !prev.selectedPiece.position 
-        ? prev.shop.map((shopPiece, index) => 
-            shopPiece === null && index < 5 ? prev.selectedPiece : shopPiece
-          )
+        ? (() => {
+            const shopCopy = [...prev.shop];
+            const firstEmptyIndex = shopCopy.findIndex(piece => piece === null);
+            if (firstEmptyIndex !== -1) {
+              shopCopy[firstEmptyIndex] = prev.selectedPiece;
+            }
+            return shopCopy;
+          })()
         : prev.shop
     }));
   }, []);
