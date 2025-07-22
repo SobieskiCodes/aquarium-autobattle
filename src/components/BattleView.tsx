@@ -64,7 +64,10 @@ export const BattleView: React.FC<BattleViewProps> = ({
   }, [playerPieces, opponentPieces]);
 
   const calculateTotalHealth = (pieces: GamePiece[]) => {
-    return pieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.health, 0);
+    // Include fish, plants, and equipment health in the total pool
+    return pieces.filter(piece => 
+      piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
+    ).reduce((total, piece) => total + piece.stats.health, 0);
   };
 
   const calculateTotalAttack = (pieces: GamePiece[], waterQuality: number) => {
@@ -175,8 +178,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
         // Create battle event
         events.push({
           type: 'attack',
-          source: attacker.name,
-          target: target.name,
+          source: `${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}`,
+          target: `${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}`,
           value: damage,
           round
         });
@@ -199,7 +202,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
         events.push({
           type: 'status',
           source: 'Poor Water Quality',
-          target: 'Your Tank',
+          target: 'Your Fish',
           value: 0,
           round
         });
@@ -213,9 +216,9 @@ export const BattleView: React.FC<BattleViewProps> = ({
           if (piece.currentHealth <= 0) piece.isAlive = false;
         });
         events.push({
-          type: 'attack',
+          type: 'status',
           source: 'Poor Water Quality',
-          target: 'Opponent Tank',
+          target: 'Enemy Fish',
           value: 0,
           round
         });
@@ -250,7 +253,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
         events.push({
           type: 'status',
           source: 'Time Limit',
-          target: 'Battle',
+          target: 'Battle Ended',
           value: 0,
           round
         });
@@ -369,9 +372,11 @@ export const BattleView: React.FC<BattleViewProps> = ({
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.health, 0)}
+                  {playerPieces.filter(piece => 
+                    piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
+                  ).reduce((total, piece) => total + piece.stats.health, 0)}
                 </div>
-                <div className="text-gray-600">Total Health</div>
+                <div className="text-gray-600">Tank Health</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
@@ -382,7 +387,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
             </div>
             <div className="mt-3 text-xs text-gray-600">
               <div className="flex justify-between mb-1">
-                <span>Fish: {playerPieces.filter(piece => piece.type === 'fish').length}</span>
+                <span>Fish: {playerPieces.filter(piece => piece.type === 'fish').length} | Plants/Equipment: {playerPieces.filter(piece => piece.type === 'plant' || piece.type === 'equipment').length}</span>
                 <span className={`font-bold ${
                   playerWaterQuality < 3 ? 'text-red-600' : 
                   playerWaterQuality > 7 ? 'text-green-600' : 
@@ -421,9 +426,11 @@ export const BattleView: React.FC<BattleViewProps> = ({
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.health, 0)}
+                  {opponentPieces.filter(piece => 
+                    piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
+                  ).reduce((total, piece) => total + piece.stats.health, 0)}
                 </div>
-                <div className="text-gray-600">Total Health</div>
+                <div className="text-gray-600">Tank Health</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
@@ -434,7 +441,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
             </div>
             <div className="mt-3 text-xs text-gray-600">
               <div className="flex justify-between mb-1">
-                <span>Fish: {opponentPieces.filter(piece => piece.type === 'fish').length}</span>
+                <span>Fish: {opponentPieces.filter(piece => piece.type === 'fish').length} | Plants/Equipment: {opponentPieces.filter(piece => piece.type === 'plant' || piece.type === 'equipment').length}</span>
                 <span className={`font-bold ${
                   opponentWaterQuality < 3 ? 'text-red-600' : 
                   opponentWaterQuality > 7 ? 'text-green-600' : 
@@ -477,8 +484,12 @@ export const BattleView: React.FC<BattleViewProps> = ({
           <div className="text-center">
             <div className="font-medium text-gray-700 mb-1">Health Advantage</div>
             {(() => {
-              const playerHealth = playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.health, 0);
-              const opponentHealth = opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.health, 0);
+              const playerHealth = playerPieces.filter(piece => 
+                piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
+              ).reduce((total, piece) => total + piece.stats.health, 0);
+              const opponentHealth = opponentPieces.filter(piece => 
+                piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
+              ).reduce((total, piece) => total + piece.stats.health, 0);
               const diff = playerHealth - opponentHealth;
               if (diff > 0) {
                 return <div className="text-green-600 font-bold">+{diff} You</div>;
