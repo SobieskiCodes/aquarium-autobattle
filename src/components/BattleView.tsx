@@ -665,6 +665,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
             pieces={playerPieces}
             isInteractive={false}
             waterQuality={playerWaterQuality}
+            isBattlePhase={true}
           />
         </div>
 
@@ -674,6 +675,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
             pieces={opponentPieces}
             isInteractive={false}
             waterQuality={opponentWaterQuality}
+            isBattlePhase={true}
           />
         </div>
       </div>

@@ -13,6 +13,7 @@ interface TankGridProps {
   onDragEnd?: () => void;
   currentDraggedPiece?: GamePiece | null;
   hoveredCardPiece?: GamePiece | null;
+  isBattlePhase?: boolean;
 }
 
 export const TankGrid: React.FC<TankGridProps> = ({
@@ -24,7 +25,8 @@ export const TankGrid: React.FC<TankGridProps> = ({
   onDragStart,
   onDragEnd,
   currentDraggedPiece,
-  hoveredCardPiece
+  hoveredCardPiece,
+  isBattlePhase = false
 }) => {
   const GRID_WIDTH = 8;
   const GRID_HEIGHT = 6;
@@ -206,7 +208,9 @@ export const TankGrid: React.FC<TankGridProps> = ({
         >
           <div className="text-sm font-bold mb-1">{hoveredPiece.name}</div>
           {(() => {
-            const bonuses = calculatePieceBonuses(hoveredPiece, pieces);
+            // In battle phase, pieces already have consumed effects applied
+            // so don't recalculate bonuses from consumables that are no longer there
+            const bonuses = isBattlePhase ? [] : calculatePieceBonuses(hoveredPiece, pieces);
             
             // Get the original stats before any enhancements
             const enhancedPiece = hoveredPiece as any; // EnhancedGamePiece type
