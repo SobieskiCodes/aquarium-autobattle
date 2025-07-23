@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { GamePiece, BattleEvent } from '../types/game';
 import { TankGrid } from './TankGrid';
-import { Swords, Trophy, Clock, ScrollText } from 'lucide-react';
+import { Play, Pause, SkipForward, Trophy } from 'lucide-react';
 
 interface BattleViewProps {
   playerPieces: GamePiece[];
   opponentPieces: GamePiece[];
   playerWaterQuality: number;
   opponentWaterQuality: number;
+  currentRound: number;
   onBattleComplete: (playerWon: boolean) => void;
 }
 
@@ -27,6 +28,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
   opponentPieces,
   playerWaterQuality,
   opponentWaterQuality,
+  currentRound,
   onBattleComplete
 }) => {
   const [battleState, setBattleState] = useState<BattleState>({

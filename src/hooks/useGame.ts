@@ -586,6 +586,9 @@ export const useGame = () => {
 
   const completeBattle = useCallback((result: 'player' | 'opponent' | 'draw') => {
     setGameState(prev => {
+      // Check if this is the final round (15)
+      const isFinalRound = prev.round >= 15;
+      
       const isDraw = result === 'draw';
       const playerWon = result === 'player';
       
@@ -623,10 +626,17 @@ export const useGame = () => {
         opponentGoldReward += lossBonus;
       }
       
+      // If this was the final round, we need to handle game completion
+      if (isFinalRound) {
+        // For now, we'll continue the game but this is where we'd handle
+        // game completion, stats tracking, new opponent, etc.
+        // TODO: Add game completion logic here
+      }
+      
       return {
         ...prev,
         phase: 'shop' as const,
-        round: prev.round + 1,
+        round: isFinalRound ? 1 : prev.round + 1, // Reset to round 1 after 15 rounds for now
         gold: prev.gold + goldReward,
         lossStreak: playerLossStreak,
         opponentLossStreak: opponentLossStreak,

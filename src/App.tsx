@@ -68,7 +68,7 @@ function App() {
               </div>
               <div className="flex items-center gap-2 bg-gradient-to-r from-purple-400 to-pink-400 text-white px-3 py-1 rounded-full font-bold">
                 <span>🏆</span>
-                <span>Round {gameState.round}</span>
+                <span>Round {gameState.round}/15</span>
               </div>
             </div>
           </div>
