@@ -257,10 +257,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
         
         // Add water quality modification
         if (waterQuality < 3) {
-          const originalDamage = Math.floor(baseDamage / 0.7);
           waterQualityNote = ` → ${damage} (-30% water quality)`;
         } else if (waterQuality > 7) {
-          const originalDamage = Math.floor(baseDamage / 1.2);
           waterQualityNote = ` → ${damage} (+20% water quality)`;
         } else if (damage !== baseDamage) {
           waterQualityNote = ` → ${damage}`;
