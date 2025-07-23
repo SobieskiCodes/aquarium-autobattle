@@ -258,11 +258,20 @@ export const BattleView: React.FC<BattleViewProps> = ({
         
         setBattleState(prev => ({
           ...prev,
-          winner: isDraw ? 'draw' : (playerWon ? 'player' : 'opponent'),
+          winner: isDraw ? null : (playerWon ? 'player' : 'opponent'),
           battleActive: false,
           playerHealth: alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0),
           opponentHealth: aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0)
         }));
+        
+        // Call onBattleComplete with the correct result
+        setTimeout(() => {
+          if (isDraw) {
+            onBattleComplete('draw');
+          } else {
+            onBattleComplete(playerWon ? 'player' : 'opponent');
+          }
+        }, 100);
         return;
       }
       
@@ -419,7 +428,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
         
         setBattleState(prev => ({
           ...prev,
-          winner: isDraw ? 'draw' : (playerWon ? 'player' : 'opponent'),
+          winner: isDraw ? null : (playerWon ? 'player' : 'opponent'),
           battleActive: false
         }));
 
@@ -435,6 +444,15 @@ export const BattleView: React.FC<BattleViewProps> = ({
           ...prev,
           battleEvents: [...events]
         }));
+        
+        // Call onBattleComplete with the correct result
+        setTimeout(() => {
+          if (isDraw) {
+            onBattleComplete('draw');
+          } else {
+            onBattleComplete(playerWon ? 'player' : 'opponent');
+          }
+        }, 100);
       }
     }, 1500); // 1.5 seconds per round
   };
@@ -471,14 +489,19 @@ export const BattleView: React.FC<BattleViewProps> = ({
               <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-lg">
                 <Trophy size={20} />
                 <span className="font-bold">
-                  {battleState.winner === 'player' ? 'Victory!' : 
-                   battleState.winner === 'draw' ? 'Draw!' : 'Defeat!'}
+                  {battleState.winner === 'player' ? 'Victory!' : 'Defeat!'}
                 </span>
               </div>
             )}
-            {battleState.winner && (
+            {!battleState.battleActive && (
               <button
-                onClick={() => onBattleComplete(battleState.winner === 'player')}
+                onClick={() => {
+                  if (battleState.winner === null) {
+                    onBattleComplete('draw');
+                  } else {
+                    onBattleComplete(battleState.winner);
+                  }
+                }}
                 className="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-100 transition-colors ml-4"
               >
                 Continue to Next Round
@@ -600,46 +623,50 @@ export const BattleView: React.FC<BattleViewProps> = ({
         
         <div className="grid grid-cols-2 gap-6">
           {/* Player Stats */}
-          <div className="bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg border border-blue-200 p-4">
+          <div className="bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg border border-blue-200 p-3">
             <h4 className="font-bold text-blue-900 mb-3 text-center">Your Tank</h4>
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-3 gap-3 text-sm">
               <div className="text-center">
+                <div className="font-medium text-gray-700 mb-2">Attack</div>
                 {(() => {
                   const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
                   const baseAttack = playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
                   const totalAttack = enhancedPlayerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
                   const bonusAttack = totalAttack - baseAttack;
                   
-                  // Calculate water quality modifier
-                  let waterQualityMultiplier = 1;
-                  let waterQualityText = '';
+                  // Calculate final attack with water quality
+                  let finalAttack = totalAttack;
+                  let waterQualityBonus = 0;
                   if (playerWaterQuality < 3) {
-                    waterQualityMultiplier = 0.7;
-                    waterQualityText = ' (-30%)';
+                    finalAttack = Math.max(1, Math.floor(totalAttack * 0.7));
+                    waterQualityBonus = finalAttack - totalAttack;
                   } else if (playerWaterQuality > 7) {
-                    waterQualityMultiplier = 1.2;
-                    waterQualityText = ' (+20%)';
+                    finalAttack = Math.max(1, Math.floor(totalAttack * 1.2));
+                    waterQualityBonus = finalAttack - totalAttack;
                   }
                   
-                  const finalAttack = Math.max(1, Math.floor(totalAttack * waterQualityMultiplier));
-                  
                   return (
-                    <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
-                      <span>{finalAttack}</span>
-                      {bonusAttack > 0 && <span className="text-green-500">(+{bonusAttack})</span>}
-                      {waterQualityText && (
-                        <span className={`text-xs ml-1 ${
-                          playerWaterQuality < 3 ? 'text-red-500' : 'text-green-500'
-                        }`}>
-                          {waterQualityText}
-                        </span>
-                      )}
+                    <div className="space-y-1">
+                      <div className="text-lg font-bold text-gray-700">
+                        Base: {baseAttack}
+                      </div>
+                      <div className="text-lg font-bold text-green-600">
+                        Bonus: {bonusAttack > 0 ? `+${bonusAttack}` : '0'}
+                      </div>
+                      <div className="text-xl font-bold text-red-600">
+                        Total: {finalAttack}
+                        {waterQualityBonus !== 0 && (
+                          <div className={`text-xs ${waterQualityBonus > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            ({waterQualityBonus > 0 ? '+' : ''}{waterQualityBonus} water)
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })()}
-                <div className="text-gray-600">Total Attack</div>
               </div>
               <div className="text-center">
+                <div className="font-medium text-gray-700 mb-2">Health</div>
                 {(() => {
                   const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
                   const baseHealth = playerPieces.filter(piece => 
@@ -651,37 +678,56 @@ export const BattleView: React.FC<BattleViewProps> = ({
                   const bonusHealth = totalHealth - baseHealth;
                   
                   return (
-                    <div className="text-2xl font-bold text-green-600 flex items-center justify-center gap-1">
-                      <span>{baseHealth}</span>
-                      {bonusHealth > 0 && <span className="text-green-500">(+{bonusHealth})</span>}
+                    <div className="space-y-1">
+                      <div className="text-lg font-bold text-gray-700">
+                        Base: {baseHealth}
+                      </div>
+                      <div className="text-lg font-bold text-green-600">
+                        Bonus: {bonusHealth > 0 ? `+${bonusHealth}` : '0'}
+                      </div>
+                      <div className="text-xl font-bold text-green-600">
+                        Total: {totalHealth}
+                      </div>
                     </div>
                   );
                 })()}
-                <div className="text-gray-600">Tank Health</div>
               </div>
               <div className="text-center">
+                <div className="font-medium text-gray-700 mb-2">Speed</div>
                 {(() => {
                   const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
                   const playerFish = playerPieces.filter(piece => piece.type === 'fish');
                   const enhancedPlayerFish = enhancedPlayerPieces.filter(piece => piece.type === 'fish');
                   
-                  if (playerFish.length === 0) return <div className="text-2xl font-bold text-blue-600">0</div>;
+                  if (playerFish.length === 0) return (
+                    <div className="space-y-1">
+                      <div className="text-lg font-bold text-gray-700">Base: 0</div>
+                      <div className="text-lg font-bold text-green-600">Bonus: 0</div>
+                      <div className="text-xl font-bold text-blue-600">Total: 0</div>
+                    </div>
+                  );
                   
                   const baseSpeed = Math.round(playerFish.reduce((total, piece) => total + piece.stats.speed, 0) / playerFish.length);
                   const totalSpeed = Math.round(enhancedPlayerFish.reduce((total, piece) => total + piece.stats.speed, 0) / enhancedPlayerFish.length);
                   const bonusSpeed = totalSpeed - baseSpeed;
                   
                   return (
-                    <div className="text-2xl font-bold text-blue-600 flex items-center justify-center gap-1">
-                      <span>{baseSpeed}</span>
-                      {bonusSpeed > 0 && <span className="text-green-500">(+{bonusSpeed})</span>}
+                    <div className="space-y-1">
+                      <div className="text-lg font-bold text-gray-700">
+                        Base: {baseSpeed}
+                      </div>
+                      <div className="text-lg font-bold text-green-600">
+                        Bonus: {bonusSpeed > 0 ? `+${bonusSpeed}` : '0'}
+                      </div>
+                      <div className="text-xl font-bold text-blue-600">
+                        Total: {totalSpeed}
+                      </div>
                     </div>
                   );
                 })()}
-                <div className="text-gray-600">Avg Speed</div>
               </div>
             </div>
-            <div className="mt-3 text-xs text-gray-600">
+            <div className="mt-2 text-xs text-gray-600">
               <div className="flex justify-between mb-1">
                 <span>Fish: {playerPieces.filter(piece => piece.type === 'fish').length} | Plants/Equipment: {playerPieces.filter(piece => piece.type === 'plant' || piece.type === 'equipment').length}</span>
                 <span className={`font-bold ${
@@ -706,46 +752,50 @@ export const BattleView: React.FC<BattleViewProps> = ({
           </div>
 
           {/* Opponent Stats */}
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-200 p-4">
+          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-200 p-3">
             <h4 className="font-bold text-red-900 mb-3 text-center">Opponent Tank</h4>
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-3 gap-3 text-sm">
               <div className="text-center">
+                <div className="font-medium text-gray-700 mb-2">Attack</div>
                 {(() => {
                   const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
                   const baseAttack = opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
                   const totalAttack = enhancedOpponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
                   const bonusAttack = totalAttack - baseAttack;
                   
-                  // Calculate water quality modifier
-                  let waterQualityMultiplier = 1;
-                  let waterQualityText = '';
+                  // Calculate final attack with water quality
+                  let finalAttack = totalAttack;
+                  let waterQualityBonus = 0;
                   if (opponentWaterQuality < 3) {
-                    waterQualityMultiplier = 0.7;
-                    waterQualityText = ' (-30%)';
+                    finalAttack = Math.max(1, Math.floor(totalAttack * 0.7));
+                    waterQualityBonus = finalAttack - totalAttack;
                   } else if (opponentWaterQuality > 7) {
-                    waterQualityMultiplier = 1.2;
-                    waterQualityText = ' (+20%)';
+                    finalAttack = Math.max(1, Math.floor(totalAttack * 1.2));
+                    waterQualityBonus = finalAttack - totalAttack;
                   }
                   
-                  const finalAttack = Math.max(1, Math.floor(totalAttack * waterQualityMultiplier));
-                  
                   return (
-                    <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
-                      <span>{finalAttack}</span>
-                      {bonusAttack > 0 && <span className="text-green-500">(+{bonusAttack})</span>}
-                      {waterQualityText && (
-                        <span className={`text-xs ml-1 ${
-                          opponentWaterQuality < 3 ? 'text-red-500' : 'text-green-500'
-                        }`}>
-                          {waterQualityText}
-                        </span>
-                      )}
+                    <div className="space-y-1">
+                      <div className="text-lg font-bold text-gray-700">
+                        Base: {baseAttack}
+                      </div>
+                      <div className="text-lg font-bold text-green-600">
+                        Bonus: {bonusAttack > 0 ? `+${bonusAttack}` : '0'}
+                      </div>
+                      <div className="text-xl font-bold text-red-600">
+                        Total: {finalAttack}
+                        {waterQualityBonus !== 0 && (
+                          <div className={`text-xs ${waterQualityBonus > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            ({waterQualityBonus > 0 ? '+' : ''}{waterQualityBonus} water)
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })()}
-                <div className="text-gray-600">Total Attack</div>
               </div>
               <div className="text-center">
+                <div className="font-medium text-gray-700 mb-2">Health</div>
                 {(() => {
                   const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
                   const baseHealth = opponentPieces.filter(piece => 
@@ -757,37 +807,56 @@ export const BattleView: React.FC<BattleViewProps> = ({
                   const bonusHealth = totalHealth - baseHealth;
                   
                   return (
-                    <div className="text-2xl font-bold text-green-600 flex items-center justify-center gap-1">
-                      <span>{baseHealth}</span>
-                      {bonusHealth > 0 && <span className="text-green-500">(+{bonusHealth})</span>}
+                    <div className="space-y-1">
+                      <div className="text-lg font-bold text-gray-700">
+                        Base: {baseHealth}
+                      </div>
+                      <div className="text-lg font-bold text-green-600">
+                        Bonus: {bonusHealth > 0 ? `+${bonusHealth}` : '0'}
+                      </div>
+                      <div className="text-xl font-bold text-green-600">
+                        Total: {totalHealth}
+                      </div>
                     </div>
                   );
                 })()}
-                <div className="text-gray-600">Tank Health</div>
               </div>
               <div className="text-center">
+                <div className="font-medium text-gray-700 mb-2">Speed</div>
                 {(() => {
                   const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
                   const opponentFish = opponentPieces.filter(piece => piece.type === 'fish');
                   const enhancedOpponentFish = enhancedOpponentPieces.filter(piece => piece.type === 'fish');
                   
-                  if (opponentFish.length === 0) return <div className="text-2xl font-bold text-blue-600">0</div>;
+                  if (opponentFish.length === 0) return (
+                    <div className="space-y-1">
+                      <div className="text-lg font-bold text-gray-700">Base: 0</div>
+                      <div className="text-lg font-bold text-green-600">Bonus: 0</div>
+                      <div className="text-xl font-bold text-blue-600">Total: 0</div>
+                    </div>
+                  );
                   
                   const baseSpeed = Math.round(opponentFish.reduce((total, piece) => total + piece.stats.speed, 0) / opponentFish.length);
                   const totalSpeed = Math.round(enhancedOpponentFish.reduce((total, piece) => total + piece.stats.speed, 0) / enhancedOpponentFish.length);
                   const bonusSpeed = totalSpeed - baseSpeed;
                   
                   return (
-                    <div className="text-2xl font-bold text-blue-600 flex items-center justify-center gap-1">
-                      <span>{baseSpeed}</span>
-                      {bonusSpeed > 0 && <span className="text-green-500">(+{bonusSpeed})</span>}
+                    <div className="space-y-1">
+                      <div className="text-lg font-bold text-gray-700">
+                        Base: {baseSpeed}
+                      </div>
+                      <div className="text-lg font-bold text-green-600">
+                        Bonus: {bonusSpeed > 0 ? `+${bonusSpeed}` : '0'}
+                      </div>
+                      <div className="text-xl font-bold text-blue-600">
+                        Total: {totalSpeed}
+                      </div>
                     </div>
                   );
                 })()}
-                <div className="text-gray-600">Avg Speed</div>
               </div>
             </div>
-            <div className="mt-3 text-xs text-gray-600">
+            <div className="mt-2 text-xs text-gray-600">
               <div className="flex justify-between mb-1">
                 <span>Fish: {opponentPieces.filter(piece => piece.type === 'fish').length} | Plants/Equipment: {opponentPieces.filter(piece => piece.type === 'plant' || piece.type === 'equipment').length}</span>
                 <span className={`font-bold ${
@@ -937,7 +1006,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
             {battleState.battleEvents.map((event, index) => (
               <div 
                 key={index} 
-                className={`text-sm p-2 rounded ${(() => {
+                className={`text-sm p-2 rounded border-l-4 ${(() => {
                   // Color code based on what happened to whom
                   const isPlayerAction = event.source.includes('Your');
                   const isEnemyTarget = event.target?.includes('Enemy');
@@ -945,25 +1014,25 @@ export const BattleView: React.FC<BattleViewProps> = ({
                   const isKO = event.target?.includes('KO!') || event.target?.includes('Destroyed!');
                   
                   if (event.type === 'status') {
-                    return 'bg-purple-50 border-l-4 border-purple-400';
+                    return 'bg-purple-50 border-purple-400';
                   }
                   
                   // Good events (your fish attacking/killing enemies)
                   if (isPlayerAction && isEnemyTarget) {
                     return isKO 
-                      ? 'bg-green-100 border-l-4 border-green-500 text-green-800' 
-                      : 'bg-green-50 border-l-4 border-green-400 text-green-700';
+                      ? 'bg-green-100 border-green-500 text-green-800' 
+                      : 'bg-green-50 border-green-400 text-green-700';
                   }
                   
                   // Bad events (enemy fish attacking/killing yours)
                   if (!isPlayerAction && isPlayerTarget) {
                     return isKO 
-                      ? 'bg-red-100 border-l-4 border-red-500 text-red-800' 
-                      : 'bg-red-50 border-l-4 border-red-400 text-red-700';
+                      ? 'bg-red-100 border-red-500 text-red-800' 
+                      : 'bg-red-50 border-red-400 text-red-700';
                   }
                   
                   // Neutral/default
-                  return 'bg-gray-50 border-l-4 border-gray-400';
+                  return 'bg-gray-50 border-gray-400';
                 })()}`}
               >
                 <div>
@@ -984,16 +1053,16 @@ export const BattleView: React.FC<BattleViewProps> = ({
               </div>
             ))}
             
-            {battleState.winner && (
+            {!battleState.battleActive && (
               <div className={`text-sm p-3 rounded font-bold text-center ${
-                battleState.winner === 'draw'
+                battleState.winner === null
                   ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
                   : battleState.winner === 'player' 
                   ? 'bg-green-100 text-green-800 border border-green-300' 
                   : 'bg-red-100 text-red-800 border border-red-300'
               }`}>
-                {battleState.winner === 'draw' ? '🤝 DRAW!' : '🏆'} 
-                {battleState.winner === 'draw' ? ' Both tanks fought valiantly!' :
+                {battleState.winner === null ? '🤝 DRAW!' : '🏆'} 
+                {battleState.winner === null ? ' Both tanks fought valiantly!' :
                  battleState.winner === 'player' ? ' VICTORY! Your tank dominated the battlefield!' : 
                  ' DEFEAT! Better luck next time!'}
               </div>
