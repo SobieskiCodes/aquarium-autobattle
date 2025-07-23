@@ -231,16 +231,14 @@ export const TankGrid: React.FC<TankGridProps> = ({
         >
           <div className="text-sm font-bold mb-1">{hoveredPiece.name}</div>
           {(() => {
-            // Always get adjacency and ability bonuses (not from consumed items)
+            // Get adjacency and ability bonuses
             const allBonuses = calculatePieceBonuses(hoveredPiece, pieces);
-            const bonuses = isBattlePhase ? 
-              allBonuses.filter(b => b.type !== 'consumable') : // In battle, consumables are already applied
-              allBonuses.filter(b => b.type !== 'consumable'); // In shop, show adjacency bonuses but handle consumables separately
+            const bonuses = allBonuses.filter(b => b.type !== 'consumable'); // Filter out consumable bonuses since we'll show them separately
             
-            // Always show consumed effects if they exist
+            // Show consumed effects if they exist (with actual item names)
             const enhancedPiece = hoveredPiece as any; // EnhancedGamePiece type
             if (enhancedPiece.consumedEffects) {
-              // Group consumed effects by consumable name and show them clearly
+              // Group consumed effects by consumable name
               const consumedGroups = new Map<string, number>();
               
               enhancedPiece.consumedEffects.forEach(effect => {
@@ -248,12 +246,12 @@ export const TankGrid: React.FC<TankGridProps> = ({
                 consumedGroups.set(effect.consumableName, count + 1);
               });
               
-              // Add each consumed item type as a separate bonus line
+              // Add each consumed item type as a separate bonus line with actual names
               consumedGroups.forEach((count, consumableName) => {
                 bonuses.push({ 
                   source: consumableName, 
-                  effect: `×${count}`, 
-                  color: 'text-orange-600', 
+                  effect: `×${count} (consumed)`, 
+                  color: 'text-orange-500', 
                   type: 'consumable' 
                 });
               });
@@ -345,7 +343,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
                   </div>
                   {consumableBonuses.map((bonus, index) => (
                     <div key={index} className={bonus.color}>
-                      • {bonus.effect}
+                      • {bonus.source} {bonus.effect}
                     </div>
                   ))}
                 </div>
