@@ -135,7 +135,7 @@ export const PIECE_LIBRARY: GamePiece[] = [
     cost: 2,
     abilities: ['+1 ATK & +1 HP to adjacent fish this battle'],
     attackBonus: 1,
-    healthBonus: 2
+    healthBonus: 1
   },
   {
     id: 'blood-worm',
