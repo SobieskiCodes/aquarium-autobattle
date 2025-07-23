@@ -115,7 +115,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             `}
           >
             <Play size={16} />
-            {gameState.round === 15 ? 'Final Battle!' : 'Battle!'}
+            {gameState.round === 15 ? 'Final Battle Preparation!' : 'Battle Preparation Screen'}
           </button>
         </div>
       </div>
