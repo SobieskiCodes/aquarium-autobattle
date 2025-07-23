@@ -50,11 +50,11 @@ export const BattleView: React.FC<BattleViewProps> = ({
     side: 'player' | 'opponent';
   }>>([]);
 
-  // Apply bonuses to pieces for battle calculations
-  const enhancedPlayerPieces = applyBonusesToPieces(playerPieces, playerPieces);
-  const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces, opponentPieces);
+  // Use pieces as they come from game state (already enhanced)
+  const enhancedPlayerPieces = playerPieces;
+  const enhancedOpponentPieces = opponentPieces;
 
-  // Analyze both tanks
+  // Analyze both tanks (analyzeTank will apply bonuses internally)
   const playerAnalysis = analyzeTank(playerPieces);
   const opponentAnalysis = analyzeTank(opponentPieces);
 
@@ -100,9 +100,9 @@ export const BattleView: React.FC<BattleViewProps> = ({
   };
 
   const simulateBattle = () => {
-    // Apply bonuses first, then create battle copies
-    const enhancedPlayerPieces = applyBonusesToPieces(playerPieces, playerPieces);
-    const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces, opponentPieces);
+    // Use pieces as they come from game state (already enhanced)
+    const enhancedPlayerPieces = playerPieces;
+    const enhancedOpponentPieces = opponentPieces;
     
     let playerBattlePieces = enhancedPlayerPieces.map(piece => ({
       ...piece,
