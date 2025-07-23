@@ -10,7 +10,7 @@ function App() {
     placePiece,
     movePiece,
     rerollShop,
-    startBattle,
+    enterBattlePrep,
     completeBattle,
     selectPiece,
     cancelPlacement,
@@ -91,7 +91,7 @@ function App() {
           onPlacePiece={placePiece}
           onMovePiece={movePiece}
           onRerollShop={rerollShop}
-          onStartBattle={startBattle}
+          onEnterBattlePrep={enterBattlePrep}
           onCompleteBattle={(result) => completeBattle(result)}
           onSelectPiece={selectPiece}
           onCancelPlacement={cancelPlacement}

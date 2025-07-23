@@ -14,7 +14,7 @@ interface GamePhaseProps {
   onPlacePiece: (piece: any, position: any) => void;
   onMovePiece: (piece: any, position: any) => void;
   onRerollShop: () => void;
-  onStartBattle: () => void;
+  onEnterBattlePrep: () => void;
   onCompleteBattle: (result: 'player' | 'opponent' | 'draw') => void;
   onSelectPiece: (piece: any) => void;
   onCancelPlacement: () => void;
@@ -29,7 +29,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   onPlacePiece,
   onMovePiece,
   onRerollShop,
-  onStartBattle,
+  onEnterBattlePrep,
   onCompleteBattle,
   onSelectPiece,
   onCancelPlacement,
@@ -104,7 +104,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             </div>
           )}
           <button
-            onClick={onStartBattle}
+            onClick={onEnterBattlePrep}
             disabled={gameState.playerTank.pieces.length === 0}
             className={`
               flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all

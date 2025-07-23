@@ -886,7 +886,7 @@ export const useGame = () => {
     placePiece,
     movePiece,
     rerollShop,
-    startBattle,
+    enterBattlePrep: startBattle,
     completeBattle,
     selectPiece,
     cancelPlacement,
