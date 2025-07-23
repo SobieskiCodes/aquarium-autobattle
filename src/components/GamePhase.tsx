@@ -232,10 +232,13 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
 
   switch (gameState.phase) {
     case 'shop':
+      // SHOP SCREEN: Buy pieces, place on grid, has shop at bottom
       return renderShopPhase();
     case 'placement':
       return renderPlacementPhase();
     case 'battle':
+      // BATTLE PREPARATION SCREEN: Stats comparison, "Start Battle" button
+      // This is NOT the actual battle animation - that happens within BattleView
       return renderBattlePhase();
     default:
       return renderShopPhase();

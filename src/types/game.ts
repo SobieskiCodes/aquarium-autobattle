@@ -46,6 +46,10 @@ export type BattleResult = 'player' | 'opponent' | 'draw';
 
 export interface GameState {
   phase: 'shop' | 'placement' | 'battle' | 'results';
+  // PHASE CLARIFICATION:
+  // 'shop' = Shop Screen - buy pieces, place on grid, has shop at bottom
+  // 'battle' = Battle Preparation Screen - stats comparison, "Start Battle" button
+  // After clicking "Start Battle", battle animation plays but phase stays 'battle'
   round: number;
   gold: number;
   lossStreak: number;

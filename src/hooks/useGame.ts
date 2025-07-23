@@ -600,6 +600,7 @@ export const useGame = () => {
 
   const startBattle = useCallback(() => {
     setGameState(prev => {
+      // This transitions from Shop Screen to Battle Preparation Screen
       // Simulate opponent's turn first
       const opponentResult = simulateOpponentTurn(
         prev.opponentGold, 

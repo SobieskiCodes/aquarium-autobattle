@@ -19,6 +19,9 @@ interface BattleViewProps {
 }
 
 export const BattleView: React.FC<BattleViewProps> = ({
+  // THIS IS THE BATTLE PREPARATION SCREEN
+  // Shows stats comparison and "Start Battle" button
+  // When "Start Battle" is clicked, battle animation plays within this component
   playerPieces,
   opponentPieces,
   playerWaterQuality,
