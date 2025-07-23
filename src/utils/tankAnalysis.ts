@@ -341,8 +341,8 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]):
       if (healthBonus > 0) effectParts.push(`+${healthBonus} HP`);
       if (speedBonus > 0) effectParts.push(`+${speedBonus} SPD`);
       
-      const effectText = effectParts.join(' ') + ' (battle)';
-      const displayEffect = count > 1 ? `${effectText} (×${count})` : effectText;
+      const effectText = effectParts.join(' ');
+      const displayEffect = `${effectText} ×${count} (${consumableName})`;
       
       bonuses.push({ 
         source: consumableName, 
