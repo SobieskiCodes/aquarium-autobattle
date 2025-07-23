@@ -406,17 +406,17 @@ export const useGame = () => {
 
   const completeBattle = useCallback((result: 'player' | 'opponent' | 'draw') => {
     setGameState(prev => {
-      const playerWon = result === 'player';
       const isDraw = result === 'draw';
+      const playerWon = result === 'player';
       
       // Calculate loss streak bonuses
       const playerLossStreak = (playerWon || isDraw) ? 0 : prev.lossStreak + 1;
-      const opponentLossStreak = (playerWon && !isDraw) ? prev.opponentLossStreak + 1 : 0;
+      const opponentLossStreak = (!playerWon && !isDraw) ? prev.opponentLossStreak + 1 : 0;
       
       // Update win/loss records
       const newWins = playerWon ? prev.wins + 1 : prev.wins;
       const newLosses = (playerWon || isDraw) ? prev.losses : prev.losses + 1;
-      const newOpponentWins = (playerWon || isDraw) ? prev.opponentWins : prev.opponentWins + 1;
+      const newOpponentWins = (!playerWon && !isDraw) ? prev.opponentWins + 1 : prev.opponentWins;
       const newOpponentLosses = (playerWon && !isDraw) ? prev.opponentLosses + 1 : prev.opponentLosses;
       
       // Base rewards - draws give both players moderate gold
@@ -433,12 +433,12 @@ export const useGame = () => {
       }
       
       // Loss streak bonuses (exponential catch-up)
-      if (!playerWon && !isDraw && playerLossStreak >= 2) {
+      if (!playerWon && !isDraw && prev.lossStreak >= 1) {
         const lossBonus = Math.min(playerLossStreak * 2, 10); // Max 10 bonus gold
         goldReward += lossBonus;
       }
       
-      if (playerWon && !isDraw && opponentLossStreak >= 2) {
+      if (!isDraw && prev.opponentLossStreak >= 1) {
         const lossBonus = Math.min(opponentLossStreak * 2, 10);
         opponentGoldReward += lossBonus;
       }
