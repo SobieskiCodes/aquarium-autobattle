@@ -33,10 +33,8 @@ export const PieceCard: React.FC<PieceCardProps> = ({
   const [isDragging, setIsDragging] = React.useState(false);
 
   const handleClick = () => {
-    if (isInShop && onPurchase) {
+    if (isInShop && onPurchase && canAfford) {
       onPurchase(piece);
-    } else if (onSelect) {
-      onSelect(piece);
     }
   };
 

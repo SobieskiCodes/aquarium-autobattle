@@ -6,8 +6,6 @@ interface TankGridProps {
   pieces: GamePiece[];
   onPiecePlace?: (piece: GamePiece, position: Position) => void;
   onPieceMove?: (piece: GamePiece, position: Position) => void;
-  onSelectPiece?: (piece: GamePiece) => void;
-  selectedPiece?: GamePiece | null;
   isInteractive?: boolean;
   waterQuality?: number;
   previewPosition?: Position | null;
@@ -20,8 +18,6 @@ export const TankGrid: React.FC<TankGridProps> = ({
   pieces,
   onPiecePlace,
   onPieceMove,
-  onSelectPiece,
-  selectedPiece,
   isInteractive = true,
   waterQuality = 5,
   previewPosition = null,
@@ -141,59 +137,15 @@ export const TankGrid: React.FC<TankGridProps> = ({
     return providers;
   };
   const handleCellClick = (x: number, y: number) => {
-    if (!selectedPiece || !isInteractive) return;
-    
-    // Check if piece can be placed at this position
-    const canPlace = selectedPiece.shape.every(offset => {
-      const newX = x + offset.x;
-      const newY = y + offset.y;
-      if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
-        return false;
-      }
-      
-      // Allow placement if cell is empty OR occupied by the same piece we're moving
-      const occupyingPiece = grid[newY][newX];
-      return !occupyingPiece || occupyingPiece.id === selectedPiece.id;
-    });
-
-    if (canPlace) {
-      if (selectedPiece.position && onPieceMove) {
-        // Moving existing piece
-        onPieceMove(selectedPiece, { x, y });
-      } else if (onPiecePlace) {
-        // Placing new piece
-        onPiecePlace(selectedPiece, { x, y });
-      }
-    }
+    // Click functionality removed - only drag and drop now
   };
 
   const handleCellHover = (x: number, y: number) => {
-    if (selectedPiece && isInteractive) {
-      setHoveredPosition({ x, y });
-    }
+    // Hover functionality removed since no click selection
   };
 
   const handleCellLeave = () => {
     setHoveredPosition(null);
-  };
-
-  const handleDragStart = (e: React.DragEvent, piece: GamePiece) => {
-    e.dataTransfer.setData('application/json', JSON.stringify(piece));
-    e.dataTransfer.effectAllowed = 'move';
-    setDraggedPiece(piece);
-    e.stopPropagation();
-    if (onDragStart) {
-      onDragStart(piece);
-    }
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    setDraggedPiece(null);
-    setIsDragOver(null);
-    e.stopPropagation();
-    if (onDragEnd) {
-      onDragEnd();
-    }
   };
 
   const handleDragOver = (e: React.DragEvent, x: number, y: number) => {
@@ -290,27 +242,11 @@ export const TankGrid: React.FC<TankGridProps> = ({
     setTooltipPosition(null);
   };
   const canPlaceAt = (x: number, y: number) => {
-    if (!selectedPiece) return false;
-    return selectedPiece.shape.every(offset => {
-      const newX = x + offset.x;
-      const newY = y + offset.y;
-      if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
-        return false;
-      }
-      
-      // Allow placement if cell is empty OR occupied by the same piece we're moving
-      const occupyingPiece = grid[newY][newX];
-      return !occupyingPiece || occupyingPiece.id === selectedPiece.id;
-    });
+    return false; // No click placement anymore
   };
 
   const isPreviewCell = (x: number, y: number) => {
-    const position = previewPosition || hoveredPosition;
-    if (!position || !selectedPiece) return false;
-    
-    return selectedPiece.shape.some(offset => 
-      position.x + offset.x === x && position.y + offset.y === y
-    );
+    return false; // No preview for click selection
   };
 
   const isDraggedPieceCell = (x: number, y: number) => {
@@ -465,10 +401,8 @@ export const TankGrid: React.FC<TankGridProps> = ({
                   : cell && isDraggedPieceCell(x, y)
                   ? 'border-gray-400 text-white shadow-md opacity-50'
                   : `border-gray-300 bg-white/30 ${
-                      isPreviewCell(x, y) || isDragPreviewCell(x, y)
-                        ? (isPreviewCell(x, y) 
-                            ? canPlaceAt(hoveredPosition?.x || previewPosition?.x || 0, hoveredPosition?.y || previewPosition?.y || 0)
-                            : canDragPlaceAt(isDragOver?.x || 0, isDragOver?.y || 0))
+                      isDragPreviewCell(x, y)
+                        ? canDragPlaceAt(isDragOver?.x || 0, isDragOver?.y || 0)
                           ? 'bg-green-200 border-green-400' 
                           : 'bg-red-200 border-red-400'
                         : 'hover:bg-white/50'
@@ -481,17 +415,10 @@ export const TankGrid: React.FC<TankGridProps> = ({
                 backgroundColor: cell ? getTypeColor(cell.type) : undefined,
                 minHeight: '40px'
               }}
-              onClick={() => handleCellClick(x, y)}
               onMouseEnter={() => handleCellHover(x, y)}
               onMouseLeave={handleCellLeave}
               onDragOver={(e) => handleDragOver(e, x, y)}
               onDrop={(e) => handleDrop(e, x, y)}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onSelectPiece) {
-                  onSelectPiece(cell);
-                }
-              }}
             >
               {cell && !isDraggedPieceCell(x, y) && (
                 <div 
@@ -499,8 +426,23 @@ export const TankGrid: React.FC<TankGridProps> = ({
                   onMouseEnter={(e) => handlePieceHover(cell, e)}
                   onMouseLeave={handlePieceLeave}
                   draggable={isInteractive}
-                  onDragStart={(e) => handleDragStart(e, cell)}
-                  onDragEnd={handleDragEnd}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/json', JSON.stringify(cell));
+                    e.dataTransfer.effectAllowed = 'move';
+                    setDraggedPiece(cell);
+                    e.stopPropagation();
+                    if (onDragStart) {
+                      onDragStart(cell);
+                    }
+                  }}
+                  onDragEnd={(e) => {
+                    setDraggedPiece(null);
+                    setIsDragOver(null);
+                    e.stopPropagation();
+                    if (onDragEnd) {
+                      onDragEnd();
+                    }
+                  }}
                 >
                   <div className="text-xs leading-tight">{cell.name.split(' ')[0]}</div>
                   <div className="text-xs opacity-80">
@@ -508,10 +450,10 @@ export const TankGrid: React.FC<TankGridProps> = ({
                   </div>
                 </div>
               )}
-              {(isPreviewCell(x, y) || isDragPreviewCell(x, y)) && !cell && (
+              {isDragPreviewCell(x, y) && !cell && (
                 <div className="text-center text-gray-600">
                   <div className="text-xs leading-tight opacity-70">
-                    {(selectedPiece || currentDraggedPiece)?.name.split(' ')[0]}
+                    {currentDraggedPiece?.name.split(' ')[0]}
                   </div>
                 </div>
               )}

@@ -320,32 +320,12 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             pieces={gameState.playerTank.pieces}
             onPiecePlace={onPlacePiece}
             onPieceMove={onMovePiece}
-            onSelectPiece={onSelectPiece}
-            selectedPiece={gameState.selectedPiece}
             waterQuality={gameState.playerTank.waterQuality}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
             currentDraggedPiece={draggedPiece}
           />
           
-          {gameState.selectedPiece && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-blue-800">
-                  <strong>
-                    {gameState.selectedPiece.position ? 'Move mode:' : 'Placement mode:'}
-                  </strong> 
-                  Click on the grid to {gameState.selectedPiece.position ? 'move' : 'place'} your {gameState.selectedPiece.name}
-                </p>
-                <button
-                  onClick={onCancelPlacement}
-                  className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="space-y-4">
