@@ -20,6 +20,10 @@ export interface GamePiece {
   abilities?: string[];
   position?: Position;
   rotation?: number;
+  // Consumable bonuses (only used for consumable type)
+  attackBonus?: number;
+  healthBonus?: number;
+  speedBonus?: number;
 }
 
 export interface Tank {

@@ -237,15 +237,6 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
   const consumables = battlePieces.filter(p => p.type === 'consumable');
   
   // Helper function to parse consumable effects
-  const parseConsumableEffect = (ability: string): { attack: number; health: number } => {
-    const attackMatch = ability.match(/\+(\d+)\s*ATK/i);
-    const healthMatch = ability.match(/\+(\d+)\s*HP/i);
-    
-    return {
-      attack: attackMatch ? parseInt(attackMatch[1]) : 0,
-      health: healthMatch ? parseInt(healthMatch[1]) : 0
-    };
-  };
 
   // Apply each consumable's effect to adjacent fish
   consumables.forEach(consumable => {
@@ -294,21 +285,16 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
           });
           
           if (isAdjacent) {
-            // Parse the consumable's effect dynamically
-            let attackBonus = 1; // Default fallback
-            let healthBonus = 1; // Default fallback
-            
-            if (consumable.abilities && consumable.abilities.length > 0) {
-              const effect = parseConsumableEffect(consumable.abilities[0]);
-              attackBonus = effect.attack;
-              healthBonus = effect.health;
-            }
+            // Use the consumable's bonus fields directly
+            const attackBonus = consumable.attackBonus || 0;
+            const healthBonus = consumable.healthBonus || 0;
+            const speedBonus = consumable.speedBonus || 0;
 
             // Create consumed effect record
             const consumedEffect: ConsumedEffect = {
               consumableId: consumable.id,
               consumableName: consumable.name,
-              effect: `+${attackBonus} ATK +${healthBonus} HP (consumed)`,
+              effect: `${attackBonus > 0 ? `+${attackBonus} ATK ` : ''}${healthBonus > 0 ? `+${healthBonus} HP ` : ''}${speedBonus > 0 ? `+${speedBonus} SPD ` : ''}(consumed)`.trim(),
               appliedAt: Date.now()
             };
             
@@ -329,6 +315,7 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
                 attack: p.stats.attack + attackBonus,
                 health: p.stats.health + healthBonus,
                 maxHealth: p.stats.maxHealth + healthBonus
+                speed: p.stats.speed + speedBonus
               }
             } as EnhancedGamePiece;
           }
@@ -611,15 +598,6 @@ export const useGame = () => {
       const consumables = battlePieces.filter(p => p.type === 'consumable');
       
       // Helper function to parse consumable effects
-      const parseConsumableEffect = (ability: string): { attack: number; health: number } => {
-        const attackMatch = ability.match(/\+(\d+)\s*ATK/i);
-        const healthMatch = ability.match(/\+(\d+)\s*HP/i);
-        
-        return {
-          attack: attackMatch ? parseInt(attackMatch[1]) : 0,
-          health: healthMatch ? parseInt(healthMatch[1]) : 0
-        };
-      };
 
       // Apply each consumable's effect
       consumables.forEach(consumable => {
@@ -668,21 +646,16 @@ export const useGame = () => {
               });
               
               if (isAdjacent) {
-                // Parse the consumable's effect dynamically
-                let attackBonus = 1; // Default fallback
-                let healthBonus = 1; // Default fallback
-                
-                if (consumable.abilities && consumable.abilities.length > 0) {
-                  const effect = parseConsumableEffect(consumable.abilities[0]);
-                  attackBonus = effect.attack;
-                  healthBonus = effect.health;
-                }
+                // Use the consumable's bonus fields directly
+                const attackBonus = consumable.attackBonus || 0;
+                const healthBonus = consumable.healthBonus || 0;
+                const speedBonus = consumable.speedBonus || 0;
 
                 // Create consumed effect record
                 const consumedEffect: ConsumedEffect = {
                   consumableId: consumable.id,
                   consumableName: consumable.name,
-                  effect: `+${attackBonus} ATK +${healthBonus} HP (consumed)`,
+                  effect: `${attackBonus > 0 ? `+${attackBonus} ATK ` : ''}${healthBonus > 0 ? `+${healthBonus} HP ` : ''}${speedBonus > 0 ? `+${speedBonus} SPD ` : ''}(consumed)`.trim(),
                   appliedAt: Date.now()
                 };
                 
@@ -703,6 +676,7 @@ export const useGame = () => {
                     attack: p.stats.attack + attackBonus,
                     health: p.stats.health + healthBonus,
                     maxHealth: p.stats.maxHealth + healthBonus
+                    speed: p.stats.speed + speedBonus
                   }
                 } as EnhancedGamePiece;
               }

@@ -58,16 +58,6 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
     }
   });
 
-  // Helper function to parse consumable effects
-  const parseConsumableEffect = (ability: string): { attack: number; health: number } => {
-    const attackMatch = ability.match(/\+(\d+)\s*ATK/i);
-    const healthMatch = ability.match(/\+(\d+)\s*HP/i);
-    
-    return {
-      attack: attackMatch ? parseInt(attackMatch[1]) : 0,
-      health: healthMatch ? parseInt(healthMatch[1]) : 0
-    };
-  };
 
   return pieces.map(piece => {
     if (!piece.position) return piece;
@@ -151,12 +141,20 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
         }
         // Consumable bonus (if piece is fish) - parse the consumable's abilities
         if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-          // Parse the consumable's first ability to get the actual bonuses
-          if (adjacentPiece.abilities && adjacentPiece.abilities.length > 0) {
-            const effect = parseConsumableEffect(adjacentPiece.abilities[0]);
-            bonusAttack += effect.attack;
-            bonusHealth += effect.health;
-          }
+          const attackBonus = adjacentPiece.attackBonus || 0;
+          const healthBonus = adjacentPiece.healthBonus || 0;
+          const speedBonus = adjacentPiece.speedBonus || 0;
+          
+          let effectText = '';
+          if (attackBonus > 0) effectText += `+${attackBonus} ATK `;
+          if (healthBonus > 0) effectText += `+${healthBonus} HP `;
+          if (speedBonus > 0) effectText += `+${speedBonus} SPD `;
+          effectText += '(battle)';
+          
+          bonuses.push({ source: adjacentPiece.name, effect: effectText.trim(), color: 'text-orange-500', type: 'consumable' });
+          bonusAttack += adjacentPiece.attackBonus || 0;
+          bonusHealth += adjacentPiece.healthBonus || 0;
+          bonusSpeed += adjacentPiece.speedBonus || 0;
         }
       }
     });
