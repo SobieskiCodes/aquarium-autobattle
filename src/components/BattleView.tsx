@@ -493,7 +493,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
                 </span>
               </div>
             )}
-            {!battleState.battleActive && (
+            {!battleState.battleActive && battleState.winner !== null && (
               <button
                 onClick={() => {
                   if (battleState.winner === null) {
@@ -538,7 +538,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
           </div>
         </div>
 
-        {!battleState.battleActive && !battleState.winner && (
+        {!battleState.battleActive && battleState.winner === null && battleState.currentRound === 1 && (
           <button
             onClick={startBattle}
             className="mt-4 bg-white text-blue-600 px-6 py-3 rounded-lg font-bold hover:bg-gray-100 transition-colors"
