@@ -231,30 +231,32 @@ export const TankGrid: React.FC<TankGridProps> = ({
         >
           <div className="text-sm font-bold mb-1">{hoveredPiece.name}</div>
           {(() => {
-            // In battle phase, pieces already have consumed effects applied
-            // so don't recalculate bonuses from consumables that are no longer there
-            const bonuses = isBattlePhase ? [] : calculatePieceBonuses(hoveredPiece, pieces);
+            // Always get adjacency and ability bonuses (not from consumed items)
+            const allBonuses = calculatePieceBonuses(hoveredPiece, pieces);
+            const bonuses = isBattlePhase ? 
+              allBonuses.filter(b => b.type !== 'consumable') : // In battle, consumables are already applied
+              allBonuses.filter(b => b.type !== 'consumable'); // In shop, show adjacency bonuses but handle consumables separately
             
-            // Add consumed effects to bonuses (stack duplicates)
+            // Always show consumed effects if they exist
             const enhancedPiece = hoveredPiece as any; // EnhancedGamePiece type
             if (enhancedPiece.consumedEffects) {
-             // Group consumed effects by consumable name and show them clearly
-             const consumedGroups = new Map<string, number>();
-             
-             enhancedPiece.consumedEffects.forEach(effect => {
-               const count = consumedGroups.get(effect.consumableName) || 0;
-               consumedGroups.set(effect.consumableName, count + 1);
-             });
-             
-             // Add each consumed item type as a separate bonus line
-             consumedGroups.forEach((count, consumableName) => {
-               bonuses.push({ 
-                 source: consumableName, 
-                 effect: `×${count}`, 
-                 color: 'text-orange-600', 
-                 type: 'consumable' 
-               });
-             });
+              // Group consumed effects by consumable name and show them clearly
+              const consumedGroups = new Map<string, number>();
+              
+              enhancedPiece.consumedEffects.forEach(effect => {
+                const count = consumedGroups.get(effect.consumableName) || 0;
+                consumedGroups.set(effect.consumableName, count + 1);
+              });
+              
+              // Add each consumed item type as a separate bonus line
+              consumedGroups.forEach((count, consumableName) => {
+                bonuses.push({ 
+                  source: consumableName, 
+                  effect: `×${count}`, 
+                  color: 'text-orange-600', 
+                  type: 'consumable' 
+                });
+              });
             }
             
             // Get the original stats before any enhancements
