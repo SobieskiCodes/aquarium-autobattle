@@ -971,6 +971,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
             pieces={playerPieces} 
             isInteractive={false}
             waterQuality={playerWaterQuality}
+            highlightedPieceId={null}
           />
           
           {/* Floating damage texts for player side */}
@@ -995,6 +996,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
             pieces={opponentPieces} 
             isInteractive={false}
             waterQuality={opponentWaterQuality}
+            highlightedPieceId={null}
           />
           
           {/* Floating damage texts for opponent side */}
