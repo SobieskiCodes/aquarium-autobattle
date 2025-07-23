@@ -269,7 +269,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
               {consumableBonuses.length > 0 && (
                 <div>
                   <div className="font-medium text-orange-400 mb-1">
-                    Consumed Items ({consumableBonuses.length}):
+                    Consumed Items:
                   </div>
                   {consumableBonuses.map((bonus, index) => (
                     <div key={index} className={bonus.color}>

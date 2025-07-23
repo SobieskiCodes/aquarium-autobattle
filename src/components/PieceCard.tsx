@@ -97,10 +97,12 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           ? 'border-blue-500 bg-blue-50 transform scale-105' 
           : 'border-gray-300 bg-white hover:border-gray-400 hover:shadow-md'
         }
-        ${isInShop && !canAfford ? 'opacity-50 cursor-not-allowed' : ''}
+       ${isInShop && !canAfford ? 'opacity-50' : ''}
+       ${isInShop && !canAfford ? 'cursor-not-allowed' : ''}
         ${isLocked ? 'bg-yellow-50' : ''}
         ${isDragging ? 'opacity-50 transform rotate-2' : ''}
       `}
+     onClick={canAfford && piece.type !== 'consumable' ? handleClick : undefined}
       onClick={canAfford ? handleClick : undefined}
       draggable={canAfford && (isInShop || showSellOption)}
       onDragStart={handleDragStart}
@@ -241,11 +243,16 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           <div className="font-medium mb-1">Abilities:</div>
           <ul className="space-y-0.5 text-xs flex-1">
             {piece.abilities.slice(0, 2).map((ability, index) => (
-              <li key={index} className="leading-tight text-xs">• {ability}</li>
+              <li key={index} className="leading-tight text-xs">
+                • <span dangerouslySetInnerHTML={{ __html: ability.replace(/~~(.+?)~~/g, '<del>$1</del>') }} />
+              </li>
             ))}
             {piece.type === 'consumable' && (
-              <li className="text-orange-600 font-medium text-xs">⚡ Consumed at battle start</li>
+              <li className="text-orange-600 font-medium text-xs">⚡ Consumed at battle start if placed</li>
             )}
+           {!piece.position && showSellOption && piece.type === 'consumable' && (
+             <li className="text-red-600 font-medium text-xs">⚠️ Will disappear if not placed before battle!</li>
+           )}
           </ul>
           
           {/* Show consumed items summary */}
@@ -254,18 +261,33 @@ export const PieceCard: React.FC<PieceCardProps> = ({
               <div className="text-xs font-medium text-orange-600 mb-1">
                 Consumed Items ({consumedCount}):
               </div>
-              <div className="text-xs text-orange-700">
-                {enhancedPiece.consumedEffects?.slice(0, 2).map((effect, index) => (
-                  <div key={index} className="truncate">
-                    • {effect.consumableName}
+              {(() => {
+                // Group consumed effects by consumable name
+                const consumedGroups = new Map<string, number>();
+                enhancedPiece.consumedEffects?.forEach(effect => {
+                  const count = consumedGroups.get(effect.consumableName) || 0;
+                  consumedGroups.set(effect.consumableName, count + 1);
+                });
+                
+                const groupedEntries = Array.from(consumedGroups.entries());
+                const displayEntries = groupedEntries.slice(0, 2);
+                const remainingCount = groupedEntries.length > 2 ? groupedEntries.length - 2 : 0;
+                
+                return (
+                  <div className="text-xs text-orange-700">
+                    {displayEntries.map(([name, count], index) => (
+                      <div key={index} className="truncate">
+                        • {name}{count > 1 ? ` (×${count})` : ''}
+                      </div>
+                    ))}
+                    {remainingCount > 0 && (
+                      <div className="text-xs text-gray-500">
+                        +{remainingCount} more type{remainingCount > 1 ? 's' : ''}...
+                      </div>
+                    )}
                   </div>
-                ))}
-                {consumedCount > 2 && (
-                  <div className="text-xs text-gray-500">
-                    +{consumedCount - 2} more...
-                  </div>
-                )}
-              </div>
+                );
+              })()}
             </div>
           )}
         </div>

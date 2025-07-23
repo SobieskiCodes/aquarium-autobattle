@@ -110,14 +110,33 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
     adjacentPositions.forEach(pos => {
       const adjacentPiece = grid[pos.y][pos.x];
       if (adjacentPiece && adjacentPiece.id !== piece.id) {
+        // Check for sponge filter amplification first
+        const hasSpongeFilter = allPieces.some(p => 
+          p.id.includes('sponge-filter') && p.position &&
+          // Check if sponge filter is adjacent to the plant providing the bonus
+          p.shape.some(filterOffset => {
+            const filterX = p.position!.x + filterOffset.x;
+            const filterY = p.position!.y + filterOffset.y;
+            return adjacentPiece.shape.some(plantOffset => {
+              const plantX = adjacentPiece.position!.x + plantOffset.x;
+              const plantY = adjacentPiece.position!.y + plantOffset.y;
+              const dx = Math.abs(filterX - plantX);
+              const dy = Math.abs(filterY - plantY);
+              return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+            });
+          })
+        );
+        
         // Java Fern bonus
         if (adjacentPiece.id.includes('java-fern')) {
-          bonusAttack += 1;
-          bonusHealth += 1;
+          const bonus = hasSpongeFilter ? 2 : 1; // Amplified by sponge filter
+          bonusAttack += bonus;
+          bonusHealth += bonus;
         }
         // Anubias bonus
         if (adjacentPiece.id.includes('anubias')) {
-          bonusHealth += 1;
+          const bonus = hasSpongeFilter ? 2 : 1; // Amplified by sponge filter
+          bonusHealth += bonus;
         }
         // Consumable bonus (if piece is fish) - each adjacent consumable gives +1/+1
         if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
@@ -220,13 +239,34 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]):
   adjacentPositions.forEach(pos => {
     const adjacentPiece = grid[pos.y][pos.x];
     if (adjacentPiece && adjacentPiece.id !== piece.id) {
+      // Check for sponge filter amplification
+      const hasSpongeFilter = allPieces.some(p => 
+        p.id.includes('sponge-filter') && p.position &&
+        // Check if sponge filter is adjacent to the plant providing the bonus
+        p.shape.some(filterOffset => {
+          const filterX = p.position!.x + filterOffset.x;
+          const filterY = p.position!.y + filterOffset.y;
+          return adjacentPiece.shape.some(plantOffset => {
+            const plantX = adjacentPiece.position!.x + plantOffset.x;
+            const plantY = adjacentPiece.position!.y + plantOffset.y;
+            const dx = Math.abs(filterX - plantX);
+            const dy = Math.abs(filterY - plantY);
+            return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+          });
+        })
+      );
+      
       // Java Fern bonus
       if (adjacentPiece.id.includes('java-fern')) {
-        bonuses.push({ source: 'Java Fern', effect: '+1 ATK +1 HP', color: 'text-green-600', type: 'adjacency' });
+        const bonus = hasSpongeFilter ? 2 : 1;
+        const amplified = hasSpongeFilter ? ' (amplified)' : '';
+        bonuses.push({ source: 'Java Fern', effect: `+${bonus} ATK +${bonus} HP${amplified}`, color: 'text-green-600', type: 'adjacency' });
       }
       // Anubias bonus
       if (adjacentPiece.id.includes('anubias')) {
-        bonuses.push({ source: 'Anubias', effect: '+1 HP', color: 'text-green-500', type: 'adjacency' });
+        const bonus = hasSpongeFilter ? 2 : 1;
+        const amplified = hasSpongeFilter ? ' (amplified)' : '';
+        bonuses.push({ source: 'Anubias', effect: `+${bonus} HP${amplified}`, color: 'text-green-500', type: 'adjacency' });
       }
       // Consumable bonus (if piece is fish) - show each adjacent consumable
       if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
@@ -254,13 +294,28 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]):
     }
   }
   
-  // Add consumed effects to bonuses
+  // Add consumed effects to bonuses (stack duplicates)
   const enhancedPiece = piece as EnhancedGamePiece;
   if (enhancedPiece.consumedEffects) {
+    // Group consumed effects by consumable name and effect
+    const consumedGroups = new Map<string, { count: number; effect: string }>();
+    
     enhancedPiece.consumedEffects.forEach(effect => {
+      const key = `${effect.consumableName}:${effect.effect}`;
+      if (consumedGroups.has(key)) {
+        consumedGroups.get(key)!.count++;
+      } else {
+        consumedGroups.set(key, { count: 1, effect: effect.effect });
+      }
+    });
+    
+    // Add stacked bonuses
+    consumedGroups.forEach(({ count, effect }, key) => {
+      const consumableName = key.split(':')[0];
+      const displayEffect = count > 1 ? `${effect} (×${count})` : effect;
       bonuses.push({ 
-        source: effect.consumableName, 
-        effect: effect.effect, 
+        source: consumableName, 
+        effect: displayEffect, 
         color: 'text-orange-600', 
         type: 'consumable' 
       });

@@ -35,7 +35,7 @@ export const PIECE_LIBRARY: GamePiece[] = [
     stats: { attack: 5, health: 4, speed: 4, maxHealth: 4 },
     tags: ['freshwater', 'aggressive', 'labyrinth'],
     cost: 4,
-    abilities: ['First strike', '+2 ATK if alone in row']
+    abilities: ['~~First strike~~', '~~+2 ATK if alone in row~~']
   },
   {
     id: 'angelfish',
@@ -46,7 +46,7 @@ export const PIECE_LIBRARY: GamePiece[] = [
     stats: { attack: 4, health: 6, speed: 3, maxHealth: 6 },
     tags: ['freshwater', 'territorial', 'showpiece'],
     cost: 6,
-    abilities: ['+3 ATK if no orthogonal neighbors']
+    abilities: ['~~+3 ATK if no orthogonal neighbors~~']
   },
 
   // Predators
@@ -59,7 +59,7 @@ export const PIECE_LIBRARY: GamePiece[] = [
     stats: { attack: 7, health: 5, speed: 5, maxHealth: 5 },
     tags: ['freshwater', 'carnivore', 'predator'],
     cost: 8,
-    abilities: ['Heals 2 HP when KOing smaller fish']
+    abilities: ['~~Heals 2 HP when KOing smaller fish~~']
   },
 
   // Bottom Dwellers
@@ -72,7 +72,7 @@ export const PIECE_LIBRARY: GamePiece[] = [
     stats: { attack: 1, health: 7, speed: 2, maxHealth: 7 },
     tags: ['freshwater', 'cleaner', 'nocturnal'],
     cost: 4,
-    abilities: ['End of round: remove adjacent algae', '+2 ATK at night']
+    abilities: ['~~End of round: remove adjacent algae~~', '~~+2 ATK at night~~']
   },
 
   // Plants
@@ -120,7 +120,7 @@ export const PIECE_LIBRARY: GamePiece[] = [
     stats: { attack: 0, health: 3, speed: 0, maxHealth: 3 },
     tags: ['equipment', 'heater'],
     cost: 4,
-    abilities: ['2x2 aura: tropical fish gain +1 Speed']
+    abilities: ['~~2x2 aura: tropical fish gain +1 Speed~~']
   },
 
   // Consumables
