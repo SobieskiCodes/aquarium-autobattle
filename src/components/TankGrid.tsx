@@ -139,6 +139,10 @@ export const TankGrid: React.FC<TankGridProps> = ({
     return providers.includes(piece.id);
   };
 
+  const isHoveredPiece = (piece: GamePiece) => {
+    return hoveredPiece && hoveredPiece.id === piece.id;
+  };
+
   const getWaterQualityGradient = () => {
     const quality = Math.max(0, Math.min(10, waterQuality));
     const hue = (quality / 10) * 120; // 0 = red, 120 = green
