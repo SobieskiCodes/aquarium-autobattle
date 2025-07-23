@@ -8,7 +8,6 @@ interface TankGridProps {
   onPieceMove?: (piece: GamePiece, position: Position) => void;
   isInteractive?: boolean;
   waterQuality?: number;
-  previewPosition?: Position | null;
   onDragStart?: (piece: GamePiece) => void;
   onDragEnd?: () => void;
   currentDraggedPiece?: GamePiece | null;
@@ -20,18 +19,15 @@ export const TankGrid: React.FC<TankGridProps> = ({
   onPieceMove,
   isInteractive = true,
   waterQuality = 5,
-  previewPosition = null,
   onDragStart,
   onDragEnd,
   currentDraggedPiece
 }) => {
   const GRID_WIDTH = 8;
   const GRID_HEIGHT = 6;
-  const [hoveredPosition, setHoveredPosition] = React.useState<Position | null>(null);
   const [hoveredPiece, setHoveredPiece] = React.useState<GamePiece | null>(null);
   const [tooltipPosition, setTooltipPosition] = React.useState<{ x: number; y: number } | null>(null);
-  const [draggedPiece, setDraggedPiece] = React.useState<GamePiece | null>(null);
-  const [isDragOver, setIsDragOver] = React.useState<Position | null>(null);
+  const [dragOverPosition, setDragOverPosition] = React.useState<Position | null>(null);
 
   // Create grid with piece occupancy
   const grid = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null));
@@ -136,102 +132,35 @@ export const TankGrid: React.FC<TankGridProps> = ({
     
     return providers;
   };
-  const handleCellClick = (x: number, y: number) => {
-    // Click functionality removed - only drag and drop now
+
+  const isBonusProvider = (piece: GamePiece) => {
+    if (!hoveredPiece) return false;
+    const providers = getBonusProviders(hoveredPiece);
+    return providers.includes(piece.id);
   };
 
-  const handleCellHover = (x: number, y: number) => {
-    // Hover functionality removed since no click selection
+  const getWaterQualityGradient = () => {
+    const quality = Math.max(0, Math.min(10, waterQuality));
+    const hue = (quality / 10) * 120; // 0 = red, 120 = green
+    return `hsl(${hue}, 70%, 85%)`;
   };
 
-  const handleCellLeave = () => {
-    setHoveredPosition(null);
-  };
-
-  const handleDragOver = (e: React.DragEvent, x: number, y: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
-    
-    // Use the globally tracked dragged piece for consistent preview
-    if (currentDraggedPiece) {
-      const canPlace = currentDraggedPiece.shape.every((offset: Position) => {
-        const newX = x + offset.x;
-        const newY = y + offset.y;
-        if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
-          return false;
-        }
-        
-        // Allow placement if cell is empty OR occupied by the same piece we're moving
-        const occupyingPiece = grid[newY][newX];
-        return !occupyingPiece || occupyingPiece.id === currentDraggedPiece.id;
-      });
+  const canPlacePieceAt = (piece: GamePiece, x: number, y: number) => {
+    return piece.shape.every(offset => {
+      const newX = x + offset.x;
+      const newY = y + offset.y;
       
-      if (canPlace) {
-        setIsDragOver({ x, y });
-      } else {
-        setIsDragOver(null);
+      // Check bounds
+      if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
+        return false;
       }
-    }
+      
+      // Check if cell is empty or occupied by the same piece we're moving
+      const occupyingPiece = grid[newY][newX];
+      return !occupyingPiece || occupyingPiece.id === piece.id;
+    });
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.stopPropagation();
-    // Only clear drag over if we're actually leaving the grid area
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX;
-    const y = e.clientY;
-    
-    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-      setIsDragOver(null);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent, x: number, y: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const pieceData = e.dataTransfer.getData('application/json');
-    
-    if (pieceData) {
-      try {
-        const piece = JSON.parse(pieceData);
-        
-        // Check if piece can be placed at this position
-        const canPlace = piece.shape.every((offset: Position) => {
-          const newX = x + offset.x;
-          const newY = y + offset.y;
-          if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
-            return false;
-          }
-          
-          // Allow placement if cell is empty OR occupied by the same piece we're moving
-          const occupyingPiece = grid[newY][newX];
-          return !occupyingPiece || occupyingPiece.id === piece.id;
-        });
-
-        if (canPlace) {
-          // Check if this piece already exists in the tank
-          const existingPiece = pieces.find(p => p.id === piece.id);
-          
-          if (existingPiece) {
-            // This piece is already in the tank - move it
-            if (onPieceMove) {
-              onPieceMove(existingPiece, { x, y });
-            }
-          } else {
-            // This is a new piece from inventory/shop - place it
-            if (onPiecePlace) {
-              onPiecePlace(piece, { x, y });
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error parsing dropped piece data:', error);
-      }
-    }
-    
-    setIsDragOver(null);
-  };
   const handlePieceHover = (piece: GamePiece, event: React.MouseEvent) => {
     setHoveredPiece(piece);
     const rect = event.currentTarget.getBoundingClientRect();
@@ -245,52 +174,81 @@ export const TankGrid: React.FC<TankGridProps> = ({
     setHoveredPiece(null);
     setTooltipPosition(null);
   };
-  const canPlaceAt = (x: number, y: number) => {
-    return false; // No click placement anymore
+
+  const handleDragStart = (e: React.DragEvent, piece: GamePiece) => {
+    console.log('Drag start:', piece.name);
+    e.dataTransfer.setData('application/json', JSON.stringify(piece));
+    e.dataTransfer.effectAllowed = 'move';
+    if (onDragStart) {
+      onDragStart(piece);
+    }
   };
 
-  const isPreviewCell = (x: number, y: number) => {
-    return false; // No preview for click selection
+  const handleDragEnd = (e: React.DragEvent) => {
+    console.log('Drag end');
+    setDragOverPosition(null);
+    if (onDragEnd) {
+      onDragEnd();
+    }
   };
 
-  const isDraggedPieceCell = (x: number, y: number) => {
-    if (!draggedPiece || !draggedPiece.position) return false;
+  const handleDragOver = (e: React.DragEvent, x: number, y: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
     
-    return draggedPiece.shape.some((offset: Position) => 
-      draggedPiece.position!.x + offset.x === x && draggedPiece.position!.y + offset.y === y
-    );
-  };
-  const isDragPreviewCell = (x: number, y: number) => {
-    if (!isDragOver || !currentDraggedPiece) return false;
-    
-    return currentDraggedPiece.shape.some((offset: Position) => 
-      isDragOver.x + offset.x === x && isDragOver.y + offset.y === y
-    );
+    if (currentDraggedPiece && canPlacePieceAt(currentDraggedPiece, x, y)) {
+      setDragOverPosition({ x, y });
+    } else {
+      setDragOverPosition(null);
+    }
   };
 
-  const canDragPlaceAt = (x: number, y: number) => {
-    if (!isDragOver || !currentDraggedPiece) return false;
-    return currentDraggedPiece.shape.every((offset: Position) => {
-      const newX = x + offset.x;
-      const newY = y + offset.y;
-      if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
-        return false;
+  const handleDrop = (e: React.DragEvent, x: number, y: number) => {
+    e.preventDefault();
+    console.log('Drop at:', x, y);
+    
+    try {
+      const pieceData = e.dataTransfer.getData('application/json');
+      if (!pieceData) return;
+      
+      const piece = JSON.parse(pieceData);
+      console.log('Dropped piece:', piece.name, 'has position:', !!piece.position);
+      
+      if (!canPlacePieceAt(piece, x, y)) {
+        console.log('Cannot place piece at', x, y);
+        return;
       }
       
-      // Allow placement if cell is empty OR occupied by the same piece we're moving
-      const occupyingPiece = grid[newY][newX];
-      return !occupyingPiece || occupyingPiece.id === currentDraggedPiece.id;
-    });
+      // Check if this piece is already placed on the grid
+      const isAlreadyPlaced = pieces.some(p => p.id === piece.id && p.position);
+      
+      if (isAlreadyPlaced && onPieceMove) {
+        console.log('Moving existing piece');
+        onPieceMove(piece, { x, y });
+      } else if (onPiecePlace) {
+        console.log('Placing new piece');
+        onPiecePlace(piece, { x, y });
+      }
+      
+    } catch (error) {
+      console.error('Error handling drop:', error);
+    }
+    
+    setDragOverPosition(null);
   };
-  const isBonusProvider = (piece: GamePiece) => {
-    if (!hoveredPiece) return false;
-    const providers = getBonusProviders(hoveredPiece);
-    return providers.includes(piece.id);
+
+  const isPieceAtPosition = (piece: GamePiece, x: number, y: number) => {
+    if (!piece.position) return false;
+    return piece.shape.some(offset => 
+      piece.position!.x + offset.x === x && piece.position!.y + offset.y === y
+    );
   };
-  const getWaterQualityGradient = () => {
-    const quality = Math.max(0, Math.min(10, waterQuality));
-    const hue = (quality / 10) * 120; // 0 = red, 120 = green
-    return `hsl(${hue}, 70%, 85%)`;
+
+  const isDragPreview = (x: number, y: number) => {
+    if (!dragOverPosition || !currentDraggedPiece) return false;
+    return currentDraggedPiece.shape.some(offset => 
+      dragOverPosition.x + offset.x === x && dragOverPosition.y + offset.y === y
+    );
   };
 
   return (
@@ -382,6 +340,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
           )}
         </div>
       )}
+
       <div 
         className="grid grid-cols-8 gap-1 p-4 rounded-lg border-2 border-cyan-300 shadow-lg"
         style={{ 
@@ -391,78 +350,61 @@ export const TankGrid: React.FC<TankGridProps> = ({
             radial-gradient(circle at 80% 20%, rgba(0,255,127,0.2) 0%, transparent 50%)
           `
         }}
-        onDragLeave={handleDragLeave}
       >
         {grid.map((row, y) =>
-          row.map((cell, x) => (
-            <div
-              key={`${x}-${y}`}
-              className={`
-                aspect-square border rounded-lg flex items-center justify-center text-xs font-bold
-                transition-all duration-200 cursor-pointer
-                ${cell && !isDraggedPieceCell(x, y)
-                  ? 'border-gray-400 text-white shadow-md transform hover:scale-105'
-                  : cell && isDraggedPieceCell(x, y)
-                  ? 'border-gray-400 text-white shadow-md opacity-50'
-                  : `border-gray-300 bg-white/30 ${
-                      isDragPreviewCell(x, y)
-                        ? canDragPlaceAt(isDragOver?.x || 0, isDragOver?.y || 0)
-                          ? 'bg-green-200 border-green-400' 
-                          : 'bg-red-200 border-red-400'
-                        : 'hover:bg-white/50'
-                    }`
-                }
-                ${isDragPreviewCell(x, y) ? 'ring-2 ring-blue-400 ring-opacity-50' : ''}
-                ${cell && isBonusProvider(cell) ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}
-              `}
-              style={{
-                backgroundColor: cell ? getTypeColor(cell.type) : undefined,
-                minHeight: '40px'
-              }}
-              onMouseEnter={() => handleCellHover(x, y)}
-              onMouseLeave={handleCellLeave}
-              onDragOver={(e) => handleDragOver(e, x, y)}
-              onDrop={(e) => handleDrop(e, x, y)}
-            >
-              {cell && !isDraggedPieceCell(x, y) && (
-                <div 
-                  className="text-center w-full h-full flex flex-col justify-center cursor-move"
-                  onMouseEnter={(e) => handlePieceHover(cell, e)}
-                  onMouseLeave={handlePieceLeave}
-                  draggable={isInteractive}
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('application/json', JSON.stringify(cell));
-                    e.dataTransfer.effectAllowed = 'move';
-                    setDraggedPiece(cell);
-                    e.stopPropagation();
-                    if (onDragStart) {
-                      onDragStart(cell);
-                    }
-                  }}
-                  onDragEnd={(e) => {
-                    setDraggedPiece(null);
-                    setIsDragOver(null);
-                    e.stopPropagation();
-                    if (onDragEnd) {
-                      onDragEnd();
-                    }
-                  }}
-                >
-                  <div className="text-xs leading-tight">{cell.name.split(' ')[0]}</div>
-                  <div className="text-xs opacity-80">
-                    {cell.stats.attack}/{cell.stats.health}
+          row.map((cell, x) => {
+            const isPreview = isDragPreview(x, y);
+            const canPlace = dragOverPosition && canPlacePieceAt(currentDraggedPiece!, dragOverPosition.x, dragOverPosition.y);
+            
+            return (
+              <div
+                key={`${x}-${y}`}
+                className={`
+                  aspect-square border rounded-lg flex items-center justify-center text-xs font-bold
+                  transition-all duration-200 min-h-[40px]
+                  ${cell 
+                    ? 'border-gray-400 text-white shadow-md cursor-move'
+                    : 'border-gray-300 bg-white/30 hover:bg-white/50'
+                  }
+                  ${isPreview 
+                    ? canPlace 
+                      ? 'bg-green-200 border-green-400 ring-2 ring-green-400' 
+                      : 'bg-red-200 border-red-400 ring-2 ring-red-400'
+                    : ''
+                  }
+                  ${cell && isBonusProvider(cell) ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}
+                `}
+                style={{
+                  backgroundColor: cell && !isPreview ? getTypeColor(cell.type) : undefined,
+                }}
+                onDragOver={(e) => handleDragOver(e, x, y)}
+                onDrop={(e) => handleDrop(e, x, y)}
+              >
+                {cell && (
+                  <div 
+                    className="text-center w-full h-full flex flex-col justify-center"
+                    onMouseEnter={(e) => handlePieceHover(cell, e)}
+                    onMouseLeave={handlePieceLeave}
+                    draggable={isInteractive}
+                    onDragStart={(e) => handleDragStart(e, cell)}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <div className="text-xs leading-tight">{cell.name.split(' ')[0]}</div>
+                    <div className="text-xs opacity-80">
+                      {cell.stats.attack}/{cell.stats.health}
+                    </div>
                   </div>
-                </div>
-              )}
-              {isDragPreviewCell(x, y) && !cell && (
-                <div className="text-center text-gray-600">
-                  <div className="text-xs leading-tight opacity-70">
-                    {currentDraggedPiece?.name.split(' ')[0]}
+                )}
+                {isPreview && !cell && currentDraggedPiece && (
+                  <div className="text-center text-gray-600">
+                    <div className="text-xs leading-tight opacity-70">
+                      {currentDraggedPiece.name.split(' ')[0]}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))
+                )}
+              </div>
+            );
+          })
         )}
       </div>
     </div>
