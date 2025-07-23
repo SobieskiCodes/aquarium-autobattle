@@ -139,23 +139,6 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
           const bonus = hasSpongeFilter ? 2 : 1; // Amplified by sponge filter
           bonusHealth += bonus;
         }
-        // Consumable bonus (if piece is fish) - parse the consumable's abilities
-        if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-          const attackBonus = adjacentPiece.attackBonus || 0;
-          const healthBonus = adjacentPiece.healthBonus || 0;
-          const speedBonus = adjacentPiece.speedBonus || 0;
-          
-          let effectText = '';
-          if (attackBonus > 0) effectText += `+${attackBonus} ATK `;
-          if (healthBonus > 0) effectText += `+${healthBonus} HP `;
-          if (speedBonus > 0) effectText += `+${speedBonus} SPD `;
-          effectText += '(battle)';
-          
-          bonuses.push({ source: adjacentPiece.name, effect: effectText.trim(), color: 'text-orange-500', type: 'consumable' });
-          bonusAttack += adjacentPiece.attackBonus || 0;
-          bonusHealth += adjacentPiece.healthBonus || 0;
-          bonusSpeed += adjacentPiece.speedBonus || 0;
-        }
       }
     });
     
