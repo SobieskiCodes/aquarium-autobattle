@@ -207,28 +207,28 @@ export const GoldTracker: React.FC<GoldTrackerProps> = ({
           </div>
 
           {/* Interest Explanation */}
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+          <div className="bg-purple-100 border border-purple-300 rounded-lg p-4 mb-6">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="text-purple-600" size={20} />
-              <span className="font-bold text-purple-900">Interest System</span>
+              <span className="font-bold text-purple-800">Interest System</span>
             </div>
-            <div className="text-sm text-purple-800">
+            <div className="text-sm text-purple-900">
               <p className="mb-2">
                 Earn 1 gold interest for every 10 gold you have at the end of a battle (max 5 per round).
               </p>
-              <div className="grid grid-cols-6 gap-2 text-xs">
+              <div className="grid grid-cols-6 gap-2 text-xs text-purple-900">
                 {[10, 20, 30, 40, 50].map((threshold, index) => (
                   <div key={threshold} className="text-center">
                     <div className="font-bold">{threshold}g</div>
-                    <div className="text-purple-600">+{index + 1}</div>
+                    <div className="text-purple-700 font-semibold">+{index + 1}</div>
                   </div>
                 ))}
                 <div className="text-center">
                   <div className="font-bold">50+g</div>
-                  <div className="text-purple-600">+5 max</div>
+                  <div className="text-purple-700 font-semibold">+5 max</div>
                 </div>
               </div>
-              <p className="mt-2 text-xs">
+              <p className="mt-2 text-xs text-purple-800 font-medium">
                 Current gold: {currentGold}g → Next interest: +{nextInterest}g
               </p>
             </div>
@@ -263,7 +263,7 @@ export const GoldTracker: React.FC<GoldTrackerProps> = ({
           </div>
 
           {/* Transaction History */}
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div className="bg-gray-100 rounded-lg p-4">
             <h3 className="font-bold text-gray-900 mb-3">
               Transaction History
               {selectedRound && ` - Round ${selectedRound}`}
@@ -272,14 +272,19 @@ export const GoldTracker: React.FC<GoldTrackerProps> = ({
               {filteredTransactions.slice().reverse().map((transaction) => (
                 <div
                   key={transaction.id}
-                  className="flex items-center justify-between bg-white p-3 rounded border"
+                  className="flex items-center justify-between bg-white p-3 rounded border shadow-sm"
                 >
                   <div className="flex items-center gap-3">
                     {getTransactionIcon(transaction.type)}
                     <div>
-                      <div className="font-medium text-sm">{transaction.description}</div>
-                      <div className="text-xs text-gray-500">
+                      <div className="font-medium text-sm text-gray-900">{transaction.description}</div>
+                      <div className="text-xs text-gray-600">
                         Round {transaction.round} • {new Date(transaction.timestamp).toLocaleTimeString()}
+                        {transaction.pieceName && (
+                          <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                            {transaction.pieceName}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -292,7 +297,7 @@ export const GoldTracker: React.FC<GoldTrackerProps> = ({
                 </div>
               ))}
               {filteredTransactions.length === 0 && (
-                <div className="text-center text-gray-500 py-8">
+                <div className="text-center text-gray-600 py-8 font-medium">
                   No transactions found
                   {selectedRound && ` for round ${selectedRound}`}
                 </div>

@@ -391,7 +391,7 @@ export const useGame = () => {
       const transaction = addGoldTransaction(
         'purchase',
         -piece.cost,
-        `Purchased ${piece.name}`,
+        `Purchased ${piece.name} for ${piece.cost}g`,
         prev.round,
         piece.id,
         piece.name
@@ -827,7 +827,7 @@ export const useGame = () => {
       const transaction = addGoldTransaction(
         'sell',
         sellValue,
-        `Sold ${pieceToSell.name} (75% of ${pieceToSell.cost}g)`,
+        `Sold ${pieceToSell.name} for ${sellValue}g (was ${pieceToSell.cost}g)`,
         prev.round,
         pieceToSell.id,
         pieceToSell.name
