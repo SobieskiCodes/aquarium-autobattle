@@ -621,6 +621,7 @@ export const useGame = () => {
 
   const startBattle = useCallback(() => {
     setGameState(prev => {
+      console.log('=== START BATTLE - APPLYING CONSUMABLE EFFECTS ===');
       // Simulate opponent's turn first
       const opponentResult = simulateOpponentTurn(
         prev.opponentGold, 
@@ -629,7 +630,9 @@ export const useGame = () => {
       );
       
       // Apply consumable effects to player pieces before battle
+      console.log('Player pieces before consumable effects:', prev.playerTank.pieces.map(p => ({ name: p.name, type: p.type, position: p.position })));
       const battlePieces = applyConsumableEffects(prev.playerTank.pieces);
+      console.log('Player pieces after consumable effects:', battlePieces.map(p => ({ name: p.name, stats: p.stats })));
       
       // Update grid to remove consumables
       const newGrid = Array(6).fill(null).map(() => Array(8).fill(null));
