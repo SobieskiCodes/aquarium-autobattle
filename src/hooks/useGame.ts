@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { GameState, GamePiece, Position } from '../types/game';
 import { getRandomShop, PIECE_LIBRARY, getRarityWeight } from '../data/pieces';
 import { EnhancedGamePiece, ConsumedEffect } from '../utils/tankAnalysis';
+import '../utils/consumableTest'; // Import test for debugging
 
 const INITIAL_STATE: GameState = {
   phase: 'shop',
