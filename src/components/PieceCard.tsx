@@ -57,20 +57,21 @@ export const PieceCard: React.FC<PieceCardProps> = ({
         borderTopWidth: '4px'
       }}
     >
-      {/* Sell Button */}
-      {showSellOption && onSell && (
-        <button
-          onClick={handleSell}
-          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors z-10 shadow-md"
-          title={`Sell for ${sellValue}g (75% of ${piece.cost}g cost)`}
-        >
-          <X size={12} />
-        </button>
-      )}
-
       {/* Piece Name & Type */}
       <div className="mb-1">
-        <h3 className="font-bold text-sm text-gray-900">{piece.name}</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-sm text-gray-900">{piece.name}</h3>
+          {/* Sell Button */}
+          {showSellOption && onSell && (
+            <button
+              onClick={handleSell}
+              className="w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm ml-1 flex-shrink-0"
+              title={`Sell for ${sellValue}g (75% of ${piece.cost}g cost)`}
+            >
+              <X size={10} />
+            </button>
+          )}
+        </div>
         <p className="text-xs capitalize" style={{ color: getTypeColor(piece.type) }}>
           {piece.type} • {piece.rarity}
         </p>
