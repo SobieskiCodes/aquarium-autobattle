@@ -347,9 +347,8 @@ export const useGame = () => {
       );
       
       // Clear lock if we purchased the locked item
-      const newLockedIndex = prev.lockedShopIndex !== null && prev.shop[prev.lockedShopIndex]?.id === piece.id 
-        ? null 
-        : prev.lockedShopIndex;
+      const purchasedIndex = prev.shop.findIndex(shopPiece => shopPiece?.id === piece.id);
+      const newLockedIndex = prev.lockedShopIndex === purchasedIndex ? null : prev.lockedShopIndex;
       
       return {
         ...prev,
