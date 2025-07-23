@@ -307,6 +307,13 @@ export const TankGrid: React.FC<TankGridProps> = ({
     );
   };
 
+  const isDraggedPieceCell = (x: number, y: number) => {
+    if (!draggedPiece || !draggedPiece.position) return false;
+    
+    return draggedPiece.shape.some((offset: Position) => 
+      draggedPiece.position!.x + offset.x === x && draggedPiece.position!.y + offset.y === y
+    );
+  };
   const isDragPreviewCell = (x: number, y: number) => {
     if (!isDragOver || !draggedPiece) return false;
     
@@ -432,8 +439,10 @@ export const TankGrid: React.FC<TankGridProps> = ({
               className={`
                 aspect-square border rounded-lg flex items-center justify-center text-xs font-bold
                 transition-all duration-200 cursor-pointer
-                ${cell 
-                  ? 'border-gray-400 text-white shadow-md transform hover:scale-105' 
+                ${cell && !isDraggedPieceCell(x, y)
+                  ? 'border-gray-400 text-white shadow-md transform hover:scale-105'
+                  : cell && isDraggedPieceCell(x, y)
+                  ? 'border-gray-400 text-white shadow-md opacity-50'
                   : `border-gray-300 bg-white/30 ${
                       isPreviewCell(x, y) || isDragPreviewCell(x, y)
                         ? canPlaceAt(hoveredPosition?.x || previewPosition?.x || 0, hoveredPosition?.y || previewPosition?.y || 0)
@@ -454,7 +463,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
               onDragOver={(e) => handleDragOver(e, x, y)}
               onDrop={(e) => handleDrop(e, x, y)}
             >
-              {cell && (
+              {cell && !isDraggedPieceCell(x, y) && (
                 <div 
                   className="text-center w-full h-full flex flex-col justify-center"
                   onMouseEnter={(e) => handlePieceHover(cell, e)}
@@ -469,10 +478,17 @@ export const TankGrid: React.FC<TankGridProps> = ({
                   </div>
                 </div>
               )}
-              {(isPreviewCell(x, y) || isDragPreviewCell(x, y)) && !cell && (
+              {(isPreviewCell(x, y) || isDragPreviewCell(x, y)) && !cell && !isDraggedPieceCell(x, y) && (
                 <div className="text-center text-gray-600">
                   <div className="text-xs leading-tight opacity-70">
                     {(selectedPiece || draggedPiece)?.name.split(' ')[0]}
+                  </div>
+                </div>
+              )}
+              {isDragPreviewCell(x, y) && isDraggedPieceCell(x, y) && (
+                <div className="text-center text-gray-600">
+                  <div className="text-xs leading-tight opacity-70">
+                    {draggedPiece?.name.split(' ')[0]}
                   </div>
                 </div>
               )}
