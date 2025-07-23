@@ -100,14 +100,14 @@ export const BattleView: React.FC<BattleViewProps> = ({
   };
 
   const simulateBattle = () => {
-    // Use pieces as they come (already enhanced from game state)
-    let playerBattlePieces = playerPieces.map(piece => ({
+    // Create battle copies with current health tracking
+    let playerBattlePieces = playerPieces.filter(p => p.position).map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
     }));
     
-    let opponentBattlePieces = opponentPieces.map(piece => ({
+    let opponentBattlePieces = opponentPieces.filter(p => p.position).map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
@@ -215,24 +215,21 @@ export const BattleView: React.FC<BattleViewProps> = ({
         // Apply damage
         target.currentHealth = Math.max(0, target.currentHealth - damage);
         
-        console.log(`${attacker.name} dealt ${damage} damage to ${target.name}. Target health: ${target.currentHealth}/${target.stats.health}`);
-        
         // Update the piece's alive status immediately
         if (target.currentHealth <= 0) {
           target.isAlive = false;
         }
         
-        // Calculate current total health for both sides
+        // Calculate current total health for both sides immediately after damage
         const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
         const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
         
-        console.log(`Health update - Player: ${currentPlayerHealth}, Opponent: ${currentOpponentHealth}`);
-        
-        // Update health bars in real-time with current totals
+        // Force immediate state update for health bars
         setBattleState(prev => ({
           ...prev,
           playerHealth: currentPlayerHealth,
-          opponentHealth: currentOpponentHealth
+          opponentHealth: currentOpponentHealth,
+          currentRound: battleTurn
         }));
         
         // Add floating text
