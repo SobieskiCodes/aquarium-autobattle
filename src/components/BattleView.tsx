@@ -488,26 +488,120 @@ export const BattleView: React.FC<BattleViewProps> = ({
         <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">Battle Stats Comparison</h2>
         
         <div className="grid md:grid-cols-2 gap-6 mb-6">
-          {/* Player Tank Summary */}
+          {/* Player Tank Detailed Stats */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h3 className="font-bold text-blue-800 mb-3 text-center">Your Tank</h3>
-            <TankSummary
-              analysis={playerAnalysis}
-              waterQuality={playerWaterQuality}
-              showDetailed={true}
-              className="bg-transparent border-0 p-0"
-            />
+            
+            <div className="grid grid-cols-3 gap-4 text-center mb-4">
+              <div>
+                <div className="text-lg font-bold text-gray-900">Attack</div>
+                <div className="text-sm text-gray-600">Base: {playerAnalysis.baseAttack}</div>
+                {playerAnalysis.bonusAttack > 0 && (
+                  <div className="text-sm text-green-600 font-bold">Bonus: +{playerAnalysis.bonusAttack}</div>
+                )}
+                <div className="text-lg font-bold text-red-600">
+                  Total: {playerAnalysis.totalAttack}
+                  {playerWaterQuality > 7 && (
+                    <span className="text-sm text-green-600 ml-1">(+{Math.floor(playerAnalysis.totalAttack * 0.2)} water)</span>
+                  )}
+                  {playerWaterQuality < 3 && (
+                    <span className="text-sm text-red-600 ml-1">(-{Math.floor(playerAnalysis.totalAttack * 0.3)} water)</span>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <div className="text-lg font-bold text-gray-900">Health</div>
+                <div className="text-sm text-gray-600">Base: {playerAnalysis.baseHealth}</div>
+                {playerAnalysis.bonusHealth > 0 && (
+                  <div className="text-sm text-green-600 font-bold">Bonus: +{playerAnalysis.bonusHealth}</div>
+                )}
+                <div className="text-lg font-bold text-green-600">Total: {playerAnalysis.totalHealth}</div>
+              </div>
+              
+              <div>
+                <div className="text-lg font-bold text-gray-900">Speed</div>
+                <div className="text-sm text-gray-600">Base: {playerAnalysis.baseAverageSpeed}</div>
+                {playerAnalysis.bonusAverageSpeed > 0 && (
+                  <div className="text-sm text-green-600 font-bold">Bonus: +{playerAnalysis.bonusAverageSpeed}</div>
+                )}
+                <div className="text-lg font-bold text-blue-600">Total: {playerAnalysis.averageSpeed}</div>
+              </div>
+            </div>
+            
+            <div className="text-sm text-gray-600 mb-2">
+              Fish: {playerAnalysis.fishCount} | Plants/Equipment: {playerAnalysis.totalPieces - playerAnalysis.fishCount}
+            </div>
+            
+            <div className="text-sm font-bold">Water Quality: {playerWaterQuality}/10</div>
+            {playerWaterQuality > 7 && (
+              <div className="text-xs text-green-600 font-medium flex items-center gap-1">
+                ⭐ Excellent water quality: +20% attack damage
+              </div>
+            )}
+            {playerWaterQuality < 3 && (
+              <div className="text-xs text-red-600 font-medium flex items-center gap-1">
+                ⚠️ Poor water quality: -30% attack damage & poison damage each round
+              </div>
+            )}
           </div>
 
-          {/* Opponent Tank Summary */}
+          {/* Opponent Tank Detailed Stats */}
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <h3 className="font-bold text-red-800 mb-3 text-center">Opponent Tank</h3>
-            <TankSummary
-              analysis={opponentAnalysis}
-              waterQuality={opponentWaterQuality}
-              showDetailed={true}
-              className="bg-transparent border-0 p-0"
-            />
+            
+            <div className="grid grid-cols-3 gap-4 text-center mb-4">
+              <div>
+                <div className="text-lg font-bold text-gray-900">Attack</div>
+                <div className="text-sm text-gray-600">Base: {opponentAnalysis.baseAttack}</div>
+                {opponentAnalysis.bonusAttack > 0 && (
+                  <div className="text-sm text-green-600 font-bold">Bonus: +{opponentAnalysis.bonusAttack}</div>
+                )}
+                <div className="text-lg font-bold text-red-600">
+                  Total: {opponentAnalysis.totalAttack}
+                  {opponentWaterQuality > 7 && (
+                    <span className="text-sm text-green-600 ml-1">(+{Math.floor(opponentAnalysis.totalAttack * 0.2)} water)</span>
+                  )}
+                  {opponentWaterQuality < 3 && (
+                    <span className="text-sm text-red-600 ml-1">(-{Math.floor(opponentAnalysis.totalAttack * 0.3)} water)</span>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <div className="text-lg font-bold text-gray-900">Health</div>
+                <div className="text-sm text-gray-600">Base: {opponentAnalysis.baseHealth}</div>
+                {opponentAnalysis.bonusHealth > 0 && (
+                  <div className="text-sm text-green-600 font-bold">Bonus: +{opponentAnalysis.bonusHealth}</div>
+                )}
+                <div className="text-lg font-bold text-green-600">Total: {opponentAnalysis.totalHealth}</div>
+              </div>
+              
+              <div>
+                <div className="text-lg font-bold text-gray-900">Speed</div>
+                <div className="text-sm text-gray-600">Base: {opponentAnalysis.baseAverageSpeed}</div>
+                {opponentAnalysis.bonusAverageSpeed > 0 && (
+                  <div className="text-sm text-green-600 font-bold">Bonus: +{opponentAnalysis.bonusAverageSpeed}</div>
+                )}
+                <div className="text-lg font-bold text-blue-600">Total: {opponentAnalysis.averageSpeed}</div>
+              </div>
+            </div>
+            
+            <div className="text-sm text-gray-600 mb-2">
+              Fish: {opponentAnalysis.fishCount} | Plants/Equipment: {opponentAnalysis.totalPieces - opponentAnalysis.fishCount}
+            </div>
+            
+            <div className="text-sm font-bold">Water Quality: {opponentWaterQuality}/10</div>
+            {opponentWaterQuality > 7 && (
+              <div className="text-xs text-green-600 font-medium flex items-center gap-1">
+                ⭐ Excellent water quality: +20% attack damage
+              </div>
+            )}
+            {opponentWaterQuality < 3 && (
+              <div className="text-xs text-red-600 font-medium flex items-center gap-1">
+                ⚠️ Poor water quality: -30% attack damage & poison damage each round
+              </div>
+            )}
           </div>
         </div>
 
@@ -544,7 +638,6 @@ export const BattleView: React.FC<BattleViewProps> = ({
           </div>
         </div>
       </div>
-
       {/* Tank Grids */}
       <div className="grid lg:grid-cols-2 gap-6 relative">
         {/* Floating Damage Text */}
