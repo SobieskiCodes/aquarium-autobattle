@@ -358,7 +358,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
         {grid.map((row, y) =>
           row.map((cell, x) => {
             const isPreview = isDragPreview(x, y);
-            const canPlace = dragOverPosition && canPlacePieceAt(currentDraggedPiece!, dragOverPosition.x, dragOverPosition.y);
+            const canPlace = dragOverPosition && currentDraggedPiece && canPlacePieceAt(currentDraggedPiece, dragOverPosition.x, dragOverPosition.y);
             
             return (
               <div
