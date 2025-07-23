@@ -300,9 +300,9 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           <h2 className="text-xl font-bold text-gray-900 mb-4">Tank Pieces</h2>
           {gameState.playerTank.pieces.length > 0 ? (
             <div className="bg-white rounded-lg shadow-md p-4 max-h-[600px] overflow-y-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 justify-items-center">
               {gameState.playerTank.pieces.map((piece, index) => (
-                <div key={`${piece.id}-${index}`} className="min-h-0">
+                <div key={`${piece.id}-${index}`} className="min-h-0 w-full max-w-[280px]">
                   <PieceCard
                     piece={piece}
                     onSelect={onSelectPiece}
