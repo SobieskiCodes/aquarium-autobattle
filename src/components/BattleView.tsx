@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GamePiece, BattleEvent } from '../types/game';
 import { TankGrid } from './TankGrid';
+import { GoldTracker } from './GoldTracker';
 import { Play, Pause, SkipForward, Trophy, ScrollText, Sword } from 'lucide-react';
 
 interface BattleViewProps {
@@ -10,6 +11,8 @@ interface BattleViewProps {
   opponentWaterQuality: number;
   currentRound: number;
   onBattleComplete: (playerWon: boolean) => void;
+  goldHistory?: any[];
+  currentGold?: number;
 }
 
 interface BattleState {
@@ -29,7 +32,9 @@ export const BattleView: React.FC<BattleViewProps> = ({
   playerWaterQuality,
   opponentWaterQuality,
   currentRound,
-  onBattleComplete
+  onBattleComplete,
+  goldHistory = [],
+  currentGold = 0
 }) => {
   const [battleState, setBattleState] = useState<BattleState>({
     playerHealth: 0,
@@ -519,6 +524,15 @@ export const BattleView: React.FC<BattleViewProps> = ({
             {battleState.winner && (
               <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-lg">
                 <Trophy size={20} />
+          
+          {/* Gold Tracker Button */}
+          <div className="flex items-center gap-4">
+            <GoldTracker 
+              goldHistory={goldHistory}
+              currentGold={currentGold}
+              currentRound={currentRound}
+            />
+          </div>
                 <span className="font-bold">
                   {battleState.winner === 'player' ? 'Victory!' : 'Defeat!'}
                   {currentRound === 15 && battleState.winner === 'player' && (
