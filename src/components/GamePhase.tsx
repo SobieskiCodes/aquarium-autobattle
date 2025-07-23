@@ -1,243 +1,1027 @@
-import React from 'react';
-import { GameState } from '../types/game';
-import { Shop } from './Shop';
-import { TankGrid } from './TankGrid';
-import { BattleView } from './BattleView';
-import { PieceCard } from './PieceCard';
-import { TankSummary } from './TankSummary';
-import { analyzeTank } from '../utils/tankAnalysis';
-import { Play, ArrowRight, Lock } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { GameState, GamePiece, Position } from '../types/game';
+import { getRandomShop, PIECE_LIBRARY, getRarityWeight } from '../data/pieces';
+import { applyBonusesToPieces, EnhancedGamePiece, ConsumedEffect } from '../utils/tankAnalysis';
 
-interface GamePhaseProps {
-  gameState: GameState;
-  onPurchasePiece: (piece: any) => void;
-  onPlacePiece: (piece: any, position: any) => void;
-  onMovePiece: (piece: any, position: any) => void;
-  onRerollShop: () => void;
-  onStartBattle: () => void;
-  onCompleteBattle: (result: 'player' | 'opponent' | 'draw') => void;
-  onSelectPiece: (piece: any) => void;
-  onCancelPlacement: () => void;
-  onSellPiece: (piece: any) => void;
-  onToggleShopLock: (index: number) => void;
-  onClearShopLock: () => void;
-}
-
-export const GamePhase: React.FC<GamePhaseProps> = ({
-  gameState,
-  onPurchasePiece,
-  onPlacePiece,
-  onMovePiece,
-  onRerollShop,
-  onStartBattle,
-  onCompleteBattle,
-  onSelectPiece,
-  onCancelPlacement,
-  onSellPiece,
-  onToggleShopLock,
-  onClearShopLock
-}) => {
-  const [draggedPiece, setDraggedPiece] = React.useState<GamePiece | null>(null);
-  const [hoveredCardPiece, setHoveredCardPiece] = React.useState<GamePiece | null>(null);
-
-  const handleDragStart = (piece: GamePiece) => {
-    setDraggedPiece(piece);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedPiece(null);
-  };
-
-  const handleDragPlace = (piece: any, position: any) => {
-    if (piece.position) {
-      // Moving existing piece
-      onMovePiece(piece, position);
-    } else if (gameState.gold >= piece.cost) {
-      // If dragging from shop, purchase first then place
-      onPurchasePiece(piece);
-      // The piece will be placed automatically after purchase
-      setTimeout(() => {
-        onPlacePiece(piece, position);
-      }, 0);
-    } else {
-      // Placing from inventory
-      onPlacePiece(piece, position);
+const INITIAL_STATE: GameState = {
+  phase: 'shop',
+  round: 1,
+  gold: 10,
+  lossStreak: 0,
+  opponentLossStreak: 0,
+  wins: 0,
+  losses: 0,
+  opponentWins: 0,
+  opponentLosses: 0,
+  playerTank: {
+    id: 'player',
+    pieces: [],
+    waterQuality: 5,
+    temperature: 25,
+    grid: Array(6).fill(null).map(() => Array(8).fill(null))
+  },
+  opponentTank: {
+    id: 'opponent',
+    pieces: [],
+    waterQuality: 5,
+    temperature: 25,
+    grid: Array(6).fill(null).map(() => Array(8).fill(null))
+  },
+  shop: getRandomShop(),
+  battleEvents: [],
+  selectedPiece: null,
+  opponentGold: 10,
+  opponentShop: getRandomShop(),
+  lockedShopIndex: null,
+  goldHistory: [
+    {
+      id: 'initial',
+      round: 1,
+      type: 'round_start',
+      amount: 10,
+      description: 'Starting gold',
+      timestamp: Date.now()
     }
+  ],
+  rerollsThisRound: 0
+};
+
+// AI opponent logic
+const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces: GamePiece[]) => {
+  const shop = getRandomShop();
+  let gold = opponentGold;
+  const newPieces: GamePiece[] = [...currentPieces];
+  
+  console.log(`=== OPPONENT TURN - Round ${round} ===`);
+  console.log(`Starting gold: ${gold}`);
+  console.log(`Current pieces: ${newPieces.length}`);
+  
+  // Improved AI reroll strategy - more conservative, especially after losses
+  let currentShop = shop;
+  const rerollCost = 2;
+  let rerollsUsed = 0;
+  
+  // Calculate max rerolls based on gold and game state
+  // After losses, be more conservative with rerolls
+  const baseMaxRerolls = Math.min(Math.floor(gold / 6), 2); // Don't spend more than 1/3 gold on rerolls
+  const maxRerolls = round <= 3 ? Math.min(baseMaxRerolls, 1) : baseMaxRerolls; // Early game: max 1 reroll
+  
+  while (rerollsUsed < maxRerolls && gold >= rerollCost) {
+    const affordablePieces = currentShop.filter(piece => piece && piece.cost <= (gold - rerollCost));
+    
+    // More sophisticated evaluation of shop quality
+    const evaluateShopQuality = (pieces: (GamePiece | null)[]) => {
+      const validPieces = pieces.filter(piece => piece && piece.cost <= gold);
+      if (validPieces.length === 0) return 0;
+      
+      let qualityScore = 0;
+      validPieces.forEach(piece => {
+        if (!piece) return;
+        
+        // Base efficiency score
+        const efficiency = (piece.stats.attack + piece.stats.health) / piece.cost;
+        qualityScore += efficiency;
+        
+        // Rarity bonus
+        if (piece.rarity === 'rare') qualityScore += 2;
+        if (piece.rarity === 'epic') qualityScore += 4;
+        if (piece.rarity === 'legendary') qualityScore += 6;
+        
+        // Synergy bonus with existing pieces
+        const existingTags = newPieces.flatMap(p => p.tags);
+        piece.tags.forEach(tag => {
+          if (existingTags.includes(tag)) qualityScore += 1;
+        });
+      });
+      
+      return qualityScore / validPieces.length; // Average quality
+    };
+    
+    const currentQuality = evaluateShopQuality(currentShop);
+    
+    // Only reroll if shop quality is below threshold AND we have enough gold left to buy
+    const qualityThreshold = round <= 3 ? 2.5 : round <= 6 ? 3.0 : 3.5;
+    const hasEnoughGoldAfterReroll = (gold - rerollCost) >= Math.min(...currentShop.filter(p => p).map(p => p!.cost));
+    
+    if (currentQuality < qualityThreshold && hasEnoughGoldAfterReroll) {
+      const newShop = getRandomShop();
+      const newQuality = evaluateShopQuality(newShop);
+      
+      // Only actually reroll if the new shop would likely be better
+      if (newQuality > currentQuality * 1.1) { // At least 10% better
+        currentShop = newShop;
+        gold -= rerollCost;
+        rerollsUsed++;
+      } else {
+        break; // Don't reroll if new shop isn't significantly better
+      }
+    } else {
+      break; // Shop is good enough or we don't have enough gold
+    }
+  }
+  
+  // Now buy pieces with remaining gold
+  const affordablePieces = currentShop.filter(piece => piece && piece.cost <= gold);
+  
+  // Helper function to check if a consumable can be placed adjacent to fish
+  const canPlaceConsumableEffectively = (consumable: GamePiece) => {
+    if (consumable.type !== 'consumable') return true; // Not a consumable, always OK
+    
+    // Check if we have any fish that could benefit
+    const fishPieces = newPieces.filter(p => p.type === 'fish' && p.position);
+    if (fishPieces.length === 0) return false; // No fish to benefit
+    
+    // Try to find a position where the consumable would be adjacent to at least one fish
+    for (let y = 0; y < 6; y++) {
+      for (let x = 0; x < 8; x++) {
+        // Check if consumable can be placed here
+        const canPlace = consumable.shape.every(offset => {
+          const px = x + offset.x;
+          const py = y + offset.y;
+          return px >= 0 && px < 8 && py >= 0 && py < 6 && 
+                 !newPieces.some(p => p.position && 
+                   p.shape.some(pOffset => 
+                     p.position!.x + pOffset.x === px && 
+                     p.position!.y + pOffset.y === py
+                   )
+                 );
+        });
+        
+        if (!canPlace) continue;
+        
+        // Check if any tile of the consumable would be adjacent to any fish
+        const wouldBeAdjacent = consumable.shape.some(consumableOffset => {
+          const consumableX = x + consumableOffset.x;
+          const consumableY = y + consumableOffset.y;
+          
+          // Check all 4 directions from this consumable tile
+          const directions = [
+            { x: consumableX - 1, y: consumableY },
+            { x: consumableX + 1, y: consumableY },
+            { x: consumableX, y: consumableY - 1 },
+            { x: consumableX, y: consumableY + 1 }
+          ];
+          
+          return directions.some(dir => {
+            if (dir.x < 0 || dir.x >= 8 || dir.y < 0 || dir.y >= 6) return false;
+            
+            // Check if any fish occupies this adjacent position
+            return fishPieces.some(fish => 
+              fish.shape.some(fishOffset => 
+                fish.position!.x + fishOffset.x === dir.x && 
+                fish.position!.y + fishOffset.y === dir.y
+              )
+            );
+          });
+        });
+        
+        if (wouldBeAdjacent) return true;
+      }
+    }
+    
+    return false; // No valid adjacent placement found
+  };
+  
+  const goodPieces = affordablePieces.filter(piece => {
+      if (!piece) return false;
+      
+      // Skip consumables that can't be placed effectively
+      if (piece.type === 'consumable' && !canPlaceConsumableEffectively(piece)) {
+        console.log(`AI skipping ${piece.name} - no effective placement available`);
+        return false;
+      }
+      
+      // More nuanced evaluation of what makes a piece "good"
+      const efficiency = (piece.stats.attack + piece.stats.health) / piece.cost;
+      const isRare = piece.rarity === 'rare' || piece.rarity === 'epic' || piece.rarity === 'legendary';
+      const hasGoodEfficiency = efficiency > (round <= 3 ? 1.8 : round <= 6 ? 2.2 : 2.5);
+      
+      // Check for synergies
+      const existingTags = newPieces.flatMap(p => p.tags);
+      const hasSynergy = piece.tags.some(tag => existingTags.includes(tag));
+      
+      return isRare || hasGoodEfficiency || hasSynergy;
+    });
+    
+  // AI strategy based on round
+  const maxPieces = Math.min(48, 4 + Math.floor(round * 1.5)); // Scale up to full board (48 slots)
+  
+  // More aggressive spending, especially after losses
+  const minSpending = Math.max(6, Math.min(gold * 0.7, round * 2)); // Spend at least 70% of gold or round*2, whichever is higher
+  const targetSpending = Math.min(gold, minSpending);
+  
+  // Filter affordable pieces from shop
+  const finalAffordablePieces = currentShop.filter(piece => piece && piece.cost <= gold);
+  
+  // AI preferences (weighted by round)
+  const getAIPriority = (piece: GamePiece) => {
+    let priority = 0;
+    
+    // Early game: prefer cheap, efficient pieces
+    if (round <= 3) {
+      priority += (10 - piece.cost); // Prefer cheaper pieces
+      priority += piece.stats.attack + piece.stats.health; // Basic stats
+    }
+    // Mid game: prefer synergies and utility
+    else if (round <= 8) {
+      priority += piece.stats.attack * 2 + piece.stats.health; // Favor attack
+      if (piece.tags.includes('schooling')) priority += 5;
+      if (piece.type === 'plant' || piece.type === 'equipment') priority += 3;
+      if (piece.rarity === 'rare') priority += 4;
+    }
+    // Late game: prefer high-value pieces
+    else {
+      priority += piece.stats.attack * 3 + piece.stats.health * 2;
+      if (piece.rarity === 'rare') priority += 6;
+      if (piece.rarity === 'epic' || piece.rarity === 'legendary') priority += 10;
+      if (piece.cost >= 6) priority += 3; // Prefer expensive pieces late game
+    }
+    
+    // Bonus for synergies with existing pieces
+    const existingTags = newPieces.flatMap(p => p.tags);
+    piece.tags.forEach(tag => {
+      if (existingTags.includes(tag)) priority += 2;
+    });
+    
+    return priority;
+  };
+  
+  // Sort by AI priority
+  finalAffordablePieces.sort((a, b) => getAIPriority(b!) - getAIPriority(a!));
+  
+  // Buy pieces until we hit our limits or target spending
+  let totalSpent = rerollsUsed * rerollCost;
+  for (const piece of finalAffordablePieces) {
+    if (!piece || gold < piece.cost || newPieces.length >= maxPieces) continue;
+    
+    // Always try to spend at least the minimum amount
+    if (totalSpent >= targetSpending && totalSpent >= minSpending) continue;
+    
+    // Find available positions for this piece
+    const availablePositions: Position[] = [];
+    for (let y = 0; y < 6; y++) {
+      for (let x = 0; x < 8; x++) {
+        const canPlace = piece.shape.every(offset => {
+          const px = x + offset.x;
+          const py = y + offset.y;
+          return px >= 0 && px < 8 && py >= 0 && py < 6 && 
+                 !newPieces.some(p => p.position && 
+                   p.shape.some(pOffset => 
+                     p.position!.x + pOffset.x === px && 
+                     p.position!.y + pOffset.y === py
+                   )
+                 );
+        });
+        
+        if (canPlace) {
+          availablePositions.push({ x, y });
+        }
+      }
+    }
+    
+    if (availablePositions.length > 0) {
+      const randomPos = availablePositions[Math.floor(Math.random() * availablePositions.length)];
+      
+      // For consumables, try to find a position adjacent to fish
+      let finalPos = randomPos;
+      if (piece.type === 'consumable') {
+        const fishPieces = newPieces.filter(p => p.type === 'fish' && p.position);
+        
+        // Find the best position adjacent to fish
+        let bestPos = null;
+        let maxAdjacentFish = 0;
+        
+        for (const pos of availablePositions) {
+          let adjacentFishCount = 0;
+          
+          // Count how many fish would be adjacent to this consumable placement
+          piece.shape.forEach(consumableOffset => {
+            const consumableX = pos.x + consumableOffset.x;
+            const consumableY = pos.y + consumableOffset.y;
+            
+            const directions = [
+              { x: consumableX - 1, y: consumableY },
+              { x: consumableX + 1, y: consumableY },
+              { x: consumableX, y: consumableY - 1 },
+              { x: consumableX, y: consumableY + 1 }
+            ];
+            
+            directions.forEach(dir => {
+              if (dir.x >= 0 && dir.x < 8 && dir.y >= 0 && dir.y < 6) {
+                const adjacentFish = fishPieces.filter(fish => 
+                  fish.shape.some(fishOffset => 
+                    fish.position!.x + fishOffset.x === dir.x && 
+                    fish.position!.y + fishOffset.y === dir.y
+                  )
+                );
+                adjacentFishCount += adjacentFish.length;
+              }
+            });
+          });
+          
+          if (adjacentFishCount > maxAdjacentFish) {
+            maxAdjacentFish = adjacentFishCount;
+            bestPos = pos;
+          }
+        }
+        
+        if (bestPos && maxAdjacentFish > 0) {
+          finalPos = bestPos;
+          console.log(`AI placing ${piece.name} adjacent to ${maxAdjacentFish} fish at (${finalPos.x}, ${finalPos.y})`);
+        }
+      }
+      
+      newPieces.push({
+        ...piece,
+        id: `opp-${piece.id}-${Math.random().toString(36).substr(2, 9)}`,
+        position: finalPos
+      });
+      gold -= piece.cost;
+      totalSpent += piece.cost;
+      console.log(`AI purchased: ${piece.name} for ${piece.cost}g (${piece.type})`);
+    }
+  }
+  
+  console.log(`AI final gold: ${gold}, pieces: ${newPieces.length}`);
+  console.log(`AI pieces breakdown:`, newPieces.map(p => `${p.name} (${p.type})`));
+  
+  // Calculate water quality for opponent
+  let waterQuality = 5;
+  const plantsAndFilters = newPieces.filter(p => 
+    p.tags.includes('plant') || p.tags.includes('filtration')
+  ).length;
+  waterQuality += plantsAndFilters;
+  
+  const fishCount = newPieces.filter(p => p.type === 'fish').length;
+  if (fishCount > 4) waterQuality -= (fishCount - 4);
+  
+  waterQuality = Math.max(0, Math.min(10, waterQuality));
+  
+  return {
+    pieces: newPieces,
+    remainingGold: gold,
+    waterQuality
+  };
+};
+
+export const useGame = () => {
+  const [gameState, setGameState] = useState<GameState>(INITIAL_STATE);
+
+  // Helper function to add gold transaction
+  const addGoldTransaction = (
+    type: GoldTransaction['type'],
+    amount: number,
+    description: string,
+    round: number,
+    pieceId?: string,
+    pieceName?: string
+  ): GoldTransaction => {
+    return {
+      id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      round,
+      type,
+      amount,
+      description,
+      timestamp: Date.now(),
+      pieceId,
+      pieceName
+    };
   };
 
-  const renderShopPhase = () => (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-teal-500 to-blue-600 text-white p-4 rounded-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">
-              Game Round {gameState.round}/15
-              {gameState.round === 15 && (
-                <span className="ml-2 text-yellow-300 text-lg">🏁 Final Round!</span>
-              )}
-            </h1>
-            <div className="flex items-center gap-4">
-              <p className="text-sm opacity-90">Shop & Build Phase</p>
-              {gameState.lossStreak > 0 && (
-                <div className="bg-red-500/20 px-2 py-1 rounded text-xs font-bold">
-                  Loss Streak: {gameState.lossStreak} (+{Math.min(gameState.lossStreak * 2, 10)} bonus gold next loss)
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Shop Lock Status */}
-          {gameState.lockedShopIndex !== null && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-yellow-800">
-                  <Lock size={16} />
-                  <span className="text-sm font-medium">Shop slot {gameState.lockedShopIndex + 1} is locked</span>
-                </div>
-                <button
-                  onClick={onClearShopLock}
-                  className="text-xs text-yellow-700 hover:text-yellow-900 underline"
-                >
-                  Clear lock
-                </button>
-              </div>
-            </div>
-          )}
-          <button
-            onClick={onStartBattle}
-            disabled={gameState.playerTank.pieces.length === 0}
-            className={`
-              flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
-              ${gameState.playerTank.pieces.length > 0
-                ? 'bg-white text-teal-600 hover:bg-gray-100 hover:shadow-md'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }
-            `}
-          >
-            <Play size={16} />
-            {gameState.round === 15 ? 'Prepare for Final Battle!' : 'Prepare for Battle!'}
-          </button>
-        </div>
-      </div>
+  // Calculate interest based on current gold
+  const calculateInterest = (currentGold: number): number => {
+    // Interest: 1 gold per 10 gold held, max 5 interest per round
+    return Math.min(Math.floor(currentGold / 10), 5);
+  };
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Your Tank</h2>
-          
-          {/* Board Stats Summary */}
-          {gameState.playerTank.pieces.length > 0 && (
-            <TankSummary
-              analysis={analyzeTank(gameState.playerTank.pieces)}
-              waterQuality={gameState.playerTank.waterQuality}
-              className="mb-4"
-            />
-          )}
-          
-          <TankGrid
-            pieces={gameState.playerTank.pieces}
-            onPiecePlace={onPlacePiece}
-            onPieceMove={onMovePiece}
-            waterQuality={gameState.playerTank.waterQuality}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            currentDraggedPiece={draggedPiece}
-            hoveredCardPiece={hoveredCardPiece}
-          />
-          
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Tank Pieces</h2>
-          {gameState.playerTank.pieces.length > 0 ? (
-            <div className="bg-white rounded-lg shadow-lg p-4 max-h-[600px] overflow-y-auto">
-              {/* Unplaced pieces warning */}
-              {(() => {
-                const unplacedPieces = gameState.playerTank.pieces.filter(piece => !piece.position);
-                if (unplacedPieces.length > 0) {
-                  return (
-                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <div className="flex items-center gap-2 text-yellow-800">
-                        <span className="text-lg">⚠️</span>
-                        <span className="font-medium">
-                          {unplacedPieces.length} piece{unplacedPieces.length > 1 ? 's' : ''} not placed on grid yet!
-                        </span>
-                      </div>
-                      <div className="text-sm text-yellow-700 mt-1">
-                        Drag them to the tank grid to use them in battle.
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 justify-items-center">
-              {gameState.playerTank.pieces.map((piece, index) => (
-                <div key={`${piece.id}-${index}`} className="min-h-0 w-full max-w-[280px]">
-                  <PieceCard
-                    piece={piece}
-                    onSelect={onSelectPiece}
-                    onSell={onSellPiece}
-                    isSelected={gameState.selectedPiece?.id === piece.id}
-                    showSellOption={true}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onHover={setHoveredCardPiece}
-                  />
-                </div>
-              ))}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow-lg p-6 text-center text-gray-500">
-              <p>No pieces in your tank yet.</p>
-              <p className="text-sm">Purchase some from the shop below!</p>
-            </div>
-          )}
-        </div>
-      </div>
+  const purchasePiece = useCallback((piece: GamePiece) => {
+    setGameState(prev => {
+      if (prev.gold < piece.cost) return prev;
       
-      <Shop
-        pieces={gameState.shop}
-        gold={gameState.gold}
-        onPurchase={onPurchasePiece}
-        onReroll={onRerollShop}
-        currentRerollCost={gameState.rerollsThisRound < 5 ? 2 : 2 + (gameState.rerollsThisRound - 4)}
-        rerollsThisRound={gameState.rerollsThisRound}
-        lockedIndex={gameState.lockedShopIndex}
-        onToggleLock={onToggleShopLock}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      />
-    </div>
-  );
+      // Remove the purchased piece from shop
+      const newShop = prev.shop.map(shopPiece => 
+        shopPiece?.id === piece.id ? null : shopPiece
+      );
+      
+      // Clear lock if we purchased the locked item
+      const purchasedIndex = prev.shop.findIndex(shopPiece => shopPiece?.id === piece.id);
+      const newLockedIndex = prev.lockedShopIndex === purchasedIndex ? null : prev.lockedShopIndex;
+      
+      // Add purchase transaction
+      const transaction = addGoldTransaction(
+        'purchase',
+        -piece.cost,
+        `Purchased ${piece.name} for ${piece.cost}g`,
+        prev.round,
+        piece.id,
+        piece.name
+      );
+      
+      return {
+        ...prev,
+        gold: prev.gold - piece.cost,
+        shop: newShop,
+        lockedShopIndex: newLockedIndex,
+        playerTank: {
+          ...prev.playerTank,
+          pieces: [...prev.playerTank.pieces, piece]
+        },
+        selectedPiece: null,
+        phase: 'shop' as const,
+        goldHistory: [...prev.goldHistory, transaction]
+      };
+    });
+  }, []);
 
-  const renderPlacementPhase = () => (
-    // Just render the shop phase - placement instructions are already shown there
-    renderShopPhase()
-  );
+  const placePiece = useCallback((piece: GamePiece, position: Position) => {
+    setGameState(prev => {
+      // Check if position is valid
+      const canPlace = piece.shape.every(offset => {
+        const x = position.x + offset.x;
+        const y = position.y + offset.y;
+        return x >= 0 && x < 8 && y >= 0 && y < 6 && !prev.playerTank.grid[y][x];
+      });
 
-  const renderBattlePhase = () => (
-    <BattleView
-      playerPieces={gameState.playerTank.pieces}
-      opponentPieces={gameState.opponentTank.pieces}
-      playerWaterQuality={gameState.playerTank.waterQuality}
-      opponentWaterQuality={gameState.opponentTank.waterQuality}
-      currentRound={gameState.round}
-      onBattleComplete={onCompleteBattle}
-      goldHistory={gameState.goldHistory}
-      currentGold={gameState.gold}
-    />
-  );
+      if (!canPlace) return prev;
 
-  switch (gameState.phase) {
-    case 'shop':
-      return renderShopPhase();
-    case 'placement':
-      return renderPlacementPhase();
-    case 'battle':
-      return renderBattlePhase();
-    default:
-      return renderShopPhase();
-  }
+      // Check if piece is already in tank (from inventory) or is new (from shop)
+      const existingPieceIndex = prev.playerTank.pieces.findIndex(p => p.id === piece.id);
+      let newPieces;
+      let newGoldHistory = prev.goldHistory;
+      let newGold = prev.gold;
+      let newShop = prev.shop;
+      let newLockedIndex = prev.lockedShopIndex;
+      
+      if (existingPieceIndex >= 0) {
+        // Update existing piece position (from inventory)
+        newPieces = prev.playerTank.pieces.map((p, index) => 
+          index === existingPieceIndex ? { ...p, position } : p
+        );
+      } else {
+        // This is a new piece being placed from shop via drag-and-drop
+        // We need to purchase it first
+        if (prev.gold < piece.cost) return prev; // Can't afford it
+        
+        // Add purchase transaction
+        const transaction = addGoldTransaction(
+          'purchase',
+          -piece.cost,
+          `Purchased ${piece.name} for ${piece.cost}g`,
+          prev.round,
+          piece.id,
+          piece.name
+        );
+        
+        newGoldHistory = [...prev.goldHistory, transaction];
+        newGold = prev.gold - piece.cost;
+        
+        // Remove from shop
+        const purchasedIndex = prev.shop.findIndex(shopPiece => shopPiece?.id === piece.id);
+        newShop = prev.shop.map(shopPiece => 
+          shopPiece?.id === piece.id ? null : shopPiece
+        );
+        
+        // Clear lock if we purchased the locked item via drag-and-drop
+        newLockedIndex = prev.lockedShopIndex === purchasedIndex ? null : prev.lockedShopIndex;
+        
+        const newPiece = { ...piece, position };
+        newPieces = [...prev.playerTank.pieces, newPiece];
+      }
+      
+      const newGrid = prev.playerTank.grid.map(row => [...row]);
+      
+      // Mark grid cells as occupied
+      piece.shape.forEach(offset => {
+        const x = position.x + offset.x;
+        const y = position.y + offset.y;
+        newGrid[y][x] = piece.id;
+      });
+
+      // Calculate new water quality
+      let waterQuality = 5;
+      const allPieces = newPieces;
+      
+      // Plants and filters improve water quality
+      const plantsAndFilters = allPieces.filter(p => 
+        p.tags.includes('plant') || p.tags.includes('filtration')
+      ).length;
+      waterQuality += plantsAndFilters;
+      
+      // Too many fish reduce water quality
+      const fishCount = allPieces.filter(p => p.type === 'fish').length;
+      if (fishCount > 4) waterQuality -= (fishCount - 4);
+      
+      waterQuality = Math.max(0, Math.min(10, waterQuality));
+
+      return {
+        ...prev,
+        playerTank: {
+          ...prev.playerTank,
+          pieces: newPieces,
+          grid: newGrid,
+          waterQuality
+        },
+        selectedPiece: null,
+        phase: 'shop' as const,
+        shop: newShop,
+        lockedShopIndex: newLockedIndex,
+        gold: newGold,
+        goldHistory: newGoldHistory
+      };
+    });
+  }, []);
+
+  const movePiece = useCallback((piece: GamePiece, newPosition: Position) => {
+    setGameState(prev => {
+      if (prev.phase !== 'shop') return prev;
+      
+      // Remove piece from current position
+      const newGrid = prev.playerTank.grid.map(row => [...row]);
+      
+      // Clear old position
+      if (piece.position) {
+        piece.shape.forEach(offset => {
+          const x = piece.position!.x + offset.x;
+          const y = piece.position!.y + offset.y;
+          if (x >= 0 && x < 8 && y >= 0 && y < 6) {
+            newGrid[y][x] = null;
+          }
+        });
+      }
+      
+      // Check if new position is valid
+      const canPlace = piece.shape.every(offset => {
+        const x = newPosition.x + offset.x;
+        const y = newPosition.y + offset.y;
+        return x >= 0 && x < 8 && y >= 0 && y < 6 && !newGrid[y][x];
+      });
+
+      if (!canPlace) return prev;
+
+      // Place at new position
+      piece.shape.forEach(offset => {
+        const x = newPosition.x + offset.x;
+        const y = newPosition.y + offset.y;
+        newGrid[y][x] = piece.id;
+      });
+
+      // Update piece position
+      const newPieces = prev.playerTank.pieces.map(p => 
+        p.id === piece.id ? { ...p, position: newPosition } : p
+      );
+
+      return {
+        ...prev,
+        playerTank: {
+          ...prev.playerTank,
+          pieces: newPieces,
+          grid: newGrid
+        },
+        selectedPiece: null
+      };
+    });
+  }, []);
+
+  const rerollShop = useCallback(() => {
+    setGameState(prev => {
+      // Calculate escalating reroll cost: 2g for first 5, then +1g for each additional
+      const rerollCost = prev.rerollsThisRound < 5 ? 2 : 2 + (prev.rerollsThisRound - 4);
+      
+      if (prev.gold < rerollCost) return prev;
+      
+      // Generate new shop but preserve locked item
+      const newShop = getRandomShop(5);
+      if (prev.lockedShopIndex !== null && prev.shop[prev.lockedShopIndex]) {
+        newShop[prev.lockedShopIndex] = prev.shop[prev.lockedShopIndex];
+      }
+      
+      // Add reroll transaction
+      const transaction = addGoldTransaction(
+        'reroll',
+        -rerollCost,
+        `Shop reroll #${prev.rerollsThisRound + 1}`,
+        prev.round
+      );
+      
+      return {
+        ...prev,
+        gold: prev.gold - rerollCost,
+        shop: newShop,
+        goldHistory: [...prev.goldHistory, transaction],
+        rerollsThisRound: prev.rerollsThisRound + 1
+      };
+    });
+  }, []);
+
+  const startBattle = useCallback(() => {
+    setGameState(prev => {
+      // Simulate opponent's turn first
+      const opponentResult = simulateOpponentTurn(
+        prev.opponentGold, 
+        prev.round, 
+        prev.opponentTank.pieces
+      );
+      
+                affectedFish++;
+                // Create consumed effect record
+                const consumedEffect: ConsumedEffect = {
+                  consumableId: consumable.id,
+                  consumableName: consumable.name,
+                  effect: '+1 ATK +1 HP (consumed)',
+                  appliedAt: Date.now()
+                };
+                
+                const enhancedPiece = p as EnhancedGamePiece;
+                const existingEffects = enhancedPiece.consumedEffects || [];
+                
+                return {
+                  ...p,
+                  originalStats: enhancedPiece.originalStats || {
+                    attack: p.stats.attack,
+                    health: p.stats.health,
+                    speed: p.stats.speed,
+                    maxHealth: p.stats.maxHealth
+                  },
+                  consumedEffects: [...existingEffects, consumedEffect],
+                  stats: {
+                    ...p.stats,
+                    attack: p.stats.attack + 1,
+                    health: p.stats.health + 1,
+                    maxHealth: p.stats.maxHealth + 1
+                  }
+                } as EnhancedGamePiece;
+              }
+            }
+            return p;
+          });
+          
+          console.log(`Player ${consumable.name} affected ${affectedFish} fish`);
+        }
+      });
+      
+      // Now remove consumables from battle pieces
+      battlePieces = battlePieces.filter(p => p.type !== 'consumable');
+                affectedFish++;
+                // Create consumed effect record
+                const consumedEffect: ConsumedEffect = {
+                  consumableId: consumable.id,
+                  consumableName: consumable.name,
+                  effect: '+1 ATK +1 HP (consumed)',
+                  appliedAt: Date.now()
+                };
+                
+                const enhancedPiece = p as EnhancedGamePiece;
+                const existingEffects = enhancedPiece.consumedEffects || [];
+                
+                return {
+                  ...p,
+                  originalStats: enhancedPiece.originalStats || {
+                    attack: p.stats.attack,
+                    health: p.stats.health,
+                    speed: p.stats.speed,
+                    maxHealth: p.stats.maxHealth
+                  },
+                  consumedEffects: [...existingEffects, consumedEffect],
+                  stats: {
+                    ...p.stats,
+                    attack: p.stats.attack + 1,
+                    health: p.stats.health + 1,
+                    maxHealth: p.stats.maxHealth + 1
+                  }
+                } as EnhancedGamePiece;
+              }
+            }
+            return p;
+          });
+          
+          console.log(`Opponent ${consumable.name} affected ${affectedFish} fish`);
+        }
+      });
+      
+      // Remove opponent consumables after applying effects
+      opponentBattlePieces = opponentBattlePieces.filter(p => p.type !== 'consumable');
+      
+      // Update grid to remove consumables
+      const newGrid = Array(6).fill(null).map(() => Array(8).fill(null));
+      battlePieces.forEach(piece => {
+        if (piece.position) {
+          piece.shape.forEach(offset => {
+            const x = piece.position!.x + offset.x;
+            const y = piece.position!.y + offset.y;
+            if (x >= 0 && x < 8 && y >= 0 && y < 6) {
+              newGrid[y][x] = piece.id;
+            }
+          });
+        }
+      });
+
+      // Update opponent grid to remove consumables
+      const opponentGrid = Array(6).fill(null).map(() => Array(8).fill(null));
+      opponentBattlePieces.forEach(piece => {
+        if (piece.position) {
+          piece.shape.forEach(offset => {
+            const x = piece.position!.x + offset.x;
+            const y = piece.position!.y + offset.y;
+            if (x >= 0 && x < 8 && y >= 0 && y < 6) {
+              opponentGrid[y][x] = piece.id;
+            }
+          });
+        }
+      });
+
+      return {
+        ...prev,
+        phase: 'battle' as const, 
+        playerTank: {
+          ...prev.playerTank,
+          pieces: battlePieces,
+          grid: newGrid
+        },
+        opponentTank: {
+          ...prev.opponentTank,
+          pieces: opponentBattlePieces,
+          grid: opponentGrid,
+          waterQuality: opponentResult.waterQuality
+        },
+        opponentGold: opponentResult.remainingGold
+      };
+    });
+  }, []);
+
+  const completeBattle = useCallback((result: 'player' | 'opponent' | 'draw') => {
+    setGameState(prev => {
+      // Check if this is the final round (15)
+      const isFinalRound = prev.round >= 15;
+      
+      const isDraw = result === 'draw';
+      const playerWon = result === 'player';
+      
+      // Calculate loss streak bonuses
+      const playerLossStreak = (playerWon || isDraw) ? 0 : prev.lossStreak + 1;
+      const opponentLossStreak = (!playerWon && !isDraw) ? prev.opponentLossStreak + 1 : 0;
+      
+      // Update win/loss records
+      const newWins = playerWon ? prev.wins + 1 : prev.wins;
+      const newLosses = (playerWon || isDraw) ? prev.losses : prev.losses + 1;
+      const newOpponentWins = (!playerWon && !isDraw) ? prev.opponentWins + 1 : prev.opponentWins;
+      const newOpponentLosses = (playerWon && !isDraw) ? prev.opponentLosses + 1 : prev.opponentLosses;
+      
+      // Base rewards - draws give both players moderate gold
+      let goldReward, opponentGoldReward;
+      if (isDraw) {
+        goldReward = 4 + Math.floor(prev.round / 2); // Draw reward
+        opponentGoldReward = 4 + Math.floor(prev.round / 2); // Same for opponent
+      } else if (playerWon) {
+        goldReward = 5 + prev.round;
+        opponentGoldReward = 3;
+      } else {
+        goldReward = 3;
+        opponentGoldReward = 5 + prev.round;
+      }
+      
+      // Loss streak bonuses (exponential catch-up)
+      let lossStreakBonus = 0;
+      if (!playerWon && !isDraw && prev.lossStreak >= 1) {
+        lossStreakBonus = Math.min(playerLossStreak * 2, 10); // Max 10 bonus gold
+        goldReward += lossStreakBonus;
+      }
+      
+      if (!isDraw && prev.opponentLossStreak >= 1) {
+        const lossBonus = Math.min(opponentLossStreak * 2, 10);
+        opponentGoldReward += lossBonus;
+      }
+      
+      // Calculate interest for next round
+      const currentGoldAfterReward = prev.gold + goldReward;
+      const interestAmount = calculateInterest(currentGoldAfterReward);
+      const totalGoldGain = goldReward + interestAmount;
+      
+      // Create transactions
+      const transactions: GoldTransaction[] = [];
+      
+      // Battle reward transaction
+      const battleRewardDesc = isDraw ? 'Draw reward' : playerWon ? 'Victory reward' : 'Defeat consolation';
+      transactions.push(addGoldTransaction(
+        'battle_reward',
+        goldReward,
+        battleRewardDesc,
+        prev.round
+      ));
+      
+      // Loss streak bonus transaction
+      if (lossStreakBonus > 0) {
+        transactions.push(addGoldTransaction(
+          'loss_streak_bonus',
+          lossStreakBonus,
+          `Loss streak bonus (${playerLossStreak} losses)`,
+          prev.round
+        ));
+      }
+      
+      // Interest transaction
+      if (interestAmount > 0) {
+        transactions.push(addGoldTransaction(
+          'interest',
+          interestAmount,
+          `Interest on ${currentGoldAfterReward}g (${Math.floor(currentGoldAfterReward / 10)} × 1g)`,
+          prev.round
+        ));
+      }
+      
+      // Round start transaction for next round
+      const nextRound = isFinalRound ? 1 : prev.round + 1;
+      transactions.push(addGoldTransaction(
+        'round_start',
+        0,
+        `Round ${nextRound} begins`,
+        nextRound
+      ));
+      
+      // If this was the final round, we need to handle game completion
+      if (isFinalRound) {
+        // Complete reset after round 15 - start fresh campaign
+        return {
+          ...INITIAL_STATE,
+          round: 1,
+          gold: 10,
+          wins: 0,
+          losses: 0,
+          opponentWins: 0,
+          opponentLosses: 0,
+          lossStreak: 0,
+          opponentLossStreak: 0,
+          playerTank: {
+            id: 'player',
+            pieces: [],
+            waterQuality: 5,
+            temperature: 25,
+            grid: Array(6).fill(null).map(() => Array(8).fill(null))
+          },
+          opponentTank: {
+            id: 'opponent',
+            pieces: [],
+            waterQuality: 5,
+            temperature: 25,
+            grid: Array(6).fill(null).map(() => Array(8).fill(null))
+          },
+          shop: getRandomShop(),
+          opponentShop: getRandomShop(),
+          battleEvents: [],
+          selectedPiece: null,
+          lockedShopIndex: null,
+          rerollsThisRound: 0,
+          goldHistory: [
+            {
+              id: 'campaign-complete',
+              round: 1,
+              type: 'round_start',
+              amount: 10,
+              description: 'New campaign started - Starting gold',
+              timestamp: Date.now()
+            }
+          ]
+        };
+      }
+      
+      return {
+        ...prev,
+        phase: 'shop' as const,
+        round: prev.round + 1,
+        gold: currentGoldAfterReward + interestAmount,
+        lossStreak: playerLossStreak,
+        opponentLossStreak: opponentLossStreak,
+        wins: newWins,
+        losses: newLosses,
+        opponentWins: newOpponentWins,
+        opponentLosses: newOpponentLosses,
+        opponentGold: prev.opponentGold + opponentGoldReward,
+        rerollsThisRound: 0, // Reset reroll count for new round
+        shop: (() => {
+          // Generate new shop but preserve locked item
+          const newShop = getRandomShop(5);
+          if (prev.lockedShopIndex !== null && prev.shop[prev.lockedShopIndex]) {
+            newShop[prev.lockedShopIndex] = prev.shop[prev.lockedShopIndex];
+          }
+          return newShop;
+        })(),
+        opponentShop: getRandomShop(5),
+        battleEvents: [],
+        goldHistory: [...prev.goldHistory, ...transactions]
+      };
+    });
+  }, []);
+
+  const selectPiece = useCallback((piece: GamePiece) => {
+    setGameState(prev => ({
+      ...prev,
+      selectedPiece: prev.selectedPiece?.id === piece.id ? null : piece,
+      phase: prev.selectedPiece?.id === piece.id ? 'shop' as const : prev.phase
+    }));
+  }, []);
+
+  const cancelPlacement = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      selectedPiece: null,
+      phase: 'shop' as const,
+      // Refund the gold since we're canceling the purchase
+      gold: prev.selectedPiece && !prev.selectedPiece.position ? prev.gold + prev.selectedPiece.cost : prev.gold,
+      // Put the piece back in the shop if it was a new purchase
+      shop: prev.selectedPiece && !prev.selectedPiece.position 
+        ? (() => {
+            const shopCopy = [...prev.shop];
+            const firstEmptyIndex = shopCopy.findIndex(piece => piece === null);
+            if (firstEmptyIndex !== -1) {
+              shopCopy[firstEmptyIndex] = prev.selectedPiece;
+            }
+            return shopCopy;
+          })()
+        : prev.shop
+    }));
+  }, []);
+
+  const sellPiece = useCallback((pieceToSell: GamePiece) => {
+    setGameState(prev => {
+      const sellValue = Math.floor(pieceToSell.cost * 0.75);
+      
+      // Remove piece from tank
+      const newPieces = prev.playerTank.pieces.filter(p => p.id !== pieceToSell.id);
+      
+      // Clear piece from grid
+      const newGrid = prev.playerTank.grid.map(row => [...row]);
+      if (pieceToSell.position) {
+        pieceToSell.shape.forEach(offset => {
+          const x = pieceToSell.position!.x + offset.x;
+          const y = pieceToSell.position!.y + offset.y;
+          if (x >= 0 && x < 8 && y >= 0 && y < 6) {
+            newGrid[y][x] = null;
+          }
+        });
+      }
+      
+      // Recalculate water quality
+      let waterQuality = 5;
+      const plantsAndFilters = newPieces.filter(p => 
+        p.tags.includes('plant') || p.tags.includes('filtration')
+      ).length;
+      waterQuality += plantsAndFilters;
+      
+      const fishCount = newPieces.filter(p => p.type === 'fish').length;
+      if (fishCount > 4) waterQuality -= (fishCount - 4);
+      
+      waterQuality = Math.max(0, Math.min(10, waterQuality));
+      
+      // Add sell transaction
+      const transaction = addGoldTransaction(
+        'sell',
+        sellValue,
+        `Sold ${pieceToSell.name} for ${sellValue}g (was ${pieceToSell.cost}g)`,
+        prev.round,
+        pieceToSell.id,
+        pieceToSell.name
+      );
+      
+      return {
+        ...prev,
+        gold: prev.gold + sellValue,
+        playerTank: {
+          ...prev.playerTank,
+          pieces: newPieces,
+          grid: newGrid,
+          waterQuality
+        },
+        selectedPiece: prev.selectedPiece?.id === pieceToSell.id ? null : prev.selectedPiece,
+        goldHistory: [...prev.goldHistory, transaction]
+      };
+    });
+  }, []);
+
+  const toggleShopLock = useCallback((index: number) => {
+    setGameState(prev => ({
+      ...prev,
+      lockedShopIndex: prev.lockedShopIndex === index ? null : index
+    }));
+  }, []);
+
+  const clearShopLock = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      lockedShopIndex: null
+    }));
+  }, []);
+
+  return {
+    gameState,
+    purchasePiece,
+    placePiece,
+    movePiece,
+    rerollShop,
+    startBattle,
+    completeBattle,
+    selectPiece,
+    cancelPlacement,
+    sellPiece,
+    toggleShopLock,
+    clearShopLock
+  };
 };
