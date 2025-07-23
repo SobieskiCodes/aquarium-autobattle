@@ -52,10 +52,10 @@ export const BattleView: React.FC<BattleViewProps> = ({
 
   // Apply bonuses to get enhanced pieces for display
   const enhancedPlayerPieces = React.useMemo(() => 
-    applyBonusesToPieces(playerPieces, playerPieces), [playerPieces]
+    playerPieces, [playerPieces]
   );
   const enhancedOpponentPieces = React.useMemo(() => 
-    applyBonusesToPieces(opponentPieces, opponentPieces), [opponentPieces]
+    opponentPieces, [opponentPieces]
   );
 
   // Analyze both tanks using original pieces (analyzeTank will apply bonuses internally)
