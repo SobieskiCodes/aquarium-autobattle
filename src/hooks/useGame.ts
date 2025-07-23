@@ -31,7 +31,17 @@ const INITIAL_STATE: GameState = {
   selectedPiece: null,
   opponentGold: 10,
   opponentShop: getRandomShop(),
-  lockedShopIndex: null
+  lockedShopIndex: null,
+  goldHistory: [
+    {
+      id: 'initial',
+      round: 1,
+      type: 'round_start',
+      amount: 10,
+      description: 'Starting gold',
+      timestamp: Date.now()
+    }
+  ]
 };
 
 // Helper function for applying bonuses to pieces
@@ -337,6 +347,33 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
 export const useGame = () => {
   const [gameState, setGameState] = useState<GameState>(INITIAL_STATE);
 
+  // Helper function to add gold transaction
+  const addGoldTransaction = (
+    type: GoldTransaction['type'],
+    amount: number,
+    description: string,
+    round: number,
+    pieceId?: string,
+    pieceName?: string
+  ): GoldTransaction => {
+    return {
+      id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      round,
+      type,
+      amount,
+      description,
+      timestamp: Date.now(),
+      pieceId,
+      pieceName
+    };
+  };
+
+  // Calculate interest based on current gold
+  const calculateInterest = (currentGold: number): number => {
+    // Interest: 1 gold per 10 gold held, max 5 interest per round
+    return Math.min(Math.floor(currentGold / 10), 5);
+  };
+
   const purchasePiece = useCallback((piece: GamePiece) => {
     setGameState(prev => {
       if (prev.gold < piece.cost) return prev;
@@ -350,6 +387,16 @@ export const useGame = () => {
       const purchasedIndex = prev.shop.findIndex(shopPiece => shopPiece?.id === piece.id);
       const newLockedIndex = prev.lockedShopIndex === purchasedIndex ? null : prev.lockedShopIndex;
       
+      // Add purchase transaction
+      const transaction = addGoldTransaction(
+        'purchase',
+        -piece.cost,
+        `Purchased ${piece.name} for ${piece.cost}g`,
+        prev.round,
+        piece.id,
+        piece.name
+      );
+      
       return {
         ...prev,
         gold: prev.gold - piece.cost,
@@ -360,7 +407,8 @@ export const useGame = () => {
           pieces: [...prev.playerTank.pieces, piece]
         },
         selectedPiece: null,
-        phase: 'shop' as const
+        phase: 'shop' as const,
+        goldHistory: [...prev.goldHistory, transaction]
       };
     });
   }, []);
@@ -498,10 +546,19 @@ export const useGame = () => {
         newShop[prev.lockedShopIndex] = prev.shop[prev.lockedShopIndex];
       }
       
+      // Add reroll transaction
+      const transaction = addGoldTransaction(
+        'reroll',
+        -rerollCost,
+        'Shop reroll',
+        prev.round
+      );
+      
       return {
         ...prev,
         gold: prev.gold - rerollCost,
-        shop: newShop
+        shop: newShop,
+        goldHistory: [...prev.goldHistory, transaction]
       };
     });
   }, []);
@@ -615,15 +672,62 @@ export const useGame = () => {
       }
       
       // Loss streak bonuses (exponential catch-up)
+      let lossStreakBonus = 0;
       if (!playerWon && !isDraw && prev.lossStreak >= 1) {
-        const lossBonus = Math.min(playerLossStreak * 2, 10); // Max 10 bonus gold
-        goldReward += lossBonus;
+        lossStreakBonus = Math.min(playerLossStreak * 2, 10); // Max 10 bonus gold
+        goldReward += lossStreakBonus;
       }
       
       if (!isDraw && prev.opponentLossStreak >= 1) {
         const lossBonus = Math.min(opponentLossStreak * 2, 10);
         opponentGoldReward += lossBonus;
       }
+      
+      // Calculate interest for next round
+      const currentGoldAfterReward = prev.gold + goldReward;
+      const interestAmount = calculateInterest(currentGoldAfterReward);
+      const totalGoldGain = goldReward + interestAmount;
+      
+      // Create transactions
+      const transactions: GoldTransaction[] = [];
+      
+      // Battle reward transaction
+      const battleRewardDesc = isDraw ? 'Draw reward' : playerWon ? 'Victory reward' : 'Defeat consolation';
+      transactions.push(addGoldTransaction(
+        'battle_reward',
+        goldReward,
+        battleRewardDesc,
+        prev.round
+      ));
+      
+      // Loss streak bonus transaction
+      if (lossStreakBonus > 0) {
+        transactions.push(addGoldTransaction(
+          'loss_streak_bonus',
+          lossStreakBonus,
+          `Loss streak bonus (${playerLossStreak} losses)`,
+          prev.round
+        ));
+      }
+      
+      // Interest transaction
+      if (interestAmount > 0) {
+        transactions.push(addGoldTransaction(
+          'interest',
+          interestAmount,
+          `Interest on ${currentGoldAfterReward}g (${Math.floor(currentGoldAfterReward / 10)} × 1g)`,
+          prev.round
+        ));
+      }
+      
+      // Round start transaction for next round
+      const nextRound = isFinalRound ? 1 : prev.round + 1;
+      transactions.push(addGoldTransaction(
+        'round_start',
+        0,
+        `Round ${nextRound} begins`,
+        nextRound
+      ));
       
       // If this was the final round, we need to handle game completion
       if (isFinalRound) {
@@ -636,7 +740,7 @@ export const useGame = () => {
         ...prev,
         phase: 'shop' as const,
         round: isFinalRound ? 1 : prev.round + 1, // Reset to round 1 after 15 rounds for now
-        gold: prev.gold + goldReward,
+        gold: currentGoldAfterReward + interestAmount,
         lossStreak: playerLossStreak,
         opponentLossStreak: opponentLossStreak,
         wins: newWins,
@@ -653,7 +757,8 @@ export const useGame = () => {
           return newShop;
         })(),
         opponentShop: getRandomShop(5),
-        battleEvents: []
+        battleEvents: [],
+        goldHistory: [...prev.goldHistory, ...transactions]
       };
     });
   }, []);
@@ -718,6 +823,16 @@ export const useGame = () => {
       
       waterQuality = Math.max(0, Math.min(10, waterQuality));
       
+      // Add sell transaction
+      const transaction = addGoldTransaction(
+        'sell',
+        sellValue,
+        `Sold ${pieceToSell.name} for ${sellValue}g (was ${pieceToSell.cost}g)`,
+        prev.round,
+        pieceToSell.id,
+        pieceToSell.name
+      );
+      
       return {
         ...prev,
         gold: prev.gold + sellValue,
@@ -727,7 +842,8 @@ export const useGame = () => {
           grid: newGrid,
           waterQuality
         },
-        selectedPiece: prev.selectedPiece?.id === pieceToSell.id ? null : prev.selectedPiece
+        selectedPiece: prev.selectedPiece?.id === pieceToSell.id ? null : prev.selectedPiece,
+        goldHistory: [...prev.goldHistory, transaction]
       };
     });
   }, []);

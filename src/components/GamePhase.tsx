@@ -434,6 +434,8 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
       opponentWaterQuality={gameState.opponentTank.waterQuality}
       currentRound={gameState.round}
       onBattleComplete={onCompleteBattle}
+      goldHistory={gameState.goldHistory}
+      currentGold={gameState.gold}
     />
   );
 

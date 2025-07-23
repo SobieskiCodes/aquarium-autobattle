@@ -58,4 +58,16 @@ export interface GameState {
   opponentGold: number;
   opponentShop: (GamePiece | null)[];
   lockedShopIndex: number | null;
+  goldHistory: GoldTransaction[];
+}
+
+export interface GoldTransaction {
+  id: string;
+  round: number;
+  type: 'purchase' | 'sell' | 'reroll' | 'battle_reward' | 'loss_streak_bonus' | 'interest' | 'round_start';
+  amount: number;
+  description: string;
+  timestamp: number;
+  pieceId?: string;
+  pieceName?: string;
 }

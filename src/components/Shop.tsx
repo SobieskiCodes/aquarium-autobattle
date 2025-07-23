@@ -1,7 +1,7 @@
 import React from 'react';
 import { GamePiece } from '../types/game';
 import { PieceCard } from './PieceCard';
-import { RefreshCw, DollarSign, Lock, Unlock } from 'lucide-react';
+import { RefreshCw, DollarSign, Lock, Unlock, Info } from 'lucide-react';
 
 interface ShopProps {
   pieces: (GamePiece | null)[];
@@ -29,7 +29,18 @@ export const Shop: React.FC<ShopProps> = ({
   return (
     <div className="bg-white rounded-lg shadow-lg p-4">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900">Aquarium Shop</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-bold text-gray-900">Aquarium Shop</h2>
+          <div className="relative group">
+            <Info 
+              size={16} 
+              className="text-gray-400 hover:text-gray-600 cursor-help transition-colors" 
+            />
+            <div className="absolute left-0 top-6 bg-gray-900 text-white text-sm p-3 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap">
+              You can buy multiple items at once - they'll go into your storage to place later
+            </div>
+          </div>
+        </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1 text-yellow-600">
             <DollarSign size={20} />
