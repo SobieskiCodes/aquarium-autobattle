@@ -6,6 +6,7 @@ interface TankGridProps {
   pieces: GamePiece[];
   onPiecePlace?: (piece: GamePiece, position: Position) => void;
   onPieceMove?: (piece: GamePiece, position: Position) => void;
+  onSelectPiece?: (piece: GamePiece) => void;
   selectedPiece?: GamePiece | null;
   isInteractive?: boolean;
   waterQuality?: number;
@@ -19,6 +20,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
   pieces,
   onPiecePlace,
   onPieceMove,
+  onSelectPiece,
   selectedPiece,
   isInteractive = true,
   waterQuality = 5,
@@ -256,11 +258,14 @@ export const TankGrid: React.FC<TankGridProps> = ({
         });
 
         if (canPlace) {
-          if (piece.position && onPieceMove) {
-            // Moving existing piece
-            onPieceMove(piece, { x, y });
+          // Check if this piece already exists in the tank (has a position)
+          const existingPiece = pieces.find(p => p.id === piece.id);
+          
+          if (existingPiece && existingPiece.position && onPieceMove) {
+            // Moving existing piece within the grid
+            onPieceMove(existingPiece, { x, y });
           } else if (onPiecePlace) {
-            // Placing new piece
+            // Placing new piece from shop or inventory
             onPiecePlace(piece, { x, y });
           }
         }
@@ -481,6 +486,12 @@ export const TankGrid: React.FC<TankGridProps> = ({
               onMouseLeave={handleCellLeave}
               onDragOver={(e) => handleDragOver(e, x, y)}
               onDrop={(e) => handleDrop(e, x, y)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onSelectPiece) {
+                  onSelectPiece(cell);
+                }
+              }}
             >
               {cell && !isDraggedPieceCell(x, y) && (
                 <div 

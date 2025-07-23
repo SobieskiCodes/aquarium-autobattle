@@ -320,6 +320,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             pieces={gameState.playerTank.pieces}
             onPiecePlace={onPlacePiece}
             onPieceMove={onMovePiece}
+            onSelectPiece={onSelectPiece}
             selectedPiece={gameState.selectedPiece}
             waterQuality={gameState.playerTank.waterQuality}
             onDragStart={handleDragStart}
