@@ -111,13 +111,13 @@ export const BattleView: React.FC<BattleViewProps> = ({
 
   const simulateBattle = () => {
     // Create battle copies with current health tracking
-    let playerBattlePieces = enhancedPlayerPieces.filter(p => p.position).map(piece => ({
+    let playerBattlePieces = applyBonusesToPieces(playerPieces, playerPieces).filter(p => p.position).map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
     }));
     
-    let opponentBattlePieces = enhancedOpponentPieces.filter(p => p.position).map(piece => ({
+    let opponentBattlePieces = applyBonusesToPieces(opponentPieces, opponentPieces).filter(p => p.position).map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
