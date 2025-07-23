@@ -72,33 +72,110 @@ export const BattleView: React.FC<BattleViewProps> = ({
       return;
     }
 
-    // Simple battle simulation based on total stats
-    const playerPower = playerAnalysis.totalAttack + playerAnalysis.totalHealth + (playerAnalysis.averageSpeed * playerFish.length);
-    const opponentPower = opponentAnalysis.totalAttack + opponentAnalysis.totalHealth + (opponentAnalysis.averageSpeed * opponentFish.length);
+    // Detailed turn-based battle simulation
+    const allCombatants = [
+      ...playerFish.map(f => ({ ...f, side: 'player' as const })),
+      ...opponentFish.map(f => ({ ...f, side: 'opponent' as const }))
+    ].sort((a, b) => b.stats.speed - a.stats.speed); // Sort by speed (fastest first)
     
-    // Add some randomness (±20%)
-    const playerFinalPower = playerPower * (0.8 + Math.random() * 0.4);
-    const opponentFinalPower = opponentPower * (0.8 + Math.random() * 0.4);
+    let alivePlayers = playerFish.map(f => ({ ...f, currentHealth: f.stats.health }));
+    let aliveOpponents = opponentFish.map(f => ({ ...f, currentHealth: f.stats.health }));
     
-    setBattleLog(prev => [
-      ...prev,
-      `Your tank power: ${Math.round(playerFinalPower)}`,
-      `Opponent tank power: ${Math.round(opponentFinalPower)}`,
-      'Battle in progress...'
-    ]);
+    let turn = 1;
+    let battleInProgress = true;
     
-    setTimeout(() => {
-      if (Math.abs(playerFinalPower - opponentFinalPower) < playerPower * 0.1) {
-        setBattleResult('draw');
-        setBattleLog(prev => [...prev, 'The battle is too close to call! It\'s a draw!']);
-      } else if (playerFinalPower > opponentFinalPower) {
-        setBattleResult('player');
-        setBattleLog(prev => [...prev, 'Victory! Your aquarium dominates!']);
-      } else {
-        setBattleResult('opponent');
-        setBattleLog(prev => [...prev, 'Defeat! The opponent\'s tank was stronger.']);
+    const simulateTurn = () => {
+      if (!battleInProgress) return;
+      
+      // Each combatant acts in speed order
+      for (const combatant of allCombatants) {
+        if (!battleInProgress) break;
+        
+        let attacker, targets;
+        if (combatant.side === 'player') {
+          attacker = alivePlayers.find(p => p.id === combatant.id);
+          targets = aliveOpponents;
+        } else {
+          attacker = aliveOpponents.find(p => p.id === combatant.id);
+          targets = alivePlayers;
+        }
+        
+        if (!attacker || attacker.currentHealth <= 0 || targets.length === 0) continue;
+        
+        // Pick random target
+        const target = targets[Math.floor(Math.random() * targets.length)];
+        if (target.currentHealth <= 0) continue;
+        
+        // Calculate damage (with some randomness)
+        const baseDamage = attacker.stats.attack;
+        const waterQualityBonus = combatant.side === 'player' 
+          ? Math.floor(playerWaterQuality / 5) 
+          : Math.floor(opponentWaterQuality / 5);
+        const damage = Math.max(1, baseDamage + waterQualityBonus + Math.floor(Math.random() * 3) - 1);
+        
+        target.currentHealth -= damage;
+        
+        const attackerName = attacker.name.split(' ')[0];
+        const targetName = target.name.split(' ')[0];
+        const sideColor = combatant.side === 'player' ? 'text-blue-600' : 'text-red-600';
+        
+        setBattleLog(prev => [...prev, 
+          `Turn ${turn}: ${combatant.side === 'player' ? 'Your' : 'Enemy'} ${attackerName} → ${combatant.side === 'player' ? 'Enemy' : 'Your'} ${targetName} for ${damage}${waterQualityBonus > 0 ? `+${waterQualityBonus}` : ''}${waterQualityBonus > 0 ? ` (+${Math.round(waterQualityBonus/waterQualityBonus*20)}% water quality)` : ''} damage`
+        ]);
+        
+        if (target.currentHealth <= 0) {
+          setBattleLog(prev => [...prev, 
+            `Turn ${turn}: ${combatant.side === 'player' ? 'Your' : 'Enemy'} ${attackerName} → KO! ${combatant.side === 'player' ? 'Enemy' : 'Your'} ${targetName}`
+          ]);
+          
+          // Remove dead target
+          if (combatant.side === 'player') {
+            aliveOpponents = aliveOpponents.filter(p => p.id !== target.id);
+          } else {
+            alivePlayers = alivePlayers.filter(p => p.id !== target.id);
+          }
+        }
+        
+        // Check win conditions
+        if (alivePlayers.length === 0 && aliveOpponents.length === 0) {
+          setBattleResult('draw');
+          setBattleLog(prev => [...prev, 'Both sides eliminated! It\'s a draw!']);
+          battleInProgress = false;
+          break;
+        } else if (alivePlayers.length === 0) {
+          setBattleResult('opponent');
+          setBattleLog(prev => [...prev, 'All your fish have been defeated! Opponent wins.']);
+          battleInProgress = false;
+          break;
+        } else if (aliveOpponents.length === 0) {
+          setBattleResult('player');
+          setBattleLog(prev => [...prev, 'Victory! All enemy fish defeated!']);
+          battleInProgress = false;
+          break;
+        }
       }
-    }, 2000);
+      
+      turn++;
+      
+      // Prevent infinite battles
+      if (turn > 20) {
+        setBattleResult('draw');
+        setBattleLog(prev => [...prev, 'Battle timeout! It\'s a draw.']);
+        battleInProgress = false;
+      }
+    };
+    
+    // Run battle simulation with delays for dramatic effect
+    const runBattle = () => {
+      if (battleInProgress && turn <= 20) {
+        simulateTurn();
+        if (battleInProgress) {
+          setTimeout(runBattle, 800); // Delay between turns
+        }
+      }
+    };
+    
+    setTimeout(runBattle, 1000);
   };
 
   const getResultColor = () => {
@@ -280,12 +357,28 @@ export const BattleView: React.FC<BattleViewProps> = ({
       {battleStarted && (
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Battle Log</h3>
-          <div className="bg-gray-100 rounded-lg p-4 max-h-40 overflow-y-auto">
+          <div className="bg-gray-100 rounded-lg p-4 max-h-64 overflow-y-auto">
             {battleLog.map((log, index) => (
-              <div key={index} className="text-sm text-gray-700 mb-1">
+              <div 
+                key={index} 
+                className={`text-sm mb-1 p-2 rounded ${
+                  log.includes('Your') && log.includes('→') 
+                    ? 'bg-blue-50 text-blue-800 border-l-4 border-blue-400' 
+                    : log.includes('Enemy') && log.includes('→')
+                    ? 'bg-red-50 text-red-800 border-l-4 border-red-400'
+                    : log.includes('KO!')
+                    ? 'bg-yellow-50 text-yellow-800 border-l-4 border-yellow-400 font-bold'
+                    : 'text-gray-700'
+                }`}
+              >
                 {log}
               </div>
             ))}
+            {battleLog.length === 0 && (
+              <div className="text-center text-gray-500 py-4">
+                Battle log will appear here...
+              </div>
+            )}
           </div>
         </div>
       )}
