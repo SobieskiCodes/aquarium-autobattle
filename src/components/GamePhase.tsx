@@ -35,7 +35,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   onToggleShopLock,
   onClearShopLock
 }) => {
-  const [draggedPiece, setDraggedPiece] = React.useState<any>(null);
+  const [draggedPiece, setDraggedPiece] = React.useState<GamePiece | null>(null);
   const [hoveredCardPiece, setHoveredCardPiece] = React.useState<any>(null);
 
   const handleDragStart = (piece: any) => {
