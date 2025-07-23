@@ -629,7 +629,7 @@ export const useGame = () => {
                   consumable.position!.y + offset.y === pos.y
                 );
                 if (!isOwnTile) {
-                  adjacentPositions.push(pos);
+                  maxHealth: p.stats.maxHealth + healthBonus,
                   checkedPositions.add(posKey);
                 }
               }
