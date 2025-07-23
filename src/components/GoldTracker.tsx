@@ -173,34 +173,34 @@ export const GoldTracker: React.FC<GoldTrackerProps> = ({
 
           {/* Breakdown by Category */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-gray-50 p-3 rounded-lg">
+            <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
               <div className="flex items-center gap-2 mb-1">
                 <ShoppingCart size={16} className="text-red-500" />
-                <span className="text-sm font-medium">Purchases</span>
+                <span className="text-sm font-medium text-red-800">Purchases</span>
               </div>
               <div className="text-lg font-bold text-red-600">{totals.purchases}g</div>
             </div>
 
-            <div className="bg-gray-50 p-3 rounded-lg">
+            <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
               <div className="flex items-center gap-2 mb-1">
                 <DollarSign size={16} className="text-green-500" />
-                <span className="text-sm font-medium">Sales</span>
+                <span className="text-sm font-medium text-green-800">Sales</span>
               </div>
               <div className="text-lg font-bold text-green-600">{totals.sales}g</div>
             </div>
 
-            <div className="bg-gray-50 p-3 rounded-lg">
+            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
               <div className="flex items-center gap-2 mb-1">
                 <RefreshCw size={16} className="text-blue-500" />
-                <span className="text-sm font-medium">Rerolls</span>
+                <span className="text-sm font-medium text-blue-800">Rerolls</span>
               </div>
               <div className="text-lg font-bold text-blue-600">{totals.rerolls}g</div>
             </div>
 
-            <div className="bg-gray-50 p-3 rounded-lg">
+            <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
               <div className="flex items-center gap-2 mb-1">
                 <Trophy size={16} className="text-yellow-500" />
-                <span className="text-sm font-medium">Battle Rewards</span>
+                <span className="text-sm font-medium text-yellow-800">Battle Rewards</span>
               </div>
               <div className="text-lg font-bold text-yellow-600">{totals.battleRewards}g</div>
             </div>
