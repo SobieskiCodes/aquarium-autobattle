@@ -146,37 +146,96 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
   let gold = opponentGold;
   const newPieces: GamePiece[] = [...currentPieces];
   
-  // AI reroll strategy - reroll if shop is bad and we have gold
+  // Improved AI reroll strategy - more conservative, especially after losses
   let currentShop = shop;
   const rerollCost = 2;
   let rerollsUsed = 0;
-  const maxRerolls = Math.min(Math.floor(gold / 4), 2); // Don't spend more than half gold on rerolls
+  
+  // Calculate max rerolls based on gold and game state
+  // After losses, be more conservative with rerolls
+  const baseMaxRerolls = Math.min(Math.floor(gold / 6), 2); // Don't spend more than 1/3 gold on rerolls
+  const maxRerolls = round <= 3 ? Math.min(baseMaxRerolls, 1) : baseMaxRerolls; // Early game: max 1 reroll
   
   while (rerollsUsed < maxRerolls && gold >= rerollCost) {
     const affordablePieces = currentShop.filter(piece => piece && piece.cost <= (gold - rerollCost));
-    const goodPieces = affordablePieces.filter(piece => {
-      if (!piece) return false;
-      // Consider a piece "good" if it's rare+ or has good stats for cost
-      const efficiency = (piece.stats.attack + piece.stats.health) / piece.cost;
-      return piece.rarity === 'rare' || piece.rarity === 'epic' || piece.rarity === 'legendary' || efficiency > 2;
-    });
     
-    // Reroll if less than 2 good pieces available
-    if (goodPieces.length < 2) {
-      currentShop = getRandomShop();
-      gold -= rerollCost;
-      rerollsUsed++;
+    // More sophisticated evaluation of shop quality
+    const evaluateShopQuality = (pieces: (GamePiece | null)[]) => {
+      const validPieces = pieces.filter(piece => piece && piece.cost <= gold);
+      if (validPieces.length === 0) return 0;
+      
+      let qualityScore = 0;
+      validPieces.forEach(piece => {
+        if (!piece) return;
+        
+        // Base efficiency score
+        const efficiency = (piece.stats.attack + piece.stats.health) / piece.cost;
+        qualityScore += efficiency;
+        
+        // Rarity bonus
+        if (piece.rarity === 'rare') qualityScore += 2;
+        if (piece.rarity === 'epic') qualityScore += 4;
+        if (piece.rarity === 'legendary') qualityScore += 6;
+        
+        // Synergy bonus with existing pieces
+        const existingTags = newPieces.flatMap(p => p.tags);
+        piece.tags.forEach(tag => {
+          if (existingTags.includes(tag)) qualityScore += 1;
+        });
+      });
+      
+      return qualityScore / validPieces.length; // Average quality
+    };
+    
+    const currentQuality = evaluateShopQuality(currentShop);
+    
+    // Only reroll if shop quality is below threshold AND we have enough gold left to buy
+    const qualityThreshold = round <= 3 ? 2.5 : round <= 6 ? 3.0 : 3.5;
+    const hasEnoughGoldAfterReroll = (gold - rerollCost) >= Math.min(...currentShop.filter(p => p).map(p => p!.cost));
+    
+    if (currentQuality < qualityThreshold && hasEnoughGoldAfterReroll) {
+      const newShop = getRandomShop();
+      const newQuality = evaluateShopQuality(newShop);
+      
+      // Only actually reroll if the new shop would likely be better
+      if (newQuality > currentQuality * 1.1) { // At least 10% better
+        currentShop = newShop;
+        gold -= rerollCost;
+        rerollsUsed++;
+      } else {
+        break; // Don't reroll if new shop isn't significantly better
+      }
     } else {
-      break;
+      break; // Shop is good enough or we don't have enough gold
     }
   }
   
+  // Now buy pieces with remaining gold
+  const affordablePieces = currentShop.filter(piece => piece && piece.cost <= gold);
+  
+  const goodPieces = affordablePieces.filter(piece => {
+      if (!piece) return false;
+      // More nuanced evaluation of what makes a piece "good"
+      const efficiency = (piece.stats.attack + piece.stats.health) / piece.cost;
+      const isRare = piece.rarity === 'rare' || piece.rarity === 'epic' || piece.rarity === 'legendary';
+      const hasGoodEfficiency = efficiency > (round <= 3 ? 1.8 : round <= 6 ? 2.2 : 2.5);
+      
+      // Check for synergies
+      const existingTags = newPieces.flatMap(p => p.tags);
+      const hasSynergy = piece.tags.some(tag => existingTags.includes(tag));
+      
+      return isRare || hasGoodEfficiency || hasSynergy;
+    });
+    
   // AI strategy based on round
   const maxPieces = Math.min(48, 4 + Math.floor(round * 1.5)); // Scale up to full board (48 slots)
-  const targetSpending = Math.min(gold, Math.max(round * 2, 8)); // Always spend at least 8 gold if available
+  
+  // More aggressive spending, especially after losses
+  const minSpending = Math.max(6, Math.min(gold * 0.7, round * 2)); // Spend at least 70% of gold or round*2, whichever is higher
+  const targetSpending = Math.min(gold, minSpending);
   
   // Filter affordable pieces from shop
-  const affordablePieces = currentShop.filter(piece => piece && piece.cost <= gold);
+  const finalAffordablePieces = currentShop.filter(piece => piece && piece.cost <= gold);
   
   // AI preferences (weighted by round)
   const getAIPriority = (piece: GamePiece) => {
@@ -212,12 +271,15 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
   };
   
   // Sort by AI priority
-  affordablePieces.sort((a, b) => getAIPriority(b!) - getAIPriority(a!));
+  finalAffordablePieces.sort((a, b) => getAIPriority(b!) - getAIPriority(a!));
   
   // Buy pieces until we hit our limits or target spending
   let totalSpent = rerollsUsed * rerollCost;
-  for (const piece of affordablePieces) {
-    if (!piece || gold < piece.cost || newPieces.length >= maxPieces || totalSpent >= targetSpending) continue;
+  for (const piece of finalAffordablePieces) {
+    if (!piece || gold < piece.cost || newPieces.length >= maxPieces) continue;
+    
+    // Always try to spend at least the minimum amount
+    if (totalSpent >= targetSpending && totalSpent >= minSpending) continue;
     
     // Find available positions for this piece
     const availablePositions: Position[] = [];
@@ -285,9 +347,8 @@ export const useGame = () => {
       );
       
       // Clear lock if we purchased the locked item
-      const newLockedIndex = prev.lockedShopIndex !== null && prev.shop[prev.lockedShopIndex]?.id === piece.id 
-        ? null 
-        : prev.lockedShopIndex;
+      const purchasedIndex = prev.shop.findIndex(shopPiece => shopPiece?.id === piece.id);
+      const newLockedIndex = prev.lockedShopIndex === purchasedIndex ? null : prev.lockedShopIndex;
       
       return {
         ...prev,
@@ -524,6 +585,9 @@ export const useGame = () => {
 
   const completeBattle = useCallback((result: 'player' | 'opponent' | 'draw') => {
     setGameState(prev => {
+      // Check if this is the final round (15)
+      const isFinalRound = prev.round >= 15;
+      
       const isDraw = result === 'draw';
       const playerWon = result === 'player';
       
@@ -561,10 +625,17 @@ export const useGame = () => {
         opponentGoldReward += lossBonus;
       }
       
+      // If this was the final round, we need to handle game completion
+      if (isFinalRound) {
+        // For now, we'll continue the game but this is where we'd handle
+        // game completion, stats tracking, new opponent, etc.
+        // TODO: Add game completion logic here
+      }
+      
       return {
         ...prev,
         phase: 'shop' as const,
-        round: prev.round + 1,
+        round: isFinalRound ? 1 : prev.round + 1, // Reset to round 1 after 15 rounds for now
         gold: prev.gold + goldReward,
         lossStreak: playerLossStreak,
         opponentLossStreak: opponentLossStreak,

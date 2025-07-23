@@ -180,7 +180,12 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
       <div className="bg-gradient-to-r from-teal-500 to-blue-600 text-white p-4 rounded-lg">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Game Round {gameState.round}</h1>
+            <h1 className="text-2xl font-bold">
+              Game Round {gameState.round}/15
+              {gameState.round === 15 && (
+                <span className="ml-2 text-yellow-300 text-lg">🏁 Final Round!</span>
+              )}
+            </h1>
             <div className="flex items-center gap-4">
               <p className="text-sm opacity-90">Shop & Build Phase</p>
               {gameState.lossStreak > 0 && (
@@ -220,7 +225,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             `}
           >
             <Play size={16} />
-            Battle!
+            {gameState.round === 15 ? 'Final Battle!' : 'Battle!'}
           </button>
         </div>
       </div>
@@ -427,6 +432,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
       opponentPieces={gameState.opponentTank.pieces}
       playerWaterQuality={gameState.playerTank.waterQuality}
       opponentWaterQuality={gameState.opponentTank.waterQuality}
+      currentRound={gameState.round}
       onBattleComplete={onCompleteBattle}
     />
   );
