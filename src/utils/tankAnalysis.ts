@@ -58,6 +58,17 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
     }
   });
 
+  // Helper function to parse consumable effects
+  const parseConsumableEffect = (ability: string): { attack: number; health: number } => {
+    const attackMatch = ability.match(/\+(\d+)\s*ATK/i);
+    const healthMatch = ability.match(/\+(\d+)\s*HP/i);
+    
+    return {
+      attack: attackMatch ? parseInt(attackMatch[1]) : 0,
+      health: healthMatch ? parseInt(healthMatch[1]) : 0
+    };
+  };
+
   return pieces.map(piece => {
     if (!piece.position) return piece;
     
@@ -138,10 +149,14 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
           const bonus = hasSpongeFilter ? 2 : 1; // Amplified by sponge filter
           bonusHealth += bonus;
         }
-        // Consumable bonus (if piece is fish) - each adjacent consumable gives +1/+1
+        // Consumable bonus (if piece is fish) - parse the consumable's abilities
         if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-          bonusAttack += 1;
-          bonusHealth += 1;
+          // Parse the consumable's first ability to get the actual bonuses
+          if (adjacentPiece.abilities && adjacentPiece.abilities.length > 0) {
+            const effect = parseConsumableEffect(adjacentPiece.abilities[0]);
+            bonusAttack += effect.attack;
+            bonusHealth += effect.health;
+          }
         }
       }
     });
