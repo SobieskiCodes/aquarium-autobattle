@@ -34,6 +34,112 @@ const INITIAL_STATE: GameState = {
   lockedShopIndex: null
 };
 
+// Helper function for applying bonuses to pieces
+const applyBonusesToPieces = (pieces: any[], allPieces: any[]) => {
+  const GRID_WIDTH = 8;
+  const GRID_HEIGHT = 6;
+  
+  // Create grid with piece occupancy
+  const grid = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null));
+  allPieces.forEach(piece => {
+    if (piece.position) {
+      piece.shape.forEach((offset: any) => {
+        const x = piece.position.x + offset.x;
+        const y = piece.position.y + offset.y;
+        if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
+          grid[y][x] = piece;
+        }
+      });
+    }
+  });
+
+  return pieces.map(piece => {
+    if (!piece.position) return piece;
+    
+    let bonusAttack = 0;
+    let bonusHealth = 0;
+    let bonusSpeed = 0;
+    
+    // Get all adjacent positions for ALL tiles this piece occupies
+    const adjacentPositions: any[] = [];
+    const checkedPositions = new Set<string>();
+    
+    piece.shape.forEach((shapeOffset: any) => {
+      const pieceX = piece.position.x + shapeOffset.x;
+      const pieceY = piece.position.y + shapeOffset.y;
+      
+      // Check all 4 directions from each tile of this piece
+      const directions = [
+        { x: pieceX - 1, y: pieceY },
+        { x: pieceX + 1, y: pieceY },
+        { x: pieceX, y: pieceY - 1 },
+        { x: pieceX, y: pieceY + 1 }
+      ];
+      
+      directions.forEach(pos => {
+        const posKey = `${pos.x},${pos.y}`;
+        if (!checkedPositions.has(posKey) && 
+            pos.x >= 0 && pos.x < GRID_WIDTH && 
+            pos.y >= 0 && pos.y < GRID_HEIGHT) {
+          // Make sure this position isn't occupied by the same piece
+          const isOwnTile = piece.shape.some((offset: any) => 
+            piece.position.x + offset.x === pos.x && 
+            piece.position.y + offset.y === pos.y
+          );
+          if (!isOwnTile) {
+            adjacentPositions.push(pos);
+            checkedPositions.add(posKey);
+          }
+        }
+      });
+    });
+    
+    adjacentPositions.forEach(pos => {
+      const adjacentPiece = grid[pos.y][pos.x];
+      if (adjacentPiece && adjacentPiece.id !== piece.id) {
+        // Java Fern bonus
+        if (adjacentPiece.id.includes('java-fern')) {
+          bonusAttack += 1;
+          bonusHealth += 1;
+        }
+        // Anubias bonus
+        if (adjacentPiece.id.includes('anubias')) {
+          bonusHealth += 1;
+        }
+        // Consumable bonus (if piece is fish)
+        if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
+          bonusAttack += 1;
+          bonusHealth += 1;
+        }
+      }
+    });
+    
+    // Check for schooling bonuses
+    if (piece.tags.includes('schooling')) {
+      const schoolingCount = adjacentPositions.filter(pos => {
+        const adjacentPiece = grid[pos.y][pos.x];
+        return adjacentPiece && adjacentPiece.tags.includes('schooling') && adjacentPiece.id !== piece.id;
+      }).length;
+      
+      if (schoolingCount > 0) {
+        bonusAttack += schoolingCount;
+        bonusSpeed += Math.floor(schoolingCount / 2);
+      }
+    }
+    
+    return {
+      ...piece,
+      stats: {
+        ...piece.stats,
+        attack: piece.stats.attack + bonusAttack,
+        health: piece.stats.health + bonusHealth,
+        maxHealth: piece.stats.maxHealth + bonusHealth,
+        speed: piece.stats.speed + bonusSpeed
+      }
+    };
+  });
+};
+
 // AI opponent logic
 const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces: GamePiece[]) => {
   const shop = getRandomShop();
