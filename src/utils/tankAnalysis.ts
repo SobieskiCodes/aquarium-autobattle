@@ -120,10 +120,10 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
       }
     }
     
+    // Create a deep copy of the piece to avoid mutating the original
     return {
       ...piece,
       stats: {
-        ...piece.stats,
         attack: piece.stats.attack + bonusAttack,
         health: piece.stats.health + bonusHealth,
         maxHealth: piece.stats.maxHealth + bonusHealth,
