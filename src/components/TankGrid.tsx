@@ -6,28 +6,30 @@ interface TankGridProps {
   pieces: GamePiece[];
   onPiecePlace?: (piece: GamePiece, position: Position) => void;
   onPieceMove?: (piece: GamePiece, position: Position) => void;
-  selectedPiece?: GamePiece | null;
   isInteractive?: boolean;
   waterQuality?: number;
-  previewPosition?: Position | null;
-  highlightedPieceId?: string | null;
+  onDragStart?: (piece: GamePiece) => void;
+  onDragEnd?: () => void;
+  currentDraggedPiece?: GamePiece | null;
+  hoveredCardPiece?: GamePiece | null;
 }
 
 export const TankGrid: React.FC<TankGridProps> = ({
   pieces,
   onPiecePlace,
   onPieceMove,
-  selectedPiece,
   isInteractive = true,
   waterQuality = 5,
-  previewPosition = null,
-  highlightedPieceId = null
+  onDragStart,
+  onDragEnd,
+  currentDraggedPiece,
+  hoveredCardPiece
 }) => {
   const GRID_WIDTH = 8;
   const GRID_HEIGHT = 6;
-  const [hoveredPosition, setHoveredPosition] = React.useState<Position | null>(null);
   const [hoveredPiece, setHoveredPiece] = React.useState<GamePiece | null>(null);
   const [tooltipPosition, setTooltipPosition] = React.useState<{ x: number; y: number } | null>(null);
+  const [dragOverPosition, setDragOverPosition] = React.useState<Position | null>(null);
 
   // Create grid with piece occupancy
   const grid = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null));
@@ -132,41 +134,38 @@ export const TankGrid: React.FC<TankGridProps> = ({
     
     return providers;
   };
-  const handleCellClick = (x: number, y: number) => {
-    if (!selectedPiece || !isInteractive) return;
-    
-    // Check if piece can be placed at this position
-    const canPlace = selectedPiece.shape.every(offset => {
+
+  const isBonusProvider = (piece: GamePiece) => {
+    if (!hoveredPiece) return false;
+    const providers = getBonusProviders(hoveredPiece);
+    return providers.includes(piece.id);
+  };
+
+  const isHoveredPiece = (piece: GamePiece) => {
+    return (hoveredPiece && hoveredPiece.id === piece.id) || 
+           (hoveredCardPiece && hoveredCardPiece.id === piece.id);
+  };
+
+  const getWaterQualityGradient = () => {
+    const quality = Math.max(0, Math.min(10, waterQuality));
+    const hue = (quality / 10) * 120; // 0 = red, 120 = green
+    return `hsl(${hue}, 70%, 85%)`;
+  };
+
+  const canPlacePieceAt = (piece: GamePiece, x: number, y: number) => {
+    return piece.shape.every(offset => {
       const newX = x + offset.x;
       const newY = y + offset.y;
+      
+      // Check bounds
       if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
         return false;
       }
       
-      // Allow placement if cell is empty OR occupied by the same piece we're moving
+      // Check if cell is empty or occupied by the same piece we're moving
       const occupyingPiece = grid[newY][newX];
-      return !occupyingPiece || occupyingPiece.id === selectedPiece.id;
+      return !occupyingPiece || occupyingPiece.id === piece.id;
     });
-
-    if (canPlace) {
-      if (selectedPiece.position && onPieceMove) {
-        // Moving existing piece
-        onPieceMove(selectedPiece, { x, y });
-      } else if (onPiecePlace) {
-        // Placing new piece
-        onPiecePlace(selectedPiece, { x, y });
-      }
-    }
-  };
-
-  const handleCellHover = (x: number, y: number) => {
-    if (selectedPiece && isInteractive) {
-      setHoveredPosition({ x, y });
-    }
-  };
-
-  const handleCellLeave = () => {
-    setHoveredPosition(null);
   };
 
   const handlePieceHover = (piece: GamePiece, event: React.MouseEvent) => {
@@ -182,44 +181,81 @@ export const TankGrid: React.FC<TankGridProps> = ({
     setHoveredPiece(null);
     setTooltipPosition(null);
   };
-  const canPlaceAt = (x: number, y: number) => {
-    if (!selectedPiece) return false;
-    return selectedPiece.shape.every(offset => {
-      const newX = x + offset.x;
-      const newY = y + offset.y;
-      if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
-        return false;
-      }
-      
-      // Allow placement if cell is empty OR occupied by the same piece we're moving
-      const occupyingPiece = grid[newY][newX];
-      return !occupyingPiece || occupyingPiece.id === selectedPiece.id;
-    });
+
+  const handleDragStart = (e: React.DragEvent, piece: GamePiece) => {
+    console.log('Drag start:', piece.name);
+    e.dataTransfer.setData('application/json', JSON.stringify(piece));
+    e.dataTransfer.effectAllowed = 'move';
+    if (onDragStart) {
+      onDragStart(piece);
+    }
   };
 
-  const isPreviewCell = (x: number, y: number) => {
-    const position = previewPosition || hoveredPosition;
-    if (!position || !selectedPiece) return false;
+  const handleDragEnd = (e: React.DragEvent) => {
+    console.log('Drag end');
+    setDragOverPosition(null);
+    if (onDragEnd) {
+      onDragEnd();
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, x: number, y: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
     
-    return selectedPiece.shape.some(offset => 
-      position.x + offset.x === x && position.y + offset.y === y
+    if (currentDraggedPiece && canPlacePieceAt(currentDraggedPiece, x, y)) {
+      setDragOverPosition({ x, y });
+    } else {
+      setDragOverPosition(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, x: number, y: number) => {
+    e.preventDefault();
+    console.log('Drop at:', x, y);
+    
+    try {
+      const pieceData = e.dataTransfer.getData('application/json');
+      if (!pieceData) return;
+      
+      const piece = JSON.parse(pieceData);
+      console.log('Dropped piece:', piece.name, 'has position:', !!piece.position);
+      
+      if (!canPlacePieceAt(piece, x, y)) {
+        console.log('Cannot place piece at', x, y);
+        return;
+      }
+      
+      // Check if this piece is already placed on the grid
+      const isAlreadyPlaced = pieces.some(p => p.id === piece.id && p.position);
+      
+      if (isAlreadyPlaced && onPieceMove) {
+        console.log('Moving existing piece');
+        onPieceMove(piece, { x, y });
+      } else if (onPiecePlace) {
+        console.log('Placing new piece');
+        onPiecePlace(piece, { x, y });
+      }
+      
+    } catch (error) {
+      console.error('Error handling drop:', error);
+    }
+    
+    setDragOverPosition(null);
+  };
+
+  const isPieceAtPosition = (piece: GamePiece, x: number, y: number) => {
+    if (!piece.position) return false;
+    return piece.shape.some(offset => 
+      piece.position!.x + offset.x === x && piece.position!.y + offset.y === y
     );
   };
 
-  const isBonusProvider = (piece: GamePiece) => {
-    if (!hoveredPiece) return false;
-    const providers = getBonusProviders(hoveredPiece);
-    return providers.includes(piece.id);
-  };
-
-  const isHighlightedPiece = (piece: GamePiece) => {
-    return highlightedPieceId === piece.id;
-  };
-
-  const getWaterQualityGradient = () => {
-    const quality = Math.max(0, Math.min(10, waterQuality));
-    const hue = (quality / 10) * 120; // 0 = red, 120 = green
-    return `hsl(${hue}, 70%, 85%)`;
+  const isDragPreview = (x: number, y: number) => {
+    if (!dragOverPosition || !currentDraggedPiece) return false;
+    return currentDraggedPiece.shape.some(offset => 
+      dragOverPosition.x + offset.x === x && dragOverPosition.y + offset.y === y
+    );
   };
 
   return (
@@ -311,6 +347,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
           )}
         </div>
       )}
+
       <div 
         className="grid grid-cols-8 gap-1 p-4 rounded-lg border-2 border-cyan-300 shadow-lg"
         style={{ 
@@ -322,60 +359,60 @@ export const TankGrid: React.FC<TankGridProps> = ({
         }}
       >
         {grid.map((row, y) =>
-          row.map((cell, x) => (
-            <div
-              key={`${x}-${y}`}
-              className={`
-                aspect-square border rounded-lg flex items-center justify-center text-xs font-bold
-                transition-all duration-200 cursor-pointer
-                ${cell
-                  ? `border-gray-400 text-white shadow-md transform hover:scale-105 ${
-                      isHighlightedPiece(cell) 
-                        ? 'ring-4 ring-yellow-400 ring-opacity-75 scale-110 z-10 relative' 
-                        : ''
-                    }` 
-                  : `border-gray-300 bg-white/30 ${
-                      isPreviewCell(x, y) 
-                        ? canPlaceAt(hoveredPosition?.x || previewPosition?.x || 0, hoveredPosition?.y || previewPosition?.y || 0)
-                          ? 'bg-green-200 border-green-400' 
-                          : 'bg-red-200 border-red-400'
-                        : 'hover:bg-white/50'
-                    }`
-                }
-              `}
-              style={{
-                backgroundColor: cell ? getTypeColor(cell.type) : undefined,
-                minHeight: '40px'
-              }}
-              onClick={() => handleCellClick(x, y)}
-              onMouseEnter={() => handleCellHover(x, y)}
-              onMouseLeave={handleCellLeave}
-            >
-              {cell && (
-                <div 
-                  className="text-center w-full h-full flex flex-col justify-center"
-                  onMouseEnter={(e) => handlePieceHover(cell, e)}
-                  onMouseLeave={handlePieceLeave}
-                >
-                  <div className={`text-xs leading-tight ${
-                    isHighlightedPiece(cell) ? 'font-bold' : ''
-                  }`}>
-                    {cell.name.split(' ')[0]}
+          row.map((cell, x) => {
+            const isPreview = isDragPreview(x, y);
+            const canPlace = dragOverPosition && currentDraggedPiece && canPlacePieceAt(currentDraggedPiece, dragOverPosition.x, dragOverPosition.y);
+            
+            return (
+              <div
+                key={`${x}-${y}`}
+                className={`
+                  aspect-square border rounded-lg flex items-center justify-center text-xs font-bold
+                  transition-all duration-200 min-h-[40px]
+                  ${cell 
+                    ? 'border-gray-400 text-white shadow-md cursor-move'
+                    : 'border-gray-300 bg-white/30 hover:bg-white/50'
+                  }
+                  ${isPreview 
+                    ? canPlace 
+                      ? 'bg-green-200 border-green-400 ring-2 ring-green-400' 
+                      : 'bg-red-200 border-red-400 ring-2 ring-red-400'
+                    : ''
+                  }
+                  ${cell && isHoveredPiece(cell) ? 'ring-4 ring-blue-400 ring-opacity-75 transform scale-110' : ''}
+                  ${cell && isBonusProvider(cell) ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}
+                `}
+                style={{
+                  backgroundColor: cell && !isPreview ? getTypeColor(cell.type) : undefined,
+                }}
+                onDragOver={(e) => handleDragOver(e, x, y)}
+                onDrop={(e) => handleDrop(e, x, y)}
+              >
+                {cell && (
+                  <div 
+                    className="text-center w-full h-full flex flex-col justify-center"
+                    onMouseEnter={(e) => handlePieceHover(cell, e)}
+                    onMouseLeave={handlePieceLeave}
+                    draggable={isInteractive}
+                    onDragStart={(e) => handleDragStart(e, cell)}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <div className="text-xs leading-tight">{cell.name.split(' ')[0]}</div>
+                    <div className="text-xs opacity-80">
+                      {cell.stats.attack}/{cell.stats.health}
+                    </div>
                   </div>
-                  <div className="text-xs opacity-80">
-                    {cell.stats.attack}/{cell.stats.health}
+                )}
+                {isPreview && !cell && currentDraggedPiece && (
+                  <div className="text-center text-gray-600">
+                    <div className="text-xs leading-tight opacity-70">
+                      {currentDraggedPiece.name.split(' ')[0]}
+                    </div>
                   </div>
-                </div>
-              )}
-              {isPreviewCell(x, y) && !cell && (
-                <div className="text-center text-gray-600">
-                  <div className="text-xs leading-tight opacity-70">
-                    {selectedPiece?.name.split(' ')[0]}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))
+                )}
+              </div>
+            );
+          })
         )}
       </div>
     </div>

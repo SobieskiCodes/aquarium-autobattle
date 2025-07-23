@@ -13,6 +13,9 @@ interface PieceCardProps {
   canAfford?: boolean;
   showSellOption?: boolean;
   isLocked?: boolean;
+  onDragStart?: (piece: GamePiece) => void;
+  onDragEnd?: () => void;
+  onHover?: (piece: GamePiece | null) => void;
 }
 
 export const PieceCard: React.FC<PieceCardProps> = ({
@@ -24,13 +27,16 @@ export const PieceCard: React.FC<PieceCardProps> = ({
   isInShop = false,
   canAfford = true,
   showSellOption = false,
-  isLocked = false
+  isLocked = false,
+  onDragStart,
+  onDragEnd,
+  onHover
 }) => {
+  const [isDragging, setIsDragging] = React.useState(false);
+
   const handleClick = () => {
-    if (isInShop && onPurchase) {
+    if (isInShop && onPurchase && canAfford) {
       onPurchase(piece);
-    } else if (onSelect) {
-      onSelect(piece);
     }
   };
 
@@ -38,6 +44,34 @@ export const PieceCard: React.FC<PieceCardProps> = ({
     e.stopPropagation();
     if (onSell) {
       onSell(piece);
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('application/json', JSON.stringify(piece));
+    e.dataTransfer.effectAllowed = 'move';
+    setIsDragging(true);
+    if (onDragStart) {
+      onDragStart(piece);
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setIsDragging(false);
+    if (onDragEnd) {
+      onDragEnd();
+    }
+  };
+
+  const handleMouseEnter = () => {
+    if (onHover && piece.position) {
+      onHover(piece);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (onHover) {
+      onHover(null);
     }
   };
 
@@ -59,8 +93,14 @@ export const PieceCard: React.FC<PieceCardProps> = ({
         }
         ${isInShop && !canAfford ? 'opacity-50 cursor-not-allowed' : ''}
         ${isLocked ? 'bg-yellow-50' : ''}
+        ${isDragging ? 'opacity-50 transform rotate-2' : ''}
       `}
       onClick={canAfford ? handleClick : undefined}
+      draggable={canAfford && (isInShop || showSellOption)}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       style={{
         borderTopColor: getRarityColor(piece.rarity),
         borderTopWidth: '4px'
@@ -76,7 +116,10 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       {/* Piece Name & Type */}
       <div className="mb-1 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-sm text-gray-900">{piece.name}</h3>
+          <h3 className={`font-bold text-sm ${!piece.position && showSellOption ? 'text-yellow-800' : 'text-gray-900'}`}>
+            {piece.name}
+            {!piece.position && showSellOption && <span className="ml-1 text-yellow-600">⚠️</span>}
+          </h3>
           {/* Sell Button */}
           {showSellOption && onSell && (
             <button

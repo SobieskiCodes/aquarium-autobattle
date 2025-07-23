@@ -35,8 +35,33 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   onToggleShopLock,
   onClearShopLock
 }) => {
-  const [highlightedPieceId, setHighlightedPieceId] = React.useState<string | null>(null);
+  const [draggedPiece, setDraggedPiece] = React.useState<GamePiece | null>(null);
+  const [hoveredCardPiece, setHoveredCardPiece] = React.useState<GamePiece | null>(null);
 
+  const handleDragStart = (piece: GamePiece) => {
+    setDraggedPiece(piece);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedPiece(null);
+  };
+
+  const handleDragPlace = (piece: any, position: any) => {
+    if (piece.position) {
+      // Moving existing piece
+      onMovePiece(piece, position);
+    } else if (gameState.gold >= piece.cost) {
+      // If dragging from shop, purchase first then place
+      onPurchasePiece(piece);
+      // The piece will be placed automatically after purchase
+      setTimeout(() => {
+        onPlacePiece(piece, position);
+      }, 0);
+    } else {
+      // Placing from inventory
+      onPlacePiece(piece, position);
+    }
+  };
   // Helper function for applying bonuses to pieces
   const applyBonusesToPieces = (pieces: any[], allPieces: any[]) => {
     const GRID_WIDTH = 8;
@@ -296,49 +321,52 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             pieces={gameState.playerTank.pieces}
             onPiecePlace={onPlacePiece}
             onPieceMove={onMovePiece}
-            selectedPiece={gameState.selectedPiece}
             waterQuality={gameState.playerTank.waterQuality}
-            highlightedPieceId={highlightedPieceId}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            currentDraggedPiece={draggedPiece}
+            hoveredCardPiece={hoveredCardPiece}
           />
           
-          {gameState.selectedPiece && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-blue-800">
-                  <strong>
-                    {gameState.selectedPiece.position ? 'Move mode:' : 'Placement mode:'}
-                  </strong> 
-                  Click on the grid to {gameState.selectedPiece.position ? 'move' : 'place'} your {gameState.selectedPiece.name}
-                </p>
-                <button
-                  onClick={onCancelPlacement}
-                  className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Tank Pieces</h2>
           {gameState.playerTank.pieces.length > 0 ? (
             <div className="bg-white rounded-lg shadow-lg p-4 max-h-[600px] overflow-y-auto">
+              {/* Unplaced pieces warning */}
+              {(() => {
+                const unplacedPieces = gameState.playerTank.pieces.filter(piece => !piece.position);
+                if (unplacedPieces.length > 0) {
+                  return (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-yellow-800">
+                        <span className="text-lg">⚠️</span>
+                        <span className="font-medium">
+                          {unplacedPieces.length} piece{unplacedPieces.length > 1 ? 's' : ''} not placed on grid yet!
+                        </span>
+                      </div>
+                      <div className="text-sm text-yellow-700 mt-1">
+                        Drag them to the tank grid to use them in battle.
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 justify-items-center">
               {gameState.playerTank.pieces.map((piece, index) => (
-                <div 
-                  key={`${piece.id}-${index}`} 
-                  className="min-h-0 w-full max-w-[280px]"
-                  onMouseEnter={() => setHighlightedPieceId(piece.id)}
-                  onMouseLeave={() => setHighlightedPieceId(null)}
-                >
+                <div key={`${piece.id}-${index}`} className="min-h-0 w-full max-w-[280px]">
                   <PieceCard
                     piece={piece}
                     onSelect={onSelectPiece}
                     onSell={onSellPiece}
                     isSelected={gameState.selectedPiece?.id === piece.id}
                     showSellOption={true}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onHover={setHoveredCardPiece}
                   />
                 </div>
               ))}
@@ -361,6 +389,8 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
         rerollCost={2}
         lockedIndex={gameState.lockedShopIndex}
         onToggleLock={onToggleShopLock}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
       />
     </div>
   );

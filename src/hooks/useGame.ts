@@ -173,13 +173,6 @@ export const useGame = () => {
     setGameState(prev => {
       if (prev.gold < piece.cost) return prev;
       
-      // If we already have a selected piece, place it in inventory first
-      let updatedPieces = prev.playerTank.pieces;
-      if (prev.selectedPiece && !prev.selectedPiece.position) {
-        // Add the previously selected piece to inventory without position
-        updatedPieces = [...prev.playerTank.pieces, prev.selectedPiece];
-      }
-      
       // Remove the purchased piece from shop
       const newShop = prev.shop.map(shopPiece => 
         shopPiece?.id === piece.id ? null : shopPiece
@@ -197,10 +190,10 @@ export const useGame = () => {
         lockedShopIndex: newLockedIndex,
         playerTank: {
           ...prev.playerTank,
-          pieces: updatedPieces
+          pieces: [...prev.playerTank.pieces, piece]
         },
-        selectedPiece: piece,
-        phase: 'placement' as const
+        selectedPiece: null,
+        phase: 'shop' as const
       };
     });
   }, []);
@@ -265,7 +258,13 @@ export const useGame = () => {
           waterQuality
         },
         selectedPiece: null,
-        phase: 'shop' as const
+        phase: 'shop' as const,
+        // If this was a drag-and-drop purchase, remove from shop
+        shop: existingPieceIndex < 0 ? prev.shop.map(shopPiece => 
+          shopPiece?.id === piece.id ? null : shopPiece
+        ) : prev.shop,
+        // Deduct gold if this was a new purchase
+        gold: existingPieceIndex < 0 ? prev.gold - piece.cost : prev.gold
       };
     });
   }, []);

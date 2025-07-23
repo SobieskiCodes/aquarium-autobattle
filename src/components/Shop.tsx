@@ -11,6 +11,8 @@ interface ShopProps {
   rerollCost: number;
   lockedIndex: number | null;
   onToggleLock: (index: number) => void;
+  onDragStart?: (piece: GamePiece) => void;
+  onDragEnd?: () => void;
 }
 
 export const Shop: React.FC<ShopProps> = ({
@@ -20,7 +22,9 @@ export const Shop: React.FC<ShopProps> = ({
   onReroll,
   rerollCost,
   lockedIndex,
-  onToggleLock
+  onToggleLock,
+  onDragStart,
+  onDragEnd
 }) => {
   return (
     <div className="bg-white rounded-lg shadow-lg p-4">
@@ -50,7 +54,7 @@ export const Shop: React.FC<ShopProps> = ({
       
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {pieces.map((piece, index) => (
-          <div key={index} className="min-h-[200px]">
+          <div key={piece ? piece.id : `empty-${index}`} className="min-h-[200px]">
             <div className="text-xs text-gray-500 mb-1 text-center">
               Slot {index + 1}
             </div>
@@ -62,6 +66,8 @@ export const Shop: React.FC<ShopProps> = ({
                   isInShop={true}
                   canAfford={gold >= piece.cost}
                   isLocked={lockedIndex === index}
+                  onDragStart={onDragStart}
+                  onDragEnd={onDragEnd}
                 />
                 <button
                   onClick={() => onToggleLock(index)}
