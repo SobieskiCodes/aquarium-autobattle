@@ -99,10 +99,17 @@ const applyConsumableEffects = (pieces: GamePiece[]): GamePiece[] => {
           });
           
           if (isAdjacent) {
+            console.log('Consumable object:', consumable);
+            console.log('attackBonus:', consumable.attackBonus);
+            console.log('healthBonus:', consumable.healthBonus);
+            console.log('speedBonus:', consumable.speedBonus);
+            
             // Use the consumable's bonus fields directly
-            const attackBonus = consumable.attackBonus || 0;
-            const healthBonus = consumable.healthBonus || 0;
-            const speedBonus = consumable.speedBonus || 0;
+            const attackBonus = consumable.attackBonus ?? 1;
+            const healthBonus = consumable.healthBonus ?? 1;
+            const speedBonus = consumable.speedBonus ?? 0;
+            
+            console.log('Final bonuses - attack:', attackBonus, 'health:', healthBonus, 'speed:', speedBonus);
 
             // Create consumed effect record
             const consumedEffect: ConsumedEffect = {
