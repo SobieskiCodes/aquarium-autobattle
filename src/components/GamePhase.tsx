@@ -4,7 +4,7 @@ import { Shop } from './Shop';
 import { TankGrid } from './TankGrid';
 import { BattleView } from './BattleView';
 import { PieceCard } from './PieceCard';
-import { Play, ArrowRight } from 'lucide-react';
+import { Play, ArrowRight, Lock } from 'lucide-react';
 
 interface GamePhaseProps {
   gameState: GameState;
@@ -17,6 +17,8 @@ interface GamePhaseProps {
   onSelectPiece: (piece: any) => void;
   onCancelPlacement: () => void;
   onSellPiece: (piece: any) => void;
+  onToggleShopLock: (index: number) => void;
+  onClearShopLock: () => void;
 }
 
 export const GamePhase: React.FC<GamePhaseProps> = ({
@@ -29,8 +31,12 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   onCompleteBattle,
   onSelectPiece,
   onCancelPlacement,
-  onSellPiece
+  onSellPiece,
+  onToggleShopLock,
+  onClearShopLock
 }) => {
+  const [highlightedPieceId, setHighlightedPieceId] = React.useState<string | null>(null);
+
   // Helper function for applying bonuses to pieces
   const applyBonusesToPieces = (pieces: any[], allPieces: any[]) => {
     const GRID_WIDTH = 8;
@@ -138,6 +144,24 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
               )}
             </div>
           </div>
+          
+          {/* Shop Lock Status */}
+          {gameState.lockedShopIndex !== null && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-yellow-800">
+                  <Lock size={16} />
+                  <span className="text-sm font-medium">Shop slot {gameState.lockedShopIndex + 1} is locked</span>
+                </div>
+                <button
+                  onClick={onClearShopLock}
+                  className="text-xs text-yellow-700 hover:text-yellow-900 underline"
+                >
+                  Clear lock
+                </button>
+              </div>
+            </div>
+          )}
           <button
             onClick={onStartBattle}
             disabled={gameState.playerTank.pieces.length === 0}
@@ -274,6 +298,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             onPieceMove={onMovePiece}
             selectedPiece={gameState.selectedPiece}
             waterQuality={gameState.playerTank.waterQuality}
+            highlightedPieceId={highlightedPieceId}
           />
           
           {gameState.selectedPiece && (
@@ -302,7 +327,12 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             <div className="bg-white rounded-lg shadow-lg p-4 max-h-[600px] overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 justify-items-center">
               {gameState.playerTank.pieces.map((piece, index) => (
-                <div key={`${piece.id}-${index}`} className="min-h-0 w-full max-w-[280px]">
+                <div 
+                  key={`${piece.id}-${index}`} 
+                  className="min-h-0 w-full max-w-[280px]"
+                  onMouseEnter={() => setHighlightedPieceId(piece.id)}
+                  onMouseLeave={() => setHighlightedPieceId(null)}
+                >
                   <PieceCard
                     piece={piece}
                     onSelect={onSelectPiece}
@@ -329,6 +359,8 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
         onPurchase={onPurchasePiece}
         onReroll={onRerollShop}
         rerollCost={2}
+        lockedIndex={gameState.lockedShopIndex}
+        onToggleLock={onToggleShopLock}
       />
     </div>
   );

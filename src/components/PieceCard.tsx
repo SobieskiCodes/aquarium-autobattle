@@ -1,7 +1,7 @@
 import React from 'react';
 import { GamePiece } from '../types/game';
 import { getRarityColor, getTypeColor } from '../data/pieces';
-import { Sword, Heart, Zap, DollarSign, X } from 'lucide-react';
+import { Sword, Heart, Zap, DollarSign, X, Lock } from 'lucide-react';
 
 interface PieceCardProps {
   piece: GamePiece;
@@ -12,6 +12,7 @@ interface PieceCardProps {
   isInShop?: boolean;
   canAfford?: boolean;
   showSellOption?: boolean;
+  isLocked?: boolean;
 }
 
 export const PieceCard: React.FC<PieceCardProps> = ({
@@ -22,7 +23,8 @@ export const PieceCard: React.FC<PieceCardProps> = ({
   isSelected = false,
   isInShop = false,
   canAfford = true,
-  showSellOption = false
+  showSellOption = false,
+  isLocked = false
 }) => {
   const handleClick = () => {
     if (isInShop && onPurchase) {
@@ -42,7 +44,13 @@ export const PieceCard: React.FC<PieceCardProps> = ({
   const sellValue = Math.floor(piece.cost * 0.75);
 
   return (
-    <div className="relative"
+    <div 
+      className={`
+        relative
+        ${isLocked ? 'ring-2 ring-yellow-400 ring-opacity-50' : ''}
+      `}
+    >
+      <div
       className={`
         relative p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 h-64 flex flex-col
         ${isSelected 
@@ -50,6 +58,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           : 'border-gray-300 bg-white hover:border-gray-400 hover:shadow-md'
         }
         ${isInShop && !canAfford ? 'opacity-50 cursor-not-allowed' : ''}
+        ${isLocked ? 'bg-yellow-50' : ''}
       `}
       onClick={canAfford ? handleClick : undefined}
       style={{
@@ -57,6 +66,13 @@ export const PieceCard: React.FC<PieceCardProps> = ({
         borderTopWidth: '4px'
       }}
     >
+      {/* Lock indicator */}
+      {isLocked && (
+        <div className="absolute top-1 left-1 w-4 h-4 bg-yellow-500 text-white rounded-full flex items-center justify-center">
+          <Lock size={8} />
+        </div>
+      )}
+      
       {/* Piece Name & Type */}
       <div className="mb-1 flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -155,6 +171,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           </ul>
         </div>
       )}
+    </div>
     </div>
   );
 };

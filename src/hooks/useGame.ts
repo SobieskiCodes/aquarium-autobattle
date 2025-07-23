@@ -30,7 +30,8 @@ const INITIAL_STATE: GameState = {
   battleEvents: [],
   selectedPiece: null,
   opponentGold: 10,
-  opponentShop: getRandomShop()
+  opponentShop: getRandomShop(),
+  lockedShopIndex: null
 };
 
 // AI opponent logic
@@ -184,10 +185,16 @@ export const useGame = () => {
         shopPiece?.id === piece.id ? null : shopPiece
       );
       
+      // Clear lock if we purchased the locked item
+      const newLockedIndex = prev.lockedShopIndex !== null && prev.shop[prev.lockedShopIndex]?.id === piece.id 
+        ? null 
+        : prev.lockedShopIndex;
+      
       return {
         ...prev,
         gold: prev.gold - piece.cost,
         shop: newShop,
+        lockedShopIndex: newLockedIndex,
         playerTank: {
           ...prev.playerTank,
           pieces: updatedPieces
@@ -319,10 +326,16 @@ export const useGame = () => {
     setGameState(prev => {
       if (prev.gold < rerollCost) return prev;
       
+      // Generate new shop but preserve locked item
+      const newShop = getRandomShop(5);
+      if (prev.lockedShopIndex !== null && prev.shop[prev.lockedShopIndex]) {
+        newShop[prev.lockedShopIndex] = prev.shop[prev.lockedShopIndex];
+      }
+      
       return {
         ...prev,
         gold: prev.gold - rerollCost,
-        shop: getRandomShop(5)
+        shop: newShop
       };
     });
   }, []);
@@ -455,7 +468,14 @@ export const useGame = () => {
         opponentWins: newOpponentWins,
         opponentLosses: newOpponentLosses,
         opponentGold: prev.opponentGold + opponentGoldReward,
-        shop: getRandomShop(5),
+        shop: (() => {
+          // Generate new shop but preserve locked item
+          const newShop = getRandomShop(5);
+          if (prev.lockedShopIndex !== null && prev.shop[prev.lockedShopIndex]) {
+            newShop[prev.lockedShopIndex] = prev.shop[prev.lockedShopIndex];
+          }
+          return newShop;
+        })(),
         opponentShop: getRandomShop(5),
         battleEvents: []
       };
@@ -536,6 +556,20 @@ export const useGame = () => {
     });
   }, []);
 
+  const toggleShopLock = useCallback((index: number) => {
+    setGameState(prev => ({
+      ...prev,
+      lockedShopIndex: prev.lockedShopIndex === index ? null : index
+    }));
+  }, []);
+
+  const clearShopLock = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      lockedShopIndex: null
+    }));
+  }, []);
+
   return {
     gameState,
     purchasePiece,
@@ -546,6 +580,8 @@ export const useGame = () => {
     completeBattle,
     selectPiece,
     cancelPlacement,
-    sellPiece
+    sellPiece,
+    toggleShopLock,
+    clearShopLock
   };
 };

@@ -10,6 +10,7 @@ interface TankGridProps {
   isInteractive?: boolean;
   waterQuality?: number;
   previewPosition?: Position | null;
+  highlightedPieceId?: string | null;
 }
 
 export const TankGrid: React.FC<TankGridProps> = ({
@@ -19,7 +20,8 @@ export const TankGrid: React.FC<TankGridProps> = ({
   selectedPiece,
   isInteractive = true,
   waterQuality = 5,
-  previewPosition = null
+  previewPosition = null,
+  highlightedPieceId = null
 }) => {
   const GRID_WIDTH = 8;
   const GRID_HEIGHT = 6;
@@ -209,6 +211,11 @@ export const TankGrid: React.FC<TankGridProps> = ({
     const providers = getBonusProviders(hoveredPiece);
     return providers.includes(piece.id);
   };
+
+  const isHighlightedPiece = (piece: GamePiece) => {
+    return highlightedPieceId === piece.id;
+  };
+
   const getWaterQualityGradient = () => {
     const quality = Math.max(0, Math.min(10, waterQuality));
     const hue = (quality / 10) * 120; // 0 = red, 120 = green
@@ -321,8 +328,12 @@ export const TankGrid: React.FC<TankGridProps> = ({
               className={`
                 aspect-square border rounded-lg flex items-center justify-center text-xs font-bold
                 transition-all duration-200 cursor-pointer
-                ${cell 
-                  ? 'border-gray-400 text-white shadow-md transform hover:scale-105' 
+                ${cell
+                  ? `border-gray-400 text-white shadow-md transform hover:scale-105 ${
+                      isHighlightedPiece(cell) 
+                        ? 'ring-4 ring-yellow-400 ring-opacity-75 scale-110 z-10 relative' 
+                        : ''
+                    }` 
                   : `border-gray-300 bg-white/30 ${
                       isPreviewCell(x, y) 
                         ? canPlaceAt(hoveredPosition?.x || previewPosition?.x || 0, hoveredPosition?.y || previewPosition?.y || 0)
@@ -346,7 +357,11 @@ export const TankGrid: React.FC<TankGridProps> = ({
                   onMouseEnter={(e) => handlePieceHover(cell, e)}
                   onMouseLeave={handlePieceLeave}
                 >
-                  <div className="text-xs leading-tight">{cell.name.split(' ')[0]}</div>
+                  <div className={`text-xs leading-tight ${
+                    isHighlightedPiece(cell) ? 'font-bold' : ''
+                  }`}>
+                    {cell.name.split(' ')[0]}
+                  </div>
                   <div className="text-xs opacity-80">
                     {cell.stats.attack}/{cell.stats.health}
                   </div>
