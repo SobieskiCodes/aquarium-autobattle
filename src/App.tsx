@@ -51,7 +51,10 @@ function App() {
                   const calculateInterest = (gold: number) => Math.min(Math.floor(gold / 10), 5);
                   const nextInterest = calculateInterest(gameState.gold);
                   return nextInterest > 0 ? (
-                    <span className="text-yellow-100 text-xs ml-1">
+                    <span 
+                      className="text-yellow-100 text-xs ml-1 cursor-help" 
+                      title={`Interest Preview: You'll earn +${nextInterest} gold at the end of this round (1g per 10g held, max 5g)`}
+                    >
                       (+{nextInterest})
                     </span>
                   ) : null;
