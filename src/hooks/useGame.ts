@@ -314,7 +314,7 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
                 ...p.stats,
                 attack: p.stats.attack + attackBonus,
                 health: p.stats.health + healthBonus,
-                maxHealth: p.stats.maxHealth + healthBonus
+                maxHealth: p.stats.maxHealth + healthBonus,
                 speed: p.stats.speed + speedBonus
               }
             } as EnhancedGamePiece;
