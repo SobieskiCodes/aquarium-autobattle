@@ -100,8 +100,8 @@ const applyConsumableEffects = (pieces: GamePiece[]): GamePiece[] => {
           
           if (isAdjacent) {
             // Use the consumable's bonus fields directly
-            const attackBonus = consumable.attackBonus || 1;
-            const healthBonus = consumable.healthBonus || 1;
+            const attackBonus = consumable.attackBonus || 0;
+            const healthBonus = consumable.healthBonus || 0;
             const speedBonus = consumable.speedBonus || 0;
 
             // Create consumed effect record
