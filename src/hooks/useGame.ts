@@ -622,24 +622,108 @@ export const useGame = () => {
         prev.opponentTank.pieces
       );
       
-      // Get pieces for battle - consumable effects are already applied from placement
-      // We just need to remove consumables and keep the enhanced pieces as-is
-      let battlePieces = prev.playerTank.pieces.filter(p => p.type !== 'consumable');
+      // Apply consumable effects to player pieces NOW (when battle actually starts)
+      let battlePieces = [...prev.playerTank.pieces];
       const consumables = prev.playerTank.pieces.filter(p => p.type === 'consumable');
-      
-      // Apply consumable effects to opponent pieces too
-      let opponentBattlePieces = [...opponentResult.pieces];
-      const opponentConsumables = opponentBattlePieces.filter(p => p.type === 'consumable');
       
       console.log(`=== BATTLE START ===`);
       console.log(`Player consumables: ${consumables.length}`);
-      console.log(`Opponent consumables: ${opponentConsumables.length}`);
       
-      // Player consumables are already applied during placement phase
-      // Just log for debugging
-      if (consumables.length > 0) {
-        console.log(`Player consumables removed from battle: ${consumables.map(c => c.name).join(', ')}`);
-      }
+      // Apply player consumable effects
+      consumables.forEach(consumable => {
+        if (consumable.position) {
+          console.log(`Applying player consumable: ${consumable.name}`);
+          
+          // Get all adjacent positions for all tiles of the consumable
+          const adjacentPositions: Position[] = [];
+          const checkedPositions = new Set<string>();
+          
+          consumable.shape.forEach(shapeOffset => {
+            const consumableX = consumable.position!.x + shapeOffset.x;
+            const consumableY = consumable.position!.y + shapeOffset.y;
+            
+            // Check all 4 directions from each tile of this consumable
+            const directions = [
+              { x: consumableX - 1, y: consumableY },
+              { x: consumableX + 1, y: consumableY },
+              { x: consumableX, y: consumableY - 1 },
+              { x: consumableX, y: consumableY + 1 }
+            ];
+            
+            directions.forEach(pos => {
+              const posKey = `${pos.x},${pos.y}`;
+              if (!checkedPositions.has(posKey) && 
+                  pos.x >= 0 && pos.x < 8 && 
+                  pos.y >= 0 && pos.y < 6) {
+                // Make sure this position isn't occupied by the same consumable
+                const isOwnTile = consumable.shape.some(offset => 
+                  consumable.position!.x + offset.x === pos.x && 
+                  consumable.position!.y + offset.y === pos.y
+                );
+                if (!isOwnTile) {
+                  adjacentPositions.push(pos);
+                  checkedPositions.add(posKey);
+                }
+              }
+            });
+          });
+          
+          let affectedFish = 0;
+          battlePieces = battlePieces.map(p => {
+            if (p.type === 'fish' && p.position) {
+              // Check if any tile of this fish is adjacent to any tile of the consumable
+              const isAdjacent = p.shape.some(fishOffset => {
+                const fishX = p.position!.x + fishOffset.x;
+                const fishY = p.position!.y + fishOffset.y;
+                return adjacentPositions.some(adj => adj.x === fishX && adj.y === fishY);
+              });
+              
+              if (isAdjacent) {
+                affectedFish++;
+                // Create consumed effect record
+                const consumedEffect: ConsumedEffect = {
+                  consumableId: consumable.id,
+                  consumableName: consumable.name,
+                  effect: '+1 ATK +1 HP (consumed)',
+                  appliedAt: Date.now()
+                };
+                
+                const enhancedPiece = p as EnhancedGamePiece;
+                const existingEffects = enhancedPiece.consumedEffects || [];
+                
+                return {
+                  ...p,
+                  originalStats: enhancedPiece.originalStats || {
+                    attack: p.stats.attack,
+                    health: p.stats.health,
+                    speed: p.stats.speed,
+                    maxHealth: p.stats.maxHealth
+                  },
+                  consumedEffects: [...existingEffects, consumedEffect],
+                  stats: {
+                    ...p.stats,
+                    attack: p.stats.attack + 1,
+                    health: p.stats.health + 1,
+                    maxHealth: p.stats.maxHealth + 1
+                  }
+                } as EnhancedGamePiece;
+              }
+            }
+            return p;
+          });
+          
+          console.log(`Player ${consumable.name} affected ${affectedFish} fish`);
+        }
+      });
+      
+      // Now remove consumables from battle pieces
+      battlePieces = battlePieces.filter(p => p.type !== 'consumable');
+      
+      // Apply consumable effects to opponent pieces
+      let opponentBattlePieces = [...opponentResult.pieces];
+      const opponentConsumables = opponentBattlePieces.filter(p => p.type === 'consumable');
+      
+      console.log(`Opponent consumables: ${opponentConsumables.length}`);
       
       // Apply opponent consumable effects
       opponentConsumables.forEach(consumable => {
@@ -761,7 +845,7 @@ export const useGame = () => {
 
       return {
         ...prev,
-        phase: 'battle' as const,
+        phase: 'battle' as const, 
         playerTank: {
           ...prev.playerTank,
           pieces: battlePieces,
