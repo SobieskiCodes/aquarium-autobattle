@@ -254,18 +254,33 @@ export const PieceCard: React.FC<PieceCardProps> = ({
               <div className="text-xs font-medium text-orange-600 mb-1">
                 Consumed Items ({consumedCount}):
               </div>
-              <div className="text-xs text-orange-700">
-                {enhancedPiece.consumedEffects?.slice(0, 2).map((effect, index) => (
-                  <div key={index} className="truncate">
-                    • {effect.consumableName}
+              {(() => {
+                // Group consumed effects by consumable name
+                const consumedGroups = new Map<string, number>();
+                enhancedPiece.consumedEffects?.forEach(effect => {
+                  const count = consumedGroups.get(effect.consumableName) || 0;
+                  consumedGroups.set(effect.consumableName, count + 1);
+                });
+                
+                const groupedEntries = Array.from(consumedGroups.entries());
+                const displayEntries = groupedEntries.slice(0, 2);
+                const remainingCount = groupedEntries.length > 2 ? groupedEntries.length - 2 : 0;
+                
+                return (
+                  <div className="text-xs text-orange-700">
+                    {displayEntries.map(([name, count], index) => (
+                      <div key={index} className="truncate">
+                        • {name}{count > 1 ? ` (×${count})` : ''}
+                      </div>
+                    ))}
+                    {remainingCount > 0 && (
+                      <div className="text-xs text-gray-500">
+                        +{remainingCount} more type{remainingCount > 1 ? 's' : ''}...
+                      </div>
+                    )}
                   </div>
-                ))}
-                {consumedCount > 2 && (
-                  <div className="text-xs text-gray-500">
-                    +{consumedCount - 2} more...
-                  </div>
-                )}
-              </div>
+                );
+              })()}
             </div>
           )}
         </div>

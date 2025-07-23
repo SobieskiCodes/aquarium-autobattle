@@ -254,13 +254,28 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]):
     }
   }
   
-  // Add consumed effects to bonuses
+  // Add consumed effects to bonuses (stack duplicates)
   const enhancedPiece = piece as EnhancedGamePiece;
   if (enhancedPiece.consumedEffects) {
+    // Group consumed effects by consumable name and effect
+    const consumedGroups = new Map<string, { count: number; effect: string }>();
+    
     enhancedPiece.consumedEffects.forEach(effect => {
+      const key = `${effect.consumableName}:${effect.effect}`;
+      if (consumedGroups.has(key)) {
+        consumedGroups.get(key)!.count++;
+      } else {
+        consumedGroups.set(key, { count: 1, effect: effect.effect });
+      }
+    });
+    
+    // Add stacked bonuses
+    consumedGroups.forEach(({ count, effect }, key) => {
+      const consumableName = key.split(':')[0];
+      const displayEffect = count > 1 ? `${effect} (×${count})` : effect;
       bonuses.push({ 
-        source: effect.consumableName, 
-        effect: effect.effect, 
+        source: consumableName, 
+        effect: displayEffect, 
         color: 'text-orange-600', 
         type: 'consumable' 
       });
