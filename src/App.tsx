@@ -45,8 +45,8 @@ function App() {
                 {(() => {
                   const nextInterest = Math.min(Math.floor(gameState.gold / 10), 5);
                   return nextInterest > 0 ? (
-                    <span className="text-yellow-200 text-xs ml-1">
-                      (+{nextInterest} next)
+                    <span className="text-yellow-200 text-xs ml-1" title={`Interest: +${nextInterest}g next round (1g per 10g held, max 5g)`}>
+                      (+{nextInterest})
                     </span>
                   ) : null;
                 })()}
