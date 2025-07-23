@@ -507,7 +507,9 @@ export const BattleView: React.FC<BattleViewProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Swords size={24} />
-            <h2 className="text-2xl font-bold">Battle Arena</h2>
+            <h2 className="text-2xl font-bold">Battle Arena - Round {currentRound}/15
+              {currentRound === 15 && <span className="ml-2">🏁</span>}
+            </h2>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-sm bg-white/20 px-3 py-1 rounded-lg">
@@ -519,6 +521,12 @@ export const BattleView: React.FC<BattleViewProps> = ({
                 <Trophy size={20} />
                 <span className="font-bold">
                   {battleState.winner === 'player' ? 'Victory!' : 'Defeat!'}
+                  {currentRound === 15 && battleState.winner === 'player' && (
+                    <div className="text-yellow-300 mt-2">
+                      <Trophy className="inline mr-2" size={24} />
+                      Perfect Game!
+                    </div>
+                  )}
                 </span>
               </div>
             )}
@@ -533,7 +541,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
                 }}
                 className="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-100 transition-colors ml-4"
               >
-                Continue to Next Round
+                {currentRound === 15 ? 'Finish Game' : 'Continue to Next Round'}
               </button>
             )}
           </div>

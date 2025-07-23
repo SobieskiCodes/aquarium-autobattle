@@ -432,6 +432,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
       opponentPieces={gameState.opponentTank.pieces}
       playerWaterQuality={gameState.playerTank.waterQuality}
       opponentWaterQuality={gameState.opponentTank.waterQuality}
+      currentRound={gameState.round}
       onBattleComplete={onCompleteBattle}
     />
   );
