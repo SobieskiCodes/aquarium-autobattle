@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { GamePiece, BattleEvent } from '../types/game';
+import { GamePiece } from '../types/game';
 import { TankGrid } from './TankGrid';
+import { TankSummary } from './TankSummary';
 import { GoldTracker } from './GoldTracker';
-import { Play, Pause, SkipForward, Trophy, ScrollText, Sword } from 'lucide-react';
+import { analyzeTank, applyBonusesToPieces } from '../utils/tankAnalysis';
+import { GoldTransaction } from '../types/game';
+import { Sword, Shield, Zap, Play, ArrowRight, Eye } from 'lucide-react';
 
 interface BattleViewProps {
   playerPieces: GamePiece[];
@@ -10,20 +13,9 @@ interface BattleViewProps {
   playerWaterQuality: number;
   opponentWaterQuality: number;
   currentRound: number;
-  onBattleComplete: (playerWon: boolean) => void;
-  goldHistory?: any[];
-  currentGold?: number;
-}
-
-interface BattleState {
-  playerHealth: number;
-  opponentHealth: number;
-  maxPlayerHealth: number;
-  maxOpponentHealth: number;
-  currentRound: number;
-  battleActive: boolean;
-  winner: 'player' | 'opponent' | null;
-  battleEvents: BattleEvent[];
+  onBattleComplete: (result: 'player' | 'opponent' | 'draw') => void;
+  goldHistory: GoldTransaction[];
+  currentGold: number;
 }
 
 export const BattleView: React.FC<BattleViewProps> = ({
@@ -33,20 +25,22 @@ export const BattleView: React.FC<BattleViewProps> = ({
   opponentWaterQuality,
   currentRound,
   onBattleComplete,
-  goldHistory = [],
-  currentGold = 0
+  goldHistory,
+  currentGold
 }) => {
-  const [battleState, setBattleState] = useState<BattleState>({
+  const [battleStarted, setBattleStarted] = useState(false);
+  const [battleResult, setBattleResult] = useState<'player' | 'opponent' | 'draw' | null>(null);
+  const [battleLog, setBattleLog] = useState<string[]>([]);
+  const [battleState, setBattleState] = useState({
+    battleActive: false,
+    currentRound: 1,
     playerHealth: 0,
     opponentHealth: 0,
-    maxPlayerHealth: 0,
-    maxOpponentHealth: 0,
-    currentRound: 1,
-    battleActive: false,
-    winner: null,
-    battleEvents: []
+    playerMaxHealth: 0,
+    opponentMaxHealth: 0,
+    winner: null as 'player' | 'opponent' | null,
+    battleEvents: [] as any[]
   });
-
   const [floatingTexts, setFloatingTexts] = useState<Array<{
     id: string;
     text: string;
@@ -56,152 +50,38 @@ export const BattleView: React.FC<BattleViewProps> = ({
     side: 'player' | 'opponent';
   }>>([]);
 
-  // Initialize health values
-  useEffect(() => {
-    // Apply bonuses to pieces before calculating health
-    const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
-    const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
-    
-    const playerMaxHealth = calculateTotalHealth(enhancedPlayerPieces);
-    const opponentMaxHealth = calculateTotalHealth(enhancedOpponentPieces);
-    
-    setBattleState(prev => ({
-      ...prev,
-      playerHealth: playerMaxHealth,
-      opponentHealth: opponentMaxHealth,
-      maxPlayerHealth: playerMaxHealth,
-      maxOpponentHealth: opponentMaxHealth
-    }));
-  }, [playerPieces, opponentPieces]);
+  // Apply bonuses to get enhanced pieces for display
+  const enhancedPlayerPieces = React.useMemo(() => 
+    applyBonusesToPieces(playerPieces, playerPieces), [playerPieces]
+  );
+  const enhancedOpponentPieces = React.useMemo(() => 
+    applyBonusesToPieces(opponentPieces, opponentPieces), [opponentPieces]
+  );
 
-  // Apply all active bonuses to pieces
-  const applyBonusesToPieces = (pieces: GamePiece[]) => {
-    const GRID_WIDTH = 8;
-    const GRID_HEIGHT = 6;
+  // Analyze both tanks using original pieces (analyzeTank will apply bonuses internally)
+  const playerAnalysis = analyzeTank(playerPieces);
+  const opponentAnalysis = analyzeTank(opponentPieces);
+
+  // Calculate initial health totals (only once when component mounts)
+  React.useEffect(() => {
+    // Use enhanced pieces for health calculation to match battle stats display
+    const playerTotal = enhancedPlayerPieces.filter(p => p.position).reduce((total, piece) => total + piece.stats.health, 0);
+    const opponentTotal = enhancedOpponentPieces.filter(p => p.position).reduce((total, piece) => total + piece.stats.health, 0);
     
-    // Create grid with piece occupancy
-    const grid = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null));
-    pieces.forEach(piece => {
-      if (piece.position) {
-        piece.shape.forEach(offset => {
-          const x = piece.position!.x + offset.x;
-          const y = piece.position!.y + offset.y;
-          if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
-            grid[y][x] = piece;
-          }
-        });
+    setBattleState(prev => {
+      // Only update if values have actually changed to prevent infinite loop
+      if (prev.playerMaxHealth !== playerTotal || prev.opponentMaxHealth !== opponentTotal) {
+        return {
+          ...prev,
+          playerHealth: playerTotal,
+          opponentHealth: opponentTotal,
+          playerMaxHealth: playerTotal,
+          opponentMaxHealth: opponentTotal
+        };
       }
+      return prev;
     });
-
-    return pieces.map(piece => {
-      if (!piece.position) return piece;
-      
-      let bonusAttack = 0;
-      let bonusHealth = 0;
-      let bonusSpeed = 0;
-      
-      // Get all adjacent positions for ALL tiles this piece occupies
-      const adjacentPositions: Position[] = [];
-      const checkedPositions = new Set<string>();
-      
-      piece.shape.forEach(shapeOffset => {
-        const pieceX = piece.position!.x + shapeOffset.x;
-        const pieceY = piece.position!.y + shapeOffset.y;
-        
-        // Check all 4 directions from each tile of this piece
-        const directions = [
-          { x: pieceX - 1, y: pieceY },
-          { x: pieceX + 1, y: pieceY },
-          { x: pieceX, y: pieceY - 1 },
-          { x: pieceX, y: pieceY + 1 }
-        ];
-        
-        directions.forEach(pos => {
-          const posKey = `${pos.x},${pos.y}`;
-          if (!checkedPositions.has(posKey) && 
-              pos.x >= 0 && pos.x < GRID_WIDTH && 
-              pos.y >= 0 && pos.y < GRID_HEIGHT) {
-            // Make sure this position isn't occupied by the same piece
-            const isOwnTile = piece.shape.some(offset => 
-              piece.position!.x + offset.x === pos.x && 
-              piece.position!.y + offset.y === pos.y
-            );
-            if (!isOwnTile) {
-              adjacentPositions.push(pos);
-              checkedPositions.add(posKey);
-            }
-          }
-        });
-      });
-      
-      adjacentPositions.forEach(pos => {
-        const adjacentPiece = grid[pos.y][pos.x];
-        if (adjacentPiece && adjacentPiece.id !== piece.id) {
-          // Java Fern bonus
-          if (adjacentPiece.id.includes('java-fern')) {
-            bonusAttack += 1;
-            bonusHealth += 1;
-          }
-          // Anubias bonus
-          if (adjacentPiece.id.includes('anubias')) {
-            bonusHealth += 1;
-          }
-          // Consumable bonus (if piece is fish)
-          if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-            bonusAttack += 1;
-            bonusHealth += 1;
-          }
-        }
-      });
-      
-      // Check for schooling bonuses
-      if (piece.tags.includes('schooling')) {
-        const schoolingCount = adjacentPositions.filter(pos => {
-          const adjacentPiece = grid[pos.y][pos.x];
-          return adjacentPiece && adjacentPiece.tags.includes('schooling') && adjacentPiece.id !== piece.id;
-        }).length;
-        
-        if (schoolingCount > 0) {
-          if (piece.id.includes('neon-tetra')) {
-            bonusAttack += schoolingCount;
-            if (schoolingCount >= 3) {
-              bonusSpeed += piece.stats.speed; // Double speed
-            }
-          } else if (piece.id.includes('cardinal-tetra')) {
-            bonusAttack += schoolingCount * 2;
-          }
-        }
-      }
-      
-      // Apply bonuses to piece stats
-      return {
-        ...piece,
-        stats: {
-          ...piece.stats,
-          attack: piece.stats.attack + bonusAttack,
-          health: piece.stats.health + bonusHealth,
-          maxHealth: piece.stats.maxHealth + bonusHealth,
-          speed: piece.stats.speed + bonusSpeed
-        }
-      };
-    });
-  };
-  const calculateTotalHealth = (pieces: GamePiece[]) => {
-    // Include fish, plants, and equipment health in the total pool
-    return pieces.filter(piece => 
-      piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
-    ).reduce((total, piece) => total + piece.stats.health, 0);
-  };
-
-  const calculateTotalAttack = (pieces: GamePiece[], waterQuality: number) => {
-    let totalAttack = pieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
-    
-    // Apply water quality modifier
-    if (waterQuality < 3) totalAttack *= 0.7;
-    else if (waterQuality > 7) totalAttack *= 1.2;
-    
-    return Math.floor(totalAttack);
-  };
+  }, [enhancedPlayerPieces, enhancedOpponentPieces]);
 
   const addFloatingText = (text: string, side: 'player' | 'opponent', color: string) => {
     const newText = {
@@ -220,31 +100,33 @@ export const BattleView: React.FC<BattleViewProps> = ({
       setFloatingTexts(prev => prev.filter(t => t.id !== newText.id));
     }, 2000);
   };
-
+  
   const startBattle = () => {
-    setBattleState(prev => ({ ...prev, battleActive: true, currentRound: 1, battleEvents: [] }));
-    simulateBattle();
+    setBattleStarted(true);
+    setBattleLog([]);
+    
+    // Simulate battle
+    setTimeout(() => {
+      simulateBattle();
+    }, 1000);
   };
 
   const simulateBattle = () => {
-    // Apply bonuses first, then create battle copies
-    const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
-    const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
-    
-    let playerBattlePieces = enhancedPlayerPieces.map(piece => ({
+    // Create battle copies with current health tracking
+    let playerBattlePieces = applyBonusesToPieces(playerPieces, playerPieces).filter(p => p.position).map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
     }));
     
-    let opponentBattlePieces = enhancedOpponentPieces.map(piece => ({
+    let opponentBattlePieces = applyBonusesToPieces(opponentPieces, opponentPieces).filter(p => p.position).map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
     }));
     
     let battleTurn = 1;
-    const events: BattleEvent[] = [];
+    const events: string[] = [];
 
     const battleInterval = setInterval(() => {
       // Get alive pieces
@@ -293,12 +175,18 @@ export const BattleView: React.FC<BattleViewProps> = ({
           }
         }
         
+        setBattleResult(isDraw ? 'draw' : (playerWon ? 'player' : 'opponent'));
+        setBattleLog(events);
+        
+        const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+        const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+        
         setBattleState(prev => ({
           ...prev,
           winner: isDraw ? null : (playerWon ? 'player' : 'opponent'),
           battleActive: false,
-          playerHealth: alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0),
-          opponentHealth: aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0)
+          playerHealth: currentPlayerHealth,
+          opponentHealth: currentOpponentHealth
         }));
         
         return;
@@ -344,55 +232,17 @@ export const BattleView: React.FC<BattleViewProps> = ({
           target.isAlive = false;
         }
         
-        // Create attack event with detailed damage breakdown
-        const targetType = target.type === 'fish' ? '' : ` (${target.type})`;
-        const baseDamage = attacker.stats.attack;
-        const originalAttacker = (attacker.side === 'player' ? playerPieces : opponentPieces).find(p => p.id === attacker.id);
-        const baseAttack = originalAttacker ? originalAttacker.stats.attack : baseDamage;
-        const attackBonus = baseDamage - baseAttack;
+        // Calculate current total health for both sides immediately after damage
+        const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+        const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
         
-        // Build detailed damage breakdown
-        let damageBreakdown = '';
-        let waterQualityNote = '';
-        
-        if (attackBonus > 0) {
-          damageBreakdown = `${baseAttack}+${attackBonus}=${baseDamage}`;
-        } else {
-          damageBreakdown = `${baseDamage}`;
-        }
-        
-        // Add water quality modification
-        if (waterQuality < 3) {
-          const originalDamage = Math.floor(baseDamage / 0.7);
-          waterQualityNote = ` → ${damage} (-30% water quality)`;
-        } else if (waterQuality > 7) {
-          const originalDamage = Math.floor(baseDamage / 1.2);
-          waterQualityNote = ` → ${damage} (+20% water quality)`;
-        } else if (damage !== baseDamage) {
-          waterQualityNote = ` → ${damage}`;
-        }
-        
-        const fullDamageText = damageBreakdown + waterQualityNote;
-        
-        events.push({
-          type: 'attack',
-          source: `${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}`,
-          target: `${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType} for ${fullDamageText} damage`,
-          value: damage,
-          round: battleTurn
-        });
-        
-        if (target.currentHealth <= 0) {
-          // Add KO event
-          const koText = target.type === 'fish' ? 'KO!' : 'Destroyed!';
-          events.push({
-            type: 'attack',
-            source: `${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}`,
-            target: `${koText} ${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType}`,
-            value: 0,
-            round: battleTurn
-          });
-        }
+        // Force immediate state update for health bars
+        setBattleState(prev => ({
+          ...prev,
+          playerHealth: currentPlayerHealth,
+          opponentHealth: currentOpponentHealth,
+          currentRound: battleTurn
+        }));
         
         // Add floating text
         addFloatingText(`-${damage}`, attacker.side === 'player' ? 'opponent' : 'player', 'text-red-500');
@@ -400,6 +250,42 @@ export const BattleView: React.FC<BattleViewProps> = ({
         if (!target.isAlive) {
           const koText = target.type === 'fish' ? 'KO!' : 'Destroyed!';
           addFloatingText(koText, attacker.side === 'player' ? 'opponent' : 'player', 'text-red-700');
+        }
+        
+        // Create attack event with detailed damage breakdown
+        const targetType = target.type === 'fish' ? '' : ` (${target.type})`;
+        const enhancedAttack = attacker.stats.attack;
+        const originalAttacker = (attacker.side === 'player' ? playerPieces : opponentPieces).find(p => p.id === attacker.id);
+        const baseAttack = originalAttacker ? originalAttacker.stats.attack : enhancedAttack;
+        const attackBonus = enhancedAttack - baseAttack;
+        
+        // Build detailed damage breakdown
+        let damageBreakdown = '';
+        let waterQualityNote = '';
+        
+        if (attackBonus > 0) {
+          damageBreakdown = `${baseAttack}+${attackBonus}=${enhancedAttack}`;
+        } else {
+          damageBreakdown = `${enhancedAttack}`;
+        }
+        
+        // Add water quality modification
+        if (waterQuality < 3) {
+          waterQualityNote = ` → ${damage} (-30% water quality)`;
+        } else if (waterQuality > 7) {
+          waterQualityNote = ` → ${damage} (+20% water quality)`;
+        } else if (damage !== enhancedAttack) {
+          waterQualityNote = ` → ${damage}`;
+        }
+        
+        const fullDamageText = damageBreakdown + waterQualityNote;
+        
+        events.push(`Turn ${battleTurn}: ${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}→ ${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType} for ${fullDamageText} damage`);
+        
+        if (target.currentHealth <= 0) {
+          // Add KO event
+          const koText = target.type === 'fish' ? 'KO!' : 'Destroyed!';
+          events.push(`Turn ${battleTurn}: ${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}→ ${koText} ${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType}`);
         }
       });
 
@@ -410,13 +296,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
           piece.currentHealth = Math.max(0, piece.currentHealth - poisonDamage);
           if (piece.currentHealth <= 0) piece.isAlive = false;
         });
-        events.push({
-          type: 'status',
-          source: 'Poor Water Quality',
-          target: 'Your Fish',
-          value: 0,
-          round: battleTurn
-        });
+        events.push(`Turn ${battleTurn}: Poor Water Quality→ Your Fish (poison damage)`);
         addFloatingText('Poison!', 'player', 'text-purple-500');
       }
 
@@ -426,19 +306,13 @@ export const BattleView: React.FC<BattleViewProps> = ({
           piece.currentHealth = Math.max(0, piece.currentHealth - poisonDamage);
           if (piece.currentHealth <= 0) piece.isAlive = false;
         });
-        events.push({
-          type: 'status',
-          source: 'Poor Water Quality',
-          target: 'Enemy Fish',
-          value: 0,
-          round: battleTurn
-        });
+        events.push(`Turn ${battleTurn}: Poor Water Quality→ Enemy Fish (poison damage)`);
         addFloatingText('Poison!', 'opponent', 'text-purple-500');
       }
 
       // Update battle state
-      const currentPlayerHealth = alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0);
-      const currentOpponentHealth = aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0);
+      const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+      const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
 
       setBattleState(prev => ({
         ...prev,
@@ -455,6 +329,9 @@ export const BattleView: React.FC<BattleViewProps> = ({
         clearInterval(battleInterval);
         
         // Force end - compare remaining health
+        const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+        const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+        
         let playerWon;
         let isDraw = false;
         if (currentPlayerHealth === currentOpponentHealth) {
@@ -464,36 +341,41 @@ export const BattleView: React.FC<BattleViewProps> = ({
           playerWon = currentPlayerHealth > currentOpponentHealth;
         }
         
+        events.push(`Battle timeout! ${isDraw ? 'Draw!' : (playerWon ? 'Victory!' : 'Defeat!')} ${isDraw ? 'Equal health remaining' : 'Health comparison'}`);
+        
+        setBattleResult(isDraw ? 'draw' : (playerWon ? 'player' : 'opponent'));
+        setBattleLog(events);
+        
         setBattleState(prev => ({
           ...prev,
           winner: isDraw ? null : (playerWon ? 'player' : 'opponent'),
-          battleActive: false
+          battleActive: false,
+          playerHealth: currentPlayerHealth,
+          opponentHealth: currentOpponentHealth
         }));
-
-        events.push({
-          type: 'status',
-          source: 'Time Limit',
-          target: isDraw ? 'Draw! Battle Ended' : 'Battle Ended',
-          value: 0,
-          round: battleTurn
-        });
-
-        setBattleState(prev => ({
-          ...prev,
-          battleEvents: [...events]
-        }));
-        
-        // Call onBattleComplete with the correct result
-        setTimeout(() => {
-          if (isDraw) {
-            onBattleComplete('draw');
-          } else {
-            onBattleComplete(playerWon ? 'player' : 'opponent');
-          }
-        }, 100);
       }
     }, 800); // 0.8 seconds per battle turn for good pacing
   };
+
+  const getResultIcon = () => {
+    switch (battleResult) {
+      case 'player': return '🏆 Victory!';
+      case 'opponent': return '💀 Defeat!';
+      case 'draw': return '🤝 Draw!';
+      default: return '';
+    }
+  };
+
+  const getAdvantage = (player: number, opponent: number) => {
+    const diff = player - opponent;
+    if (Math.abs(diff) <= 1) return { text: 'Even', color: 'text-gray-600' };
+    if (diff > 0) return { text: `+${diff} You`, color: 'text-green-600' };
+    return { text: `${diff} Opponent`, color: 'text-red-600' };
+  };
+
+  const attackAdvantage = getAdvantage(playerAnalysis.totalAttack, opponentAnalysis.totalAttack);
+  const healthAdvantage = getAdvantage(playerAnalysis.totalHealth, opponentAnalysis.totalHealth);
+  const speedAdvantage = getAdvantage(playerAnalysis.averageSpeed, opponentAnalysis.averageSpeed);
 
   const getHealthPercentage = (current: number, max: number) => {
     return Math.max(0, (current / max) * 100);
@@ -504,655 +386,339 @@ export const BattleView: React.FC<BattleViewProps> = ({
     if (percentage > 30) return 'bg-yellow-500';
     return 'bg-red-500';
   };
-
+  
   return (
     <div className="space-y-6">
-      {/* Battle Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-teal-600 text-white p-6 rounded-lg shadow-lg">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white p-4 rounded-lg">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Sword size={24} />
-            <h2 className="text-2xl font-bold">Battle Arena - Round {currentRound}/15
-              {currentRound === 15 && <span className="ml-2">🏁</span>}
-            </h2>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-sm bg-white/20 px-3 py-1 rounded-lg">
-              <div>You: {playerPieces.length} pieces</div>
-              <div>Opponent: {opponentPieces.length} pieces</div>
+          <div>
+            <div className="flex items-center gap-3">
+              <Sword size={24} />
+              <h1 className="text-2xl font-bold">
+                Battle Arena - Round {currentRound}/15
+                {battleResult && (
+                  <span className="ml-3 text-yellow-300">{getResultIcon()}</span>
+                )}
+              </h1>
             </div>
-            {battleState.winner && (
-              <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-lg">
-                <Trophy size={20} />
+            <div className="flex items-center gap-4 mt-1">
+              <p className="text-sm opacity-90">
+                {battleStarted ? 'Battle in progress...' : 'Ready to battle'}
+              </p>
+              <div className="bg-white/20 px-3 py-1 rounded-full text-sm">
+                <span>You: {playerAnalysis.fishCount} pieces</span>
+                <span className="mx-2">•</span>
+                <span>Opponent: {opponentAnalysis.fishCount} pieces</span>
+              </div>
+            </div>
+          </div>
           
-          {/* Gold Tracker Button */}
-          <div className="flex items-center gap-4">
-            <GoldTracker 
+          <div className="flex items-center gap-3">
+            {/* Gold Tracker Button */}
+            <GoldTracker
               goldHistory={goldHistory}
               currentGold={currentGold}
               currentRound={currentRound}
             />
-          </div>
-                <span className="font-bold">
-                  {battleState.winner === 'player' ? 'Victory!' : 'Defeat!'}
-                  {currentRound === 15 && battleState.winner === 'player' && (
-                    <div className="text-yellow-300 mt-2">
-                      <Trophy className="inline mr-2" size={24} />
-                      Perfect Game!
-                    </div>
-                  )}
-                </span>
+            
+            {/* Battle/Continue Button */}
+            {!battleStarted ? (
+              <button
+                onClick={startBattle}
+                disabled={playerAnalysis.fishCount === 0}
+                className={`
+                  flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all
+                  ${playerAnalysis.fishCount > 0
+                    ? 'bg-white text-blue-600 hover:bg-gray-100 hover:shadow-md'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }
+                `}
+              >
+                <Play size={20} />
+                Start Battle!
+              </button>
+            ) : battleResult ? (
+              <button
+                onClick={() => onBattleComplete(battleResult)}
+                className="flex items-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-lg font-bold hover:bg-gray-100 hover:shadow-md transition-all"
+              >
+                <ArrowRight size={20} />
+                Continue to Next Round
+              </button>
+            ) : (
+              <div className="px-6 py-3 bg-white/20 rounded-lg">
+                <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
               </div>
             )}
-            {!battleState.battleActive && battleState.winner !== null && (
-              <button
-                onClick={() => {
-                  if (battleState.winner === null) {
-                    onBattleComplete('draw');
-                  } else {
-                    onBattleComplete(battleState.winner);
-                  }
-                }}
-                className="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-100 transition-colors ml-4"
-              >
-                {currentRound === 15 ? 'Finish Game' : 'Continue to Next Round'}
-              </button>
-            )}
           </div>
         </div>
-
-        {/* Health Bars */}
-        <div className="mt-4 grid grid-cols-2 gap-6">
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span>Your Tank</span>
-              <span>{battleState.playerHealth}/{battleState.maxPlayerHealth}</span>
+        
+        {/* Live Health Bars */}
+        {battleStarted && (
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex-1 mr-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium">Your Tank</span>
+                <span className="text-sm font-bold">{battleState.playerHealth}/{battleState.playerMaxHealth}</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-3">
+                <div 
+                  className={`h-3 rounded-full transition-all duration-500 ${getHealthColor(getHealthPercentage(battleState.playerHealth, battleState.playerMaxHealth))}`}
+                  style={{ width: `${getHealthPercentage(battleState.playerHealth, battleState.playerMaxHealth)}%` }}
+                />
+              </div>
             </div>
-            <div className="w-full bg-white/20 rounded-full h-3">
-              <div 
-                className={`h-3 rounded-full transition-all duration-500 ${getHealthColor(getHealthPercentage(battleState.playerHealth, battleState.maxPlayerHealth))}`}
-                style={{ width: `${getHealthPercentage(battleState.playerHealth, battleState.maxPlayerHealth)}%` }}
-              />
+            
+            <div className="flex-1 ml-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium">Opponent Tank</span>
+                <span className="text-sm font-bold">{battleState.opponentHealth}/{battleState.opponentMaxHealth}</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-3">
+                <div 
+                  className={`h-3 rounded-full transition-all duration-500 ${getHealthColor(getHealthPercentage(battleState.opponentHealth, battleState.opponentMaxHealth))}`}
+                  style={{ width: `${getHealthPercentage(battleState.opponentHealth, battleState.opponentMaxHealth)}%` }}
+                />
+              </div>
             </div>
           </div>
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span>Opponent Tank</span>
-              <span>{battleState.opponentHealth}/{battleState.maxOpponentHealth}</span>
-            </div>
-            <div className="w-full bg-white/20 rounded-full h-3">
-              <div 
-                className={`h-3 rounded-full transition-all duration-500 ${getHealthColor(getHealthPercentage(battleState.opponentHealth, battleState.maxOpponentHealth))}`}
-                style={{ width: `${getHealthPercentage(battleState.opponentHealth, battleState.maxOpponentHealth)}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {!battleState.battleActive && battleState.winner === null && battleState.currentRound === 1 && (
-          <button
-            onClick={startBattle}
-            className="mt-4 bg-white text-blue-600 px-6 py-3 rounded-lg font-bold hover:bg-gray-100 transition-colors"
-          >
-            Start Battle!
-          </button>
         )}
       </div>
 
-      {/* Stats Comparison */}
-      <div className="bg-white rounded-lg shadow-lg p-4 relative group">
-        <h3 className="text-lg font-bold text-gray-900 mb-4 text-center">Battle Stats Comparison</h3>
+      {/* Battle Stats Comparison */}
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">Battle Stats Comparison</h2>
         
-        {/* Detailed breakdown tooltip */}
-        <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 text-white p-4 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
-          <div className="text-sm font-bold mb-2">Detailed Battle Breakdown:</div>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <div className="font-bold text-blue-400 mb-2">Your Tank:</div>
-              <div className="space-y-1 text-xs">
-                {(() => {
-                  const fishPieces = playerPieces.filter(piece => piece.type === 'fish');
-                  const enhancedPieces = applyBonusesToPieces(fishPieces);
-                  return enhancedPieces.map(piece => {
-                    const originalPiece = fishPieces.find(p => p.id === piece.id);
-                    const attackBonus = piece.stats.attack - originalPiece!.stats.attack;
-                    const healthBonus = piece.stats.health - originalPiece!.stats.health;
-                    const speedBonus = piece.stats.speed - originalPiece!.stats.speed;
-                    
-                    return (
-                      <div key={piece.id} className="flex justify-between">
-                        <span>{piece.name}:</span>
-                        <span>
-                          <span className="text-red-400">{originalPiece!.stats.attack}</span>
-                          {attackBonus > 0 && <span className="text-green-400">(+{attackBonus})</span>}
-                          {' / '}
-                          <span className="text-green-400">{originalPiece!.stats.health}</span>
-                          {healthBonus > 0 && <span className="text-green-400">(+{healthBonus})</span>}
-                          {' / '}
-                          <span className="text-blue-400">{originalPiece!.stats.speed}</span>
-                          {speedBonus > 0 && <span className="text-cyan-400">(+{speedBonus})</span>}
-                        </span>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
-            <div>
-              <div className="font-bold text-red-400 mb-2">Opponent Tank:</div>
-              <div className="space-y-1 text-xs">
-                {(() => {
-                  const fishPieces = opponentPieces.filter(piece => piece.type === 'fish');
-                  const enhancedPieces = applyBonusesToPieces(fishPieces);
-                  return enhancedPieces.map(piece => {
-                    const originalPiece = fishPieces.find(p => p.id === piece.id);
-                    const attackBonus = piece.stats.attack - originalPiece!.stats.attack;
-                    const healthBonus = piece.stats.health - originalPiece!.stats.health;
-                    const speedBonus = piece.stats.speed - originalPiece!.stats.speed;
-                    
-                    return (
-                      <div key={piece.id} className="flex justify-between">
-                        <span>{piece.name}:</span>
-                        <span>
-                          <span className="text-red-400">{originalPiece!.stats.attack}</span>
-                          {attackBonus > 0 && <span className="text-green-400">(+{attackBonus})</span>}
-                          {' / '}
-                          <span className="text-green-400">{originalPiece!.stats.health}</span>
-                          {healthBonus > 0 && <span className="text-green-400">(+{healthBonus})</span>}
-                          {' / '}
-                          <span className="text-blue-400">{originalPiece!.stats.speed}</span>
-                          {speedBonus > 0 && <span className="text-cyan-400">(+{speedBonus})</span>}
-                        </span>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-6">
-          {/* Player Stats */}
-          <div className="bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg border border-blue-200 p-3">
-            <h4 className="font-bold text-blue-900 mb-3 text-center">Your Tank</h4>
-            <div className="grid grid-cols-3 gap-3 text-sm">
-              <div className="text-center">
-                <div className="font-medium text-gray-700 mb-2">Attack</div>
-                {(() => {
-                  const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
-                  const baseAttack = playerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
-                  const totalAttack = enhancedPlayerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
-                  const bonusAttack = totalAttack - baseAttack;
-                  
-                  // Calculate final attack with water quality
-                  let finalAttack = totalAttack;
-                  let waterQualityBonus = 0;
-                  if (playerWaterQuality < 3) {
-                    finalAttack = Math.max(1, Math.floor(totalAttack * 0.7));
-                    waterQualityBonus = finalAttack - totalAttack;
-                  } else if (playerWaterQuality > 7) {
-                    finalAttack = Math.max(1, Math.floor(totalAttack * 1.2));
-                    waterQualityBonus = finalAttack - totalAttack;
-                  }
-                  
-                  return (
-                    <div className="space-y-1">
-                      <div className="text-lg font-bold text-gray-700">
-                        Base: {baseAttack}
-                      </div>
-                      <div className="text-lg font-bold text-green-600">
-                        Bonus: {bonusAttack > 0 ? `+${bonusAttack}` : '0'}
-                      </div>
-                      <div className="text-xl font-bold text-red-600">
-                        Total: {finalAttack}
-                        {waterQualityBonus !== 0 && (
-                          <div className={`text-xs ${waterQualityBonus > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            ({waterQualityBonus > 0 ? '+' : ''}{waterQualityBonus} water)
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-              <div className="text-center">
-                <div className="font-medium text-gray-700 mb-2">Health</div>
-                {(() => {
-                  const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
-                  const baseHealth = playerPieces.filter(piece => 
-                    piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
-                  ).reduce((total, piece) => total + piece.stats.health, 0);
-                  const totalHealth = enhancedPlayerPieces.filter(piece => 
-                    piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
-                  ).reduce((total, piece) => total + piece.stats.health, 0);
-                  const bonusHealth = totalHealth - baseHealth;
-                  
-                  return (
-                    <div className="space-y-1">
-                      <div className="text-lg font-bold text-gray-700">
-                        Base: {baseHealth}
-                      </div>
-                      <div className="text-lg font-bold text-green-600">
-                        Bonus: {bonusHealth > 0 ? `+${bonusHealth}` : '0'}
-                      </div>
-                      <div className="text-xl font-bold text-green-600">
-                        Total: {totalHealth}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-              <div className="text-center">
-                <div className="font-medium text-gray-700 mb-2">Speed</div>
-                {(() => {
-                  const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
-                  const playerFish = playerPieces.filter(piece => piece.type === 'fish');
-                  const enhancedPlayerFish = enhancedPlayerPieces.filter(piece => piece.type === 'fish');
-                  
-                  if (playerFish.length === 0) return (
-                    <div className="space-y-1">
-                      <div className="text-lg font-bold text-gray-700">Base: 0</div>
-                      <div className="text-lg font-bold text-green-600">Bonus: 0</div>
-                      <div className="text-xl font-bold text-blue-600">Total: 0</div>
-                    </div>
-                  );
-                  
-                  const baseSpeed = Math.round(playerFish.reduce((total, piece) => total + piece.stats.speed, 0) / playerFish.length);
-                  const totalSpeed = Math.round(enhancedPlayerFish.reduce((total, piece) => total + piece.stats.speed, 0) / enhancedPlayerFish.length);
-                  const bonusSpeed = totalSpeed - baseSpeed;
-                  
-                  return (
-                    <div className="space-y-1">
-                      <div className="text-lg font-bold text-gray-700">
-                        Base: {baseSpeed}
-                      </div>
-                      <div className="text-lg font-bold text-green-600">
-                        Bonus: {bonusSpeed > 0 ? `+${bonusSpeed}` : '0'}
-                      </div>
-                      <div className="text-xl font-bold text-blue-600">
-                        Total: {totalSpeed}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-            <div className="mt-2 text-xs text-gray-600">
-              <div className="flex justify-between mb-1">
-                <span>Fish: {playerPieces.filter(piece => piece.type === 'fish').length} | Plants/Equipment: {playerPieces.filter(piece => piece.type === 'plant' || piece.type === 'equipment').length}</span>
-                <span className={`font-bold ${
-                  playerWaterQuality < 3 ? 'text-red-600' : 
-                  playerWaterQuality > 7 ? 'text-green-600' : 
-                  'text-gray-600'
-                }`}>
-                  Water Quality: {playerWaterQuality}/10
-                </span>
-              </div>
-              {playerWaterQuality < 3 && (
-                <div className="text-red-600 font-medium text-center">
-                  ⚠️ Poor water quality: -30% attack damage & poison damage each round
+        <div className="grid md:grid-cols-2 gap-6 mb-6">
+          {/* Player Tank Detailed Stats */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="font-bold text-blue-800 mb-3 text-center">Your Tank</h3>
+            
+            <div className="grid grid-cols-3 gap-4 text-center mb-4">
+              <div>
+                <div className="text-lg font-bold text-gray-900">Attack</div>
+                <div className="text-sm text-gray-600">Base: {playerAnalysis.baseAttack}</div>
+                {playerAnalysis.bonusAttack > 0 && (
+                  <div className="text-sm text-green-600 font-bold">Bonus: +{playerAnalysis.bonusAttack}</div>
+                )}
+                <div className="text-lg font-bold text-red-600">
+                  Total: {playerAnalysis.totalAttack}
+                  {playerWaterQuality > 7 && (
+                    <span className="text-sm text-green-600 ml-1">(+{Math.floor(playerAnalysis.totalAttack * 0.2)} water)</span>
+                  )}
+                  {playerWaterQuality < 3 && (
+                    <span className="text-sm text-red-600 ml-1">(-{Math.floor(playerAnalysis.totalAttack * 0.3)} water)</span>
+                  )}
                 </div>
-              )}
-              {playerWaterQuality > 7 && (
-                <div className="text-green-600 font-medium text-center">
-                  ✨ Excellent water quality: +20% attack damage
-                </div>
-              )}
+              </div>
+              
+              <div>
+                <div className="text-lg font-bold text-gray-900">Health</div>
+                <div className="text-sm text-gray-600">Base: {playerAnalysis.baseHealth}</div>
+                {playerAnalysis.bonusHealth > 0 && (
+                  <div className="text-sm text-green-600 font-bold">Bonus: +{playerAnalysis.bonusHealth}</div>
+                )}
+                <div className="text-lg font-bold text-green-600">Total: {playerAnalysis.totalHealth}</div>
+              </div>
+              
+              <div>
+                <div className="text-lg font-bold text-gray-900">Speed</div>
+                <div className="text-sm text-gray-600">Base: {playerAnalysis.baseAverageSpeed}</div>
+                {playerAnalysis.bonusAverageSpeed > 0 && (
+                  <div className="text-sm text-green-600 font-bold">Bonus: +{playerAnalysis.bonusAverageSpeed}</div>
+                )}
+                <div className="text-lg font-bold text-blue-600">Total: {playerAnalysis.averageSpeed}</div>
+              </div>
             </div>
+            
+            <div className="text-sm text-gray-600 mb-2">
+              Fish: {playerAnalysis.fishCount} | Plants/Equipment: {playerAnalysis.totalPieces - playerAnalysis.fishCount}
+            </div>
+            
+            <div className="text-sm font-bold">Water Quality: {playerWaterQuality}/10</div>
+            {playerWaterQuality > 7 && (
+              <div className="text-xs text-green-600 font-medium flex items-center gap-1">
+                ⭐ Excellent water quality: +20% attack damage
+              </div>
+            )}
+            {playerWaterQuality < 3 && (
+              <div className="text-xs text-red-600 font-medium flex items-center gap-1">
+                ⚠️ Poor water quality: -30% attack damage & poison damage each round
+              </div>
+            )}
           </div>
 
-          {/* Opponent Stats */}
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-200 p-3">
-            <h4 className="font-bold text-red-900 mb-3 text-center">Opponent Tank</h4>
-            <div className="grid grid-cols-3 gap-3 text-sm">
-              <div className="text-center">
-                <div className="font-medium text-gray-700 mb-2">Attack</div>
-                {(() => {
-                  const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
-                  const baseAttack = opponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
-                  const totalAttack = enhancedOpponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
-                  const bonusAttack = totalAttack - baseAttack;
-                  
-                  // Calculate final attack with water quality
-                  let finalAttack = totalAttack;
-                  let waterQualityBonus = 0;
-                  if (opponentWaterQuality < 3) {
-                    finalAttack = Math.max(1, Math.floor(totalAttack * 0.7));
-                    waterQualityBonus = finalAttack - totalAttack;
-                  } else if (opponentWaterQuality > 7) {
-                    finalAttack = Math.max(1, Math.floor(totalAttack * 1.2));
-                    waterQualityBonus = finalAttack - totalAttack;
-                  }
-                  
-                  return (
-                    <div className="space-y-1">
-                      <div className="text-lg font-bold text-gray-700">
-                        Base: {baseAttack}
-                      </div>
-                      <div className="text-lg font-bold text-green-600">
-                        Bonus: {bonusAttack > 0 ? `+${bonusAttack}` : '0'}
-                      </div>
-                      <div className="text-xl font-bold text-red-600">
-                        Total: {finalAttack}
-                        {waterQualityBonus !== 0 && (
-                          <div className={`text-xs ${waterQualityBonus > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            ({waterQualityBonus > 0 ? '+' : ''}{waterQualityBonus} water)
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
+          {/* Opponent Tank Detailed Stats */}
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h3 className="font-bold text-red-800 mb-3 text-center">Opponent Tank</h3>
+            
+            <div className="grid grid-cols-3 gap-4 text-center mb-4">
+              <div>
+                <div className="text-lg font-bold text-gray-900">Attack</div>
+                <div className="text-sm text-gray-600">Base: {opponentAnalysis.baseAttack}</div>
+                {opponentAnalysis.bonusAttack > 0 && (
+                  <div className="text-sm text-green-600 font-bold">Bonus: +{opponentAnalysis.bonusAttack}</div>
+                )}
+                <div className="text-lg font-bold text-red-600">
+                  Total: {opponentAnalysis.totalAttack}
+                  {opponentWaterQuality > 7 && (
+                    <span className="text-sm text-green-600 ml-1">(+{Math.floor(opponentAnalysis.totalAttack * 0.2)} water)</span>
+                  )}
+                  {opponentWaterQuality < 3 && (
+                    <span className="text-sm text-red-600 ml-1">(-{Math.floor(opponentAnalysis.totalAttack * 0.3)} water)</span>
+                  )}
+                </div>
               </div>
-              <div className="text-center">
-                <div className="font-medium text-gray-700 mb-2">Health</div>
-                {(() => {
-                  const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
-                  const baseHealth = opponentPieces.filter(piece => 
-                    piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
-                  ).reduce((total, piece) => total + piece.stats.health, 0);
-                  const totalHealth = enhancedOpponentPieces.filter(piece => 
-                    piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
-                  ).reduce((total, piece) => total + piece.stats.health, 0);
-                  const bonusHealth = totalHealth - baseHealth;
-                  
-                  return (
-                    <div className="space-y-1">
-                      <div className="text-lg font-bold text-gray-700">
-                        Base: {baseHealth}
-                      </div>
-                      <div className="text-lg font-bold text-green-600">
-                        Bonus: {bonusHealth > 0 ? `+${bonusHealth}` : '0'}
-                      </div>
-                      <div className="text-xl font-bold text-green-600">
-                        Total: {totalHealth}
-                      </div>
-                    </div>
-                  );
-                })()}
+              
+              <div>
+                <div className="text-lg font-bold text-gray-900">Health</div>
+                <div className="text-sm text-gray-600">Base: {opponentAnalysis.baseHealth}</div>
+                {opponentAnalysis.bonusHealth > 0 && (
+                  <div className="text-sm text-green-600 font-bold">Bonus: +{opponentAnalysis.bonusHealth}</div>
+                )}
+                <div className="text-lg font-bold text-green-600">Total: {opponentAnalysis.totalHealth}</div>
               </div>
-              <div className="text-center">
-                <div className="font-medium text-gray-700 mb-2">Speed</div>
-                {(() => {
-                  const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
-                  const opponentFish = opponentPieces.filter(piece => piece.type === 'fish');
-                  const enhancedOpponentFish = enhancedOpponentPieces.filter(piece => piece.type === 'fish');
-                  
-                  if (opponentFish.length === 0) return (
-                    <div className="space-y-1">
-                      <div className="text-lg font-bold text-gray-700">Base: 0</div>
-                      <div className="text-lg font-bold text-green-600">Bonus: 0</div>
-                      <div className="text-xl font-bold text-blue-600">Total: 0</div>
-                    </div>
-                  );
-                  
-                  const baseSpeed = Math.round(opponentFish.reduce((total, piece) => total + piece.stats.speed, 0) / opponentFish.length);
-                  const totalSpeed = Math.round(enhancedOpponentFish.reduce((total, piece) => total + piece.stats.speed, 0) / enhancedOpponentFish.length);
-                  const bonusSpeed = totalSpeed - baseSpeed;
-                  
-                  return (
-                    <div className="space-y-1">
-                      <div className="text-lg font-bold text-gray-700">
-                        Base: {baseSpeed}
-                      </div>
-                      <div className="text-lg font-bold text-green-600">
-                        Bonus: {bonusSpeed > 0 ? `+${bonusSpeed}` : '0'}
-                      </div>
-                      <div className="text-xl font-bold text-blue-600">
-                        Total: {totalSpeed}
-                      </div>
-                    </div>
-                  );
-                })()}
+              
+              <div>
+                <div className="text-lg font-bold text-gray-900">Speed</div>
+                <div className="text-sm text-gray-600">Base: {opponentAnalysis.baseAverageSpeed}</div>
+                {opponentAnalysis.bonusAverageSpeed > 0 && (
+                  <div className="text-sm text-green-600 font-bold">Bonus: +{opponentAnalysis.bonusAverageSpeed}</div>
+                )}
+                <div className="text-lg font-bold text-blue-600">Total: {opponentAnalysis.averageSpeed}</div>
               </div>
             </div>
-            <div className="mt-2 text-xs text-gray-600">
-              <div className="flex justify-between mb-1">
-                <span>Fish: {opponentPieces.filter(piece => piece.type === 'fish').length} | Plants/Equipment: {opponentPieces.filter(piece => piece.type === 'plant' || piece.type === 'equipment').length}</span>
-                <span className={`font-bold ${
-                  opponentWaterQuality < 3 ? 'text-red-600' : 
-                  opponentWaterQuality > 7 ? 'text-green-600' : 
-                  'text-gray-600'
-                }`}>
-                  Water Quality: {opponentWaterQuality}/10
-                </span>
-              </div>
-              {opponentWaterQuality < 3 && (
-                <div className="text-red-600 font-medium text-center">
-                  ⚠️ Poor water quality: -30% attack damage & poison damage each round
-                </div>
-              )}
-              {opponentWaterQuality > 7 && (
-                <div className="text-green-600 font-medium text-center">
-                  ✨ Excellent water quality: +20% attack damage
-                </div>
-              )}
+            
+            <div className="text-sm text-gray-600 mb-2">
+              Fish: {opponentAnalysis.fishCount} | Plants/Equipment: {opponentAnalysis.totalPieces - opponentAnalysis.fishCount}
             </div>
+            
+            <div className="text-sm font-bold">Water Quality: {opponentWaterQuality}/10</div>
+            {opponentWaterQuality > 7 && (
+              <div className="text-xs text-green-600 font-medium flex items-center gap-1">
+                ⭐ Excellent water quality: +20% attack damage
+              </div>
+            )}
+            {opponentWaterQuality < 3 && (
+              <div className="text-xs text-red-600 font-medium flex items-center gap-1">
+                ⚠️ Poor water quality: -30% attack damage & poison damage each round
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Advantage Indicators */}
-        <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
-          <div className="text-center">
-            <div className="font-medium text-gray-700 mb-1">Attack Advantage</div>
-            {(() => {
-              const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
-              const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
-              
-              // Calculate total attack including water quality
-              let playerAttack = enhancedPlayerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
-              let opponentAttack = enhancedOpponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
-              
-              // Apply water quality modifiers
-              if (playerWaterQuality < 3) {
-                playerAttack = Math.max(1, Math.floor(playerAttack * 0.7));
-              } else if (playerWaterQuality > 7) {
-                playerAttack = Math.floor(playerAttack * 1.2);
-              }
-              
-              if (opponentWaterQuality < 3) {
-                opponentAttack = Math.max(1, Math.floor(opponentAttack * 0.7));
-              } else if (opponentWaterQuality > 7) {
-                opponentAttack = Math.floor(opponentAttack * 1.2);
-              }
-              
-              const diff = playerAttack - opponentAttack;
-              if (diff > 0) {
-                return <div className="text-green-600 font-bold">+{diff} You</div>;
-              } else if (diff < 0) {
-                return <div className="text-red-600 font-bold">{Math.abs(diff)} Opponent</div>;
-              } else {
-                return <div className="text-gray-600 font-bold">Even</div>;
-              }
-            })()}
+        {/* Advantage Summary */}
+        <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Sword size={16} className="text-red-500" />
+              <span className="font-medium text-gray-700">Attack Advantage</span>
+            </div>
+            <div className={`font-bold ${attackAdvantage.color}`}>
+              {attackAdvantage.text}
+            </div>
           </div>
-          <div className="text-center">
-            <div className="font-medium text-gray-700 mb-1">Health Advantage</div>
-            {(() => {
-              const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
-              const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
-              const playerHealth = enhancedPlayerPieces.filter(piece => 
-                piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
-              ).reduce((total, piece) => total + piece.stats.health, 0);
-              const opponentHealth = enhancedOpponentPieces.filter(piece => 
-                piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
-              ).reduce((total, piece) => total + piece.stats.health, 0);
-              const diff = playerHealth - opponentHealth;
-              if (diff > 0) {
-                return <div className="text-green-600 font-bold">+{diff} You</div>;
-              } else if (diff < 0) {
-                return <div className="text-red-600 font-bold">{Math.abs(diff)} Opponent</div>;
-              } else {
-                return <div className="text-gray-600 font-bold">Even</div>;
-              }
-            })()}
+          
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Shield size={16} className="text-green-500" />
+              <span className="font-medium text-gray-700">Health Advantage</span>
+            </div>
+            <div className={`font-bold ${healthAdvantage.color}`}>
+              {healthAdvantage.text}
+            </div>
           </div>
-          <div className="text-center">
-            <div className="font-medium text-gray-700 mb-1">Speed Advantage</div>
-            {(() => {
-              const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
-              const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
-              const playerFish = enhancedPlayerPieces.filter(piece => piece.type === 'fish');
-              const opponentFish = enhancedOpponentPieces.filter(piece => piece.type === 'fish');
-              const playerSpeed = playerFish.length > 0 ? Math.round(playerFish.reduce((total, piece) => total + piece.stats.speed, 0) / playerFish.length) : 0;
-              const opponentSpeed = opponentFish.length > 0 ? Math.round(opponentFish.reduce((total, piece) => total + piece.stats.speed, 0) / opponentFish.length) : 0;
-              const diff = playerSpeed - opponentSpeed;
-              if (diff > 0) {
-                return <div className="text-green-600 font-bold">+{diff} You</div>;
-              } else if (diff < 0) {
-                return <div className="text-red-600 font-bold">{Math.abs(diff)} Opponent</div>;
-              } else {
-                return <div className="text-gray-600 font-bold">Even</div>;
-              }
-            })()}
+          
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Zap size={16} className="text-blue-500" />
+              <span className="font-medium text-gray-700">Speed Advantage</span>
+            </div>
+            <div className={`font-bold ${speedAdvantage.color}`}>
+              {speedAdvantage.text}
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Battle Grids */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Player Tank */}
-        <div className="relative">
-          <h3 className="text-lg font-bold text-gray-900 mb-3">Your Tank</h3>
-          <TankGrid 
-            pieces={playerPieces} 
+      
+      {/* Tank Grids */}
+      <div className="grid lg:grid-cols-2 gap-6 relative">
+        {/* Floating Damage Text */}
+        {floatingTexts.map(text => (
+          <div
+            key={text.id}
+            className={`absolute pointer-events-none font-bold text-lg animate-bounce z-10 ${text.color}`}
+            style={{
+              left: text.side === 'player' ? `${text.x}%` : `${50 + text.x}%`,
+              top: `${text.y}px`,
+              animation: 'floatUp 2s ease-out forwards'
+            }}
+          >
+            {text.text}
+          </div>
+        ))}
+        
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-gray-900">Your Tank</h2>
+          <TankGrid
+            pieces={playerPieces}
             isInteractive={false}
             waterQuality={playerWaterQuality}
-            highlightedPieceId={null}
           />
-          
-          {/* Floating damage texts for player side */}
-          {floatingTexts.filter(text => text.side === 'player').map(text => (
-            <div
-              key={text.id}
-              className={`absolute pointer-events-none font-bold text-xl ${text.color} animate-float`}
-              style={{ 
-                left: `${text.x}%`, 
-                top: `${text.y}px`,
-              }}
-            >
-              {text.text}
-            </div>
-          ))}
         </div>
 
-        {/* Opponent Tank */}
-        <div className="relative">
-          <h3 className="text-lg font-bold text-gray-900 mb-3">Opponent Tank</h3>
-          <TankGrid 
-            pieces={opponentPieces} 
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-gray-900">Opponent Tank</h2>
+          <TankGrid
+            pieces={opponentPieces}
             isInteractive={false}
             waterQuality={opponentWaterQuality}
-            highlightedPieceId={null}
           />
-          
-          {/* Floating damage texts for opponent side */}
-          {floatingTexts.filter(text => text.side === 'opponent').map(text => (
-            <div
-              key={text.id}
-              className={`absolute pointer-events-none font-bold text-xl ${text.color} animate-float`}
-              style={{ 
-                left: `${text.x}%`, 
-                top: `${text.y}px`,
-              }}
-            >
-              {text.text}
-            </div>
-          ))}
         </div>
       </div>
 
       {/* Battle Log */}
-      <div className="bg-white rounded-lg shadow-lg p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <ScrollText size={20} className="text-gray-600" />
-          <h3 className="font-bold text-gray-900">Battle Log</h3>
-        </div>
-        
-        {battleState.battleEvents.length > 0 ? (
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {battleState.battleEvents.map((event, index) => (
+      {battleStarted && (
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Battle Log</h3>
+          <div className="bg-gray-100 rounded-lg p-4 max-h-64 overflow-y-auto">
+            {battleLog.map((log, index) => (
               <div 
                 key={index} 
-                className={`text-sm p-2 rounded border-l-4 ${(() => {
-                  // Color code based on what happened to whom
-                  const isPlayerAction = event.source.includes('Your');
-                  const isEnemyTarget = event.target?.includes('Enemy');
-                  const isPlayerTarget = event.target?.includes('Your');
-                  const isKO = event.target?.includes('KO!') || event.target?.includes('Destroyed!');
-                  
-                  if (event.type === 'status') {
-                    return 'bg-purple-50 border-purple-400';
-                  }
-                  
-                  // Good events (your fish attacking/killing enemies)
-                  if (isPlayerAction && isEnemyTarget) {
-                    return isKO 
-                      ? 'bg-green-100 border-green-500 text-green-800' 
-                      : 'bg-green-50 border-green-400 text-green-700';
-                  }
-                  
-                  // Bad events (enemy fish attacking/killing yours)
-                  if (!isPlayerAction && isPlayerTarget) {
-                    return isKO 
-                      ? 'bg-red-100 border-red-500 text-red-800' 
-                      : 'bg-red-50 border-red-400 text-red-700';
-                  }
-                  
-                  // Neutral/default
-                  return 'bg-gray-50 border-gray-400';
-                })()}`}
+                className={`text-sm mb-1 p-2 rounded ${
+                  log.includes('Your') && log.includes('→') 
+                    ? 'bg-blue-50 text-blue-800 border-l-4 border-blue-400' 
+                    : log.includes('Enemy') && log.includes('→')
+                    ? 'bg-red-50 text-red-800 border-l-4 border-red-400'
+                    : log.includes('KO!')
+                    ? 'bg-yellow-50 text-yellow-800 border-l-4 border-yellow-400 font-bold'
+                    : 'text-gray-700'
+                }`}
               >
-                <div>
-                  <span className="font-medium">
-                    Turn {event.round}: {event.source}
-                  </span>
-                  {event.value > 0 && (
-                    <span className="font-bold text-current opacity-80">
-                      → {event.target}
-                    </span>
-                  )}
-                  {event.value === 0 && event.target && (
-                    <span className="font-bold text-current opacity-80">
-                      → {event.target}
-                    </span>
-                  )}
-                </div>
+                {log}
               </div>
             ))}
-            
-            {!battleState.battleActive && (
-              <div className={`text-sm p-3 rounded font-bold text-center ${
-                battleState.winner === null
-                  ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
-                  : battleState.winner === 'player' 
-                  ? 'bg-green-100 text-green-800 border border-green-300' 
-                  : 'bg-red-100 text-red-800 border border-red-300'
-              }`}>
-                {battleState.winner === null ? '🤝 DRAW!' : '🏆'} 
-                {battleState.winner === null ? ' Both tanks fought valiantly!' :
-                 battleState.winner === 'player' ? ' VICTORY! Your tank dominated the battlefield!' : 
-                 ' DEFEAT! Better luck next time!'}
+            {battleLog.length === 0 && (
+              <div className="text-center text-gray-500 py-4">
+                Battle log will appear here...
               </div>
             )}
           </div>
-        ) : (
-          <div className="text-center py-4 text-gray-500">
-            <p>Battle log will appear here once combat begins...</p>
-          </div>
-        )}
-      </div>
-
-      <style jsx>{`
-        @keyframes float {
-          0% { opacity: 1; transform: translateY(0) scale(1); }
-          50% { opacity: 1; transform: translateY(-20px) scale(1.1); }
-          100% { opacity: 0; transform: translateY(-40px) scale(0.9); }
-        }
-        
-        .animate-float {
-          animation: float 2s ease-out forwards;
+        </div>
+      )}
+      
+      {/* CSS for floating text animation */}
+      <style>{`
+        @keyframes floatUp {
+          0% {
+            opacity: 1;
+            transform: translateY(0px);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-50px);
+          }
         }
       `}</style>
     </div>

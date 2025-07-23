@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { GameState, GamePiece, Position } from '../types/game';
 import { getRandomShop, PIECE_LIBRARY, getRarityWeight } from '../data/pieces';
+import { applyBonusesToPieces } from '../utils/tankAnalysis';
 
 const INITIAL_STATE: GameState = {
   phase: 'shop',
@@ -43,112 +44,6 @@ const INITIAL_STATE: GameState = {
     }
   ],
   rerollsThisRound: 0
-};
-
-// Helper function for applying bonuses to pieces
-const applyBonusesToPieces = (pieces: any[], allPieces: any[]) => {
-  const GRID_WIDTH = 8;
-  const GRID_HEIGHT = 6;
-  
-  // Create grid with piece occupancy
-  const grid = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null));
-  allPieces.forEach(piece => {
-    if (piece.position) {
-      piece.shape.forEach((offset: any) => {
-        const x = piece.position.x + offset.x;
-        const y = piece.position.y + offset.y;
-        if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
-          grid[y][x] = piece;
-        }
-      });
-    }
-  });
-
-  return pieces.map(piece => {
-    if (!piece.position) return piece;
-    
-    let bonusAttack = 0;
-    let bonusHealth = 0;
-    let bonusSpeed = 0;
-    
-    // Get all adjacent positions for ALL tiles this piece occupies
-    const adjacentPositions: any[] = [];
-    const checkedPositions = new Set<string>();
-    
-    piece.shape.forEach((shapeOffset: any) => {
-      const pieceX = piece.position.x + shapeOffset.x;
-      const pieceY = piece.position.y + shapeOffset.y;
-      
-      // Check all 4 directions from each tile of this piece
-      const directions = [
-        { x: pieceX - 1, y: pieceY },
-        { x: pieceX + 1, y: pieceY },
-        { x: pieceX, y: pieceY - 1 },
-        { x: pieceX, y: pieceY + 1 }
-      ];
-      
-      directions.forEach(pos => {
-        const posKey = `${pos.x},${pos.y}`;
-        if (!checkedPositions.has(posKey) && 
-            pos.x >= 0 && pos.x < GRID_WIDTH && 
-            pos.y >= 0 && pos.y < GRID_HEIGHT) {
-          // Make sure this position isn't occupied by the same piece
-          const isOwnTile = piece.shape.some((offset: any) => 
-            piece.position.x + offset.x === pos.x && 
-            piece.position.y + offset.y === pos.y
-          );
-          if (!isOwnTile) {
-            adjacentPositions.push(pos);
-            checkedPositions.add(posKey);
-          }
-        }
-      });
-    });
-    
-    adjacentPositions.forEach(pos => {
-      const adjacentPiece = grid[pos.y][pos.x];
-      if (adjacentPiece && adjacentPiece.id !== piece.id) {
-        // Java Fern bonus
-        if (adjacentPiece.id.includes('java-fern')) {
-          bonusAttack += 1;
-          bonusHealth += 1;
-        }
-        // Anubias bonus
-        if (adjacentPiece.id.includes('anubias')) {
-          bonusHealth += 1;
-        }
-        // Consumable bonus (if piece is fish)
-        if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-          bonusAttack += 1;
-          bonusHealth += 1;
-        }
-      }
-    });
-    
-    // Check for schooling bonuses
-    if (piece.tags.includes('schooling')) {
-      const schoolingCount = adjacentPositions.filter(pos => {
-        const adjacentPiece = grid[pos.y][pos.x];
-        return adjacentPiece && adjacentPiece.tags.includes('schooling') && adjacentPiece.id !== piece.id;
-      }).length;
-      
-      if (schoolingCount > 0) {
-        bonusAttack += schoolingCount;
-        bonusSpeed += Math.floor(schoolingCount / 2);
-      }
-    }
-    
-    return {
-      ...piece,
-      stats: {
-        ...piece.stats,
-        attack: piece.stats.attack + bonusAttack,
-        health: piece.stats.health + bonusHealth,
-        maxHealth: piece.stats.maxHealth + bonusHealth,
-        speed: piece.stats.speed + bonusSpeed
-      }
-    };
-  });
 };
 
 // AI opponent logic
@@ -428,6 +323,10 @@ export const useGame = () => {
       // Check if piece is already in tank (from inventory) or is new (from shop)
       const existingPieceIndex = prev.playerTank.pieces.findIndex(p => p.id === piece.id);
       let newPieces;
+      let newGoldHistory = prev.goldHistory;
+      let newGold = prev.gold;
+      let newShop = prev.shop;
+      let newLockedIndex = prev.lockedShopIndex;
       
       if (existingPieceIndex >= 0) {
         // Update existing piece position (from inventory)
@@ -435,7 +334,32 @@ export const useGame = () => {
           index === existingPieceIndex ? { ...p, position } : p
         );
       } else {
-        // Add new piece to tank (from shop)
+        // This is a new piece being placed from shop via drag-and-drop
+        // We need to purchase it first
+        if (prev.gold < piece.cost) return prev; // Can't afford it
+        
+        // Add purchase transaction
+        const transaction = addGoldTransaction(
+          'purchase',
+          -piece.cost,
+          `Purchased ${piece.name} for ${piece.cost}g`,
+          prev.round,
+          piece.id,
+          piece.name
+        );
+        
+        newGoldHistory = [...prev.goldHistory, transaction];
+        newGold = prev.gold - piece.cost;
+        
+        // Remove from shop
+        const purchasedIndex = prev.shop.findIndex(shopPiece => shopPiece?.id === piece.id);
+        newShop = prev.shop.map(shopPiece => 
+          shopPiece?.id === piece.id ? null : shopPiece
+        );
+        
+        // Clear lock if we purchased the locked item via drag-and-drop
+        newLockedIndex = prev.lockedShopIndex === purchasedIndex ? null : prev.lockedShopIndex;
+        
         const newPiece = { ...piece, position };
         newPieces = [...prev.playerTank.pieces, newPiece];
       }
@@ -475,12 +399,10 @@ export const useGame = () => {
         },
         selectedPiece: null,
         phase: 'shop' as const,
-        // If this was a drag-and-drop purchase, remove from shop
-        shop: existingPieceIndex < 0 ? prev.shop.map(shopPiece => 
-          shopPiece?.id === piece.id ? null : shopPiece
-        ) : prev.shop,
-        // Deduct gold if this was a new purchase
-        gold: existingPieceIndex < 0 ? prev.gold - piece.cost : prev.gold
+        shop: newShop,
+        lockedShopIndex: newLockedIndex,
+        gold: newGold,
+        goldHistory: newGoldHistory
       };
     });
   }, []);

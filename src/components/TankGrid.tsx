@@ -1,6 +1,7 @@
 import React from 'react';
 import { GamePiece, Position } from '../types/game';
 import { getTypeColor } from '../data/pieces';
+import { calculatePieceBonuses, getBonusProviders } from '../utils/tankAnalysis';
 
 interface TankGridProps {
   pieces: GamePiece[];
@@ -46,144 +47,10 @@ export const TankGrid: React.FC<TankGridProps> = ({
     }
   });
 
-  // Calculate bonuses for a piece
-  const calculateBonuses = (piece: GamePiece) => {
-    if (!piece.position) return [];
-    
-    const bonuses: Array<{ source: string; effect: string; color: string }> = [];
-    
-    // Get all adjacent positions for ALL tiles this piece occupies
-    const adjacentPositions: Position[] = [];
-    const checkedPositions = new Set<string>();
-    
-    piece.shape.forEach(shapeOffset => {
-      const pieceX = piece.position!.x + shapeOffset.x;
-      const pieceY = piece.position!.y + shapeOffset.y;
-      
-      // Check all 4 directions from each tile of this piece
-      const directions = [
-        { x: pieceX - 1, y: pieceY },
-        { x: pieceX + 1, y: pieceY },
-        { x: pieceX, y: pieceY - 1 },
-        { x: pieceX, y: pieceY + 1 }
-      ];
-      
-      directions.forEach(pos => {
-        const posKey = `${pos.x},${pos.y}`;
-        if (!checkedPositions.has(posKey) && 
-            pos.x >= 0 && pos.x < GRID_WIDTH && 
-            pos.y >= 0 && pos.y < GRID_HEIGHT) {
-          // Make sure this position isn't occupied by the same piece
-          const isOwnTile = piece.shape.some(offset => 
-            piece.position!.x + offset.x === pos.x && 
-            piece.position!.y + offset.y === pos.y
-          );
-          if (!isOwnTile) {
-            adjacentPositions.push(pos);
-            checkedPositions.add(posKey);
-          }
-        }
-      });
-    });
-    
-    adjacentPositions.forEach(pos => {
-      const adjacentPiece = grid[pos.y][pos.x];
-      if (adjacentPiece && adjacentPiece.id !== piece.id) {
-        // Java Fern bonus
-        if (adjacentPiece.id.includes('java-fern')) {
-          bonuses.push({ source: 'Java Fern', effect: '+1 ATK +1 HP', color: 'text-green-600' });
-        }
-        // Anubias bonus
-        if (adjacentPiece.id.includes('anubias')) {
-          bonuses.push({ source: 'Anubias', effect: '+1 HP', color: 'text-green-500' });
-        }
-        // Consumable bonus (if piece is fish)
-        if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-          bonuses.push({ source: 'Brine Shrimp', effect: '+1 ATK +1 HP (battle)', color: 'text-orange-500' });
-        }
-      }
-    });
-    
-    // Check for schooling bonuses
-    if (piece.tags.includes('schooling')) {
-      const schoolingCount = adjacentPositions.filter(pos => {
-        const adjacentPiece = grid[pos.y][pos.x];
-        return adjacentPiece && adjacentPiece.tags.includes('schooling') && adjacentPiece.id !== piece.id;
-      }).length;
-      
-      if (schoolingCount > 0) {
-        if (piece.id.includes('neon-tetra')) {
-          bonuses.push({ source: 'Schooling', effect: `+${schoolingCount} ATK`, color: 'text-blue-500' });
-          if (schoolingCount >= 3) {
-            bonuses.push({ source: 'Large School', effect: 'Double Speed', color: 'text-cyan-500' });
-          }
-        } else if (piece.id.includes('cardinal-tetra')) {
-          bonuses.push({ source: 'Schooling', effect: `+${schoolingCount * 2} ATK`, color: 'text-blue-600' });
-        }
-      }
-    }
-    
-    return bonuses;
-  };
-  
-  // Get pieces that are providing bonuses to the hovered piece
-  const getBonusProviders = (piece: GamePiece) => {
-    if (!piece.position) return [];
-    
-    const providers: string[] = [];
-    
-    // Get all adjacent positions for ALL tiles this piece occupies
-    const adjacentPositions: Position[] = [];
-    const checkedPositions = new Set<string>();
-    
-    piece.shape.forEach(shapeOffset => {
-      const pieceX = piece.position!.x + shapeOffset.x;
-      const pieceY = piece.position!.y + shapeOffset.y;
-      
-      // Check all 4 directions from each tile of this piece
-      const directions = [
-        { x: pieceX - 1, y: pieceY },
-        { x: pieceX + 1, y: pieceY },
-        { x: pieceX, y: pieceY - 1 },
-        { x: pieceX, y: pieceY + 1 }
-      ];
-      
-      directions.forEach(pos => {
-        const posKey = `${pos.x},${pos.y}`;
-        if (!checkedPositions.has(posKey) && 
-            pos.x >= 0 && pos.x < GRID_WIDTH && 
-            pos.y >= 0 && pos.y < GRID_HEIGHT) {
-          // Make sure this position isn't occupied by the same piece
-          const isOwnTile = piece.shape.some(offset => 
-            piece.position!.x + offset.x === pos.x && 
-            piece.position!.y + offset.y === pos.y
-          );
-          if (!isOwnTile) {
-            adjacentPositions.push(pos);
-            checkedPositions.add(posKey);
-          }
-        }
-      });
-    });
-    
-    adjacentPositions.forEach(pos => {
-      const adjacentPiece = grid[pos.y][pos.x];
-      if (adjacentPiece && adjacentPiece.id !== piece.id) {
-        if (adjacentPiece.id.includes('java-fern') || 
-            adjacentPiece.id.includes('anubias') || 
-            adjacentPiece.type === 'consumable' ||
-            (adjacentPiece.tags.includes('schooling') && piece.tags.includes('schooling'))) {
-          providers.push(adjacentPiece.id);
-        }
-      }
-    });
-    
-    return providers;
-  };
 
   const isBonusProvider = (piece: GamePiece) => {
     if (!hoveredPiece) return false;
-    const providers = getBonusProviders(hoveredPiece);
+    const providers = getBonusProviders(hoveredPiece, pieces);
     return providers.includes(piece.id);
   };
 
@@ -332,7 +199,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
         >
           <div className="text-sm font-bold mb-1">{hoveredPiece.name}</div>
           {(() => {
-            const bonuses = calculateBonuses(hoveredPiece);
+            const bonuses = calculatePieceBonuses(hoveredPiece, pieces);
             const bonusAttack = bonuses.filter(b => b.effect.includes('ATK')).reduce((sum, b) => {
               const match = b.effect.match(/\+(\d+) ATK/);
               return sum + (match ? parseInt(match[1]) : 0);
@@ -381,10 +248,10 @@ export const TankGrid: React.FC<TankGridProps> = ({
             </div>
           )}
           
-          {calculateBonuses(hoveredPiece).length > 0 && (
+          {calculatePieceBonuses(hoveredPiece, pieces).length > 0 && (
             <div className="text-xs border-t border-gray-700 pt-2">
               <div className="font-medium text-yellow-400 mb-1">Active Bonuses:</div>
-              {calculateBonuses(hoveredPiece).map((bonus, index) => (
+              {calculatePieceBonuses(hoveredPiece, pieces).map((bonus, index) => (
                 <div key={index} className={bonus.color}>
                   • {bonus.effect} (from {bonus.source})
                 </div>
