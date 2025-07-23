@@ -248,16 +248,39 @@ export const TankGrid: React.FC<TankGridProps> = ({
             </div>
           )}
           
-          {calculatePieceBonuses(hoveredPiece, pieces).length > 0 && (
+          {(() => {
+            const bonuses = calculatePieceBonuses(hoveredPiece, pieces);
+            const adjacencyBonuses = bonuses.filter(b => b.type === 'adjacency' || b.type === 'ability');
+            const consumableBonuses = bonuses.filter(b => b.type === 'consumable');
+            
+            return bonuses.length > 0 && (
             <div className="text-xs border-t border-gray-700 pt-2">
-              <div className="font-medium text-yellow-400 mb-1">Active Bonuses:</div>
-              {calculatePieceBonuses(hoveredPiece, pieces).map((bonus, index) => (
-                <div key={index} className={bonus.color}>
-                  • {bonus.effect} (from {bonus.source})
+              {adjacencyBonuses.length > 0 && (
+                <div className="mb-2">
+                  <div className="font-medium text-yellow-400 mb-1">Active Bonuses:</div>
+                  {adjacencyBonuses.map((bonus, index) => (
+                    <div key={index} className={bonus.color}>
+                      • {bonus.effect} (from {bonus.source})
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+              
+              {consumableBonuses.length > 0 && (
+                <div>
+                  <div className="font-medium text-orange-400 mb-1">
+                    Consumed Items ({consumableBonuses.length}):
+                  </div>
+                  {consumableBonuses.map((bonus, index) => (
+                    <div key={index} className={bonus.color}>
+                      • {bonus.effect} (from {bonus.source})
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+            );
+          })()}
         </div>
       )}
 

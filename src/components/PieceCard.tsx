@@ -1,6 +1,7 @@
 import React from 'react';
 import { GamePiece } from '../types/game';
 import { getRarityColor, getTypeColor } from '../data/pieces';
+import { EnhancedGamePiece } from '../utils/tankAnalysis';
 import { Sword, Heart, Zap, DollarSign, X, Lock } from 'lucide-react';
 
 interface PieceCardProps {
@@ -77,6 +78,11 @@ export const PieceCard: React.FC<PieceCardProps> = ({
 
   const sellValue = Math.floor(piece.cost * 0.75);
 
+  // Check if this piece has consumed items
+  const enhancedPiece = piece as EnhancedGamePiece;
+  const consumedCount = enhancedPiece.consumedEffects?.length || 0;
+  const hasConsumedItems = consumedCount > 0;
+
   return (
     <div 
       className={`
@@ -116,9 +122,17 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       {/* Piece Name & Type */}
       <div className="mb-1 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <h3 className={`font-bold text-sm ${!piece.position && showSellOption ? 'text-yellow-800' : 'text-gray-900'}`}>
+          <h3 className={`font-bold text-sm flex items-center gap-1 ${!piece.position && showSellOption ? 'text-yellow-800' : 'text-gray-900'}`}>
             {piece.name}
             {!piece.position && showSellOption && <span className="ml-1 text-yellow-600">⚠️</span>}
+            {hasConsumedItems && (
+              <span 
+                className="inline-flex items-center justify-center w-4 h-4 bg-orange-500 text-white text-xs rounded-full font-bold"
+                title={`Has consumed ${consumedCount} item${consumedCount > 1 ? 's' : ''}`}
+              >
+                {consumedCount}
+              </span>
+            )}
           </h3>
           {/* Sell Button */}
           {showSellOption && onSell && (
@@ -138,17 +152,38 @@ export const PieceCard: React.FC<PieceCardProps> = ({
 
       {/* Stats */}
       <div className="flex items-center gap-2 mb-1 text-xs flex-shrink-0">
-        <div className="flex items-center gap-1 text-red-600">
+        <div className="flex items-center gap-1 text-red-600" title={hasConsumedItems ? `Base: ${enhancedPiece.originalStats?.attack || piece.stats.attack}` : undefined}>
           <Sword size={12} />
-          <span>{piece.stats.attack}</span>
+          <span>
+            {piece.stats.attack}
+            {hasConsumedItems && enhancedPiece.originalStats && piece.stats.attack > enhancedPiece.originalStats.attack && (
+              <span className="text-green-500 text-xs ml-0.5">
+                (+{piece.stats.attack - enhancedPiece.originalStats.attack})
+              </span>
+            )}
+          </span>
         </div>
-        <div className="flex items-center gap-1 text-green-600">
+        <div className="flex items-center gap-1 text-green-600" title={hasConsumedItems ? `Base: ${enhancedPiece.originalStats?.health || piece.stats.health}` : undefined}>
           <Heart size={12} />
-          <span>{piece.stats.health}</span>
+          <span>
+            {piece.stats.health}
+            {hasConsumedItems && enhancedPiece.originalStats && piece.stats.health > enhancedPiece.originalStats.health && (
+              <span className="text-green-500 text-xs ml-0.5">
+                (+{piece.stats.health - enhancedPiece.originalStats.health})
+              </span>
+            )}
+          </span>
         </div>
-        <div className="flex items-center gap-1 text-blue-600">
+        <div className="flex items-center gap-1 text-blue-600" title={hasConsumedItems ? `Base: ${enhancedPiece.originalStats?.speed || piece.stats.speed}` : undefined}>
           <Zap size={12} />
-          <span>{piece.stats.speed}</span>
+          <span>
+            {piece.stats.speed}
+            {hasConsumedItems && enhancedPiece.originalStats && piece.stats.speed > enhancedPiece.originalStats.speed && (
+              <span className="text-green-500 text-xs ml-0.5">
+                (+{piece.stats.speed - enhancedPiece.originalStats.speed})
+              </span>
+            )}
+          </span>
         </div>
         {isInShop && (
           <div className="flex items-center gap-1 text-yellow-600 ml-auto">
@@ -212,6 +247,27 @@ export const PieceCard: React.FC<PieceCardProps> = ({
               <li className="text-orange-600 font-medium text-xs">⚡ Consumed at battle start</li>
             )}
           </ul>
+          
+          {/* Show consumed items summary */}
+          {hasConsumedItems && (
+            <div className="mt-2 pt-2 border-t border-gray-200">
+              <div className="text-xs font-medium text-orange-600 mb-1">
+                Consumed Items ({consumedCount}):
+              </div>
+              <div className="text-xs text-orange-700">
+                {enhancedPiece.consumedEffects?.slice(0, 2).map((effect, index) => (
+                  <div key={index} className="truncate">
+                    • {effect.consumableName}
+                  </div>
+                ))}
+                {consumedCount > 2 && (
+                  <div className="text-xs text-gray-500">
+                    +{consumedCount - 2} more...
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
