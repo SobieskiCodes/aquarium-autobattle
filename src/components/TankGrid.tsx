@@ -52,30 +52,54 @@ export const TankGrid: React.FC<TankGridProps> = ({
     
     const bonuses: Array<{ source: string; effect: string; color: string }> = [];
     
-    // Check adjacent cells for bonus sources
-    const adjacentPositions = [
-      { x: piece.position.x - 1, y: piece.position.y },
-      { x: piece.position.x + 1, y: piece.position.y },
-      { x: piece.position.x, y: piece.position.y - 1 },
-      { x: piece.position.x, y: piece.position.y + 1 }
-    ];
+    // Get all adjacent positions for ALL tiles this piece occupies
+    const adjacentPositions: Position[] = [];
+    const checkedPositions = new Set<string>();
+    
+    piece.shape.forEach(shapeOffset => {
+      const pieceX = piece.position!.x + shapeOffset.x;
+      const pieceY = piece.position!.y + shapeOffset.y;
+      
+      // Check all 4 directions from each tile of this piece
+      const directions = [
+        { x: pieceX - 1, y: pieceY },
+        { x: pieceX + 1, y: pieceY },
+        { x: pieceX, y: pieceY - 1 },
+        { x: pieceX, y: pieceY + 1 }
+      ];
+      
+      directions.forEach(pos => {
+        const posKey = `${pos.x},${pos.y}`;
+        if (!checkedPositions.has(posKey) && 
+            pos.x >= 0 && pos.x < GRID_WIDTH && 
+            pos.y >= 0 && pos.y < GRID_HEIGHT) {
+          // Make sure this position isn't occupied by the same piece
+          const isOwnTile = piece.shape.some(offset => 
+            piece.position!.x + offset.x === pos.x && 
+            piece.position!.y + offset.y === pos.y
+          );
+          if (!isOwnTile) {
+            adjacentPositions.push(pos);
+            checkedPositions.add(posKey);
+          }
+        }
+      });
+    });
     
     adjacentPositions.forEach(pos => {
-      if (pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT) {
-        const adjacentPiece = grid[pos.y][pos.x];
-        if (adjacentPiece && adjacentPiece.id !== piece.id) {
-          // Java Fern bonus
-          if (adjacentPiece.id.includes('java-fern')) {
-            bonuses.push({ source: 'Java Fern', effect: '+1 ATK +1 HP', color: 'text-green-600' });
-          }
-          // Anubias bonus
-          if (adjacentPiece.id.includes('anubias')) {
-            bonuses.push({ source: 'Anubias', effect: '+1 HP', color: 'text-green-500' });
-          }
-          // Consumable bonus (if piece is fish)
-          if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-            bonuses.push({ source: 'Brine Shrimp', effect: '+1 ATK +1 HP (battle)', color: 'text-orange-500' });
-          }
+      const adjacentPiece = grid[pos.y][pos.x];
+      if (adjacentPiece && adjacentPiece.id !== piece.id) {
+        // Java Fern bonus
+        if (adjacentPiece.id.includes('java-fern')) {
+          bonuses.push({ source: 'Java Fern', effect: '+1 ATK +1 HP', color: 'text-green-600' });
+        }
+        // Anubias bonus
+        if (adjacentPiece.id.includes('anubias')) {
+          bonuses.push({ source: 'Anubias', effect: '+1 HP', color: 'text-green-500' });
+        }
+        // Consumable bonus (if piece is fish)
+        if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
+          bonuses.push({ source: 'Brine Shrimp', effect: '+1 ATK +1 HP (battle)', color: 'text-orange-500' });
         }
       }
     });
@@ -83,11 +107,8 @@ export const TankGrid: React.FC<TankGridProps> = ({
     // Check for schooling bonuses
     if (piece.tags.includes('schooling')) {
       const schoolingCount = adjacentPositions.filter(pos => {
-        if (pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT) {
-          const adjacentPiece = grid[pos.y][pos.x];
-          return adjacentPiece && adjacentPiece.tags.includes('schooling') && adjacentPiece.id !== piece.id;
-        }
-        return false;
+        const adjacentPiece = grid[pos.y][pos.x];
+        return adjacentPiece && adjacentPiece.tags.includes('schooling') && adjacentPiece.id !== piece.id;
       }).length;
       
       if (schoolingCount > 0) {
@@ -111,23 +132,48 @@ export const TankGrid: React.FC<TankGridProps> = ({
     
     const providers: string[] = [];
     
-    const adjacentPositions = [
-      { x: piece.position.x - 1, y: piece.position.y },
-      { x: piece.position.x + 1, y: piece.position.y },
-      { x: piece.position.x, y: piece.position.y - 1 },
-      { x: piece.position.x, y: piece.position.y + 1 }
-    ];
+    // Get all adjacent positions for ALL tiles this piece occupies
+    const adjacentPositions: Position[] = [];
+    const checkedPositions = new Set<string>();
+    
+    piece.shape.forEach(shapeOffset => {
+      const pieceX = piece.position!.x + shapeOffset.x;
+      const pieceY = piece.position!.y + shapeOffset.y;
+      
+      // Check all 4 directions from each tile of this piece
+      const directions = [
+        { x: pieceX - 1, y: pieceY },
+        { x: pieceX + 1, y: pieceY },
+        { x: pieceX, y: pieceY - 1 },
+        { x: pieceX, y: pieceY + 1 }
+      ];
+      
+      directions.forEach(pos => {
+        const posKey = `${pos.x},${pos.y}`;
+        if (!checkedPositions.has(posKey) && 
+            pos.x >= 0 && pos.x < GRID_WIDTH && 
+            pos.y >= 0 && pos.y < GRID_HEIGHT) {
+          // Make sure this position isn't occupied by the same piece
+          const isOwnTile = piece.shape.some(offset => 
+            piece.position!.x + offset.x === pos.x && 
+            piece.position!.y + offset.y === pos.y
+          );
+          if (!isOwnTile) {
+            adjacentPositions.push(pos);
+            checkedPositions.add(posKey);
+          }
+        }
+      });
+    });
     
     adjacentPositions.forEach(pos => {
-      if (pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT) {
-        const adjacentPiece = grid[pos.y][pos.x];
-        if (adjacentPiece && adjacentPiece.id !== piece.id) {
-          if (adjacentPiece.id.includes('java-fern') || 
-              adjacentPiece.id.includes('anubias') || 
-              adjacentPiece.type === 'consumable' ||
-              (adjacentPiece.tags.includes('schooling') && piece.tags.includes('schooling'))) {
-            providers.push(adjacentPiece.id);
-          }
+      const adjacentPiece = grid[pos.y][pos.x];
+      if (adjacentPiece && adjacentPiece.id !== piece.id) {
+        if (adjacentPiece.id.includes('java-fern') || 
+            adjacentPiece.id.includes('anubias') || 
+            adjacentPiece.type === 'consumable' ||
+            (adjacentPiece.tags.includes('schooling') && piece.tags.includes('schooling'))) {
+          providers.push(adjacentPiece.id);
         }
       }
     });
