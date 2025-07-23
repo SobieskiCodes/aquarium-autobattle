@@ -351,9 +351,13 @@ export const useGame = () => {
         newGold = prev.gold - piece.cost;
         
         // Remove from shop
+        const purchasedIndex = prev.shop.findIndex(shopPiece => shopPiece?.id === piece.id);
         newShop = prev.shop.map(shopPiece => 
           shopPiece?.id === piece.id ? null : shopPiece
         );
+        
+        // Clear lock if we purchased the locked item via drag-and-drop
+        const newLockedIndex = prev.lockedShopIndex === purchasedIndex ? null : prev.lockedShopIndex;
         
         const newPiece = { ...piece, position };
         newPieces = [...prev.playerTank.pieces, newPiece];
@@ -395,6 +399,7 @@ export const useGame = () => {
         selectedPiece: null,
         phase: 'shop' as const,
         shop: newShop,
+        lockedShopIndex: existingPieceIndex >= 0 ? prev.lockedShopIndex : (newLockedIndex ?? prev.lockedShopIndex),
         gold: newGold,
         goldHistory: newGoldHistory
       };
