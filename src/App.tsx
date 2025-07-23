@@ -14,7 +14,9 @@ function App() {
     completeBattle,
     selectPiece,
     cancelPlacement,
-    sellPiece
+    sellPiece,
+    toggleShopLock,
+    clearShopLock
   } = useGame();
 
   return (
@@ -86,6 +88,8 @@ function App() {
           onSelectPiece={selectPiece}
           onCancelPlacement={cancelPlacement}
           onSellPiece={sellPiece}
+          onToggleShopLock={toggleShopLock}
+          onClearShopLock={clearShopLock}
         />
       </main>
 

@@ -57,4 +57,5 @@ export interface GameState {
   selectedPiece: GamePiece | null;
   opponentGold: number;
   opponentShop: (GamePiece | null)[];
+  lockedShopIndex: number | null;
 }

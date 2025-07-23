@@ -1,7 +1,7 @@
 import React from 'react';
 import { GamePiece } from '../types/game';
 import { PieceCard } from './PieceCard';
-import { RefreshCw, DollarSign } from 'lucide-react';
+import { RefreshCw, DollarSign, Lock, Unlock } from 'lucide-react';
 
 interface ShopProps {
   pieces: (GamePiece | null)[];
@@ -9,6 +9,8 @@ interface ShopProps {
   onPurchase: (piece: GamePiece) => void;
   onReroll: () => void;
   rerollCost: number;
+  lockedIndex: number | null;
+  onToggleLock: (index: number) => void;
 }
 
 export const Shop: React.FC<ShopProps> = ({
@@ -16,7 +18,9 @@ export const Shop: React.FC<ShopProps> = ({
   gold,
   onPurchase,
   onReroll,
-  rerollCost
+  rerollCost,
+  lockedIndex,
+  onToggleLock
 }) => {
   return (
     <div className="bg-white rounded-lg shadow-lg p-4">
@@ -47,13 +51,33 @@ export const Shop: React.FC<ShopProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {pieces.map((piece, index) => (
           <div key={index} className="min-h-[200px]">
+            <div className="text-xs text-gray-500 mb-1 text-center">
+              Slot {index + 1}
+            </div>
             {piece ? (
-              <PieceCard
-                piece={piece}
-                onPurchase={onPurchase}
-                isInShop={true}
-                canAfford={gold >= piece.cost}
-              />
+              <div className="relative">
+                <PieceCard
+                  piece={piece}
+                  onPurchase={onPurchase}
+                  isInShop={true}
+                  canAfford={gold >= piece.cost}
+                  isLocked={lockedIndex === index}
+                />
+                <button
+                  onClick={() => onToggleLock(index)}
+                  className={`
+                    absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center
+                    transition-all duration-200 shadow-sm
+                    ${lockedIndex === index
+                      ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }
+                  `}
+                  title={lockedIndex === index ? 'Unlock this item' : 'Lock this item (persists through rerolls)'}
+                >
+                  {lockedIndex === index ? <Lock size={12} /> : <Unlock size={12} />}
+                </button>
+              </div>
             ) : (
               <div className="h-full border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400">
                 <span className="text-sm">Sold Out</span>
@@ -62,6 +86,15 @@ export const Shop: React.FC<ShopProps> = ({
           </div>
         ))}
       </div>
+      
+      {lockedIndex !== null && (
+        <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+          <div className="flex items-center gap-2">
+            <Lock size={14} />
+            <span>Slot {lockedIndex + 1} is locked and will persist through rerolls and rounds</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

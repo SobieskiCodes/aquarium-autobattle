@@ -4,7 +4,7 @@ import { Shop } from './Shop';
 import { TankGrid } from './TankGrid';
 import { BattleView } from './BattleView';
 import { PieceCard } from './PieceCard';
-import { Play, ArrowRight } from 'lucide-react';
+import { Play, ArrowRight, Lock } from 'lucide-react';
 
 interface GamePhaseProps {
   gameState: GameState;
@@ -17,6 +17,8 @@ interface GamePhaseProps {
   onSelectPiece: (piece: any) => void;
   onCancelPlacement: () => void;
   onSellPiece: (piece: any) => void;
+  onToggleShopLock: (index: number) => void;
+  onClearShopLock: () => void;
 }
 
 export const GamePhase: React.FC<GamePhaseProps> = ({
@@ -29,7 +31,9 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   onCompleteBattle,
   onSelectPiece,
   onCancelPlacement,
-  onSellPiece
+  onSellPiece,
+  onToggleShopLock,
+  onClearShopLock
 }) => {
   // Helper function for applying bonuses to pieces
   const applyBonusesToPieces = (pieces: any[], allPieces: any[]) => {
@@ -138,6 +142,24 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
               )}
             </div>
           </div>
+          
+          {/* Shop Lock Status */}
+          {gameState.lockedShopIndex !== null && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-yellow-800">
+                  <Lock size={16} />
+                  <span className="text-sm font-medium">Shop slot {gameState.lockedShopIndex + 1} is locked</span>
+                </div>
+                <button
+                  onClick={onClearShopLock}
+                  className="text-xs text-yellow-700 hover:text-yellow-900 underline"
+                >
+                  Clear lock
+                </button>
+              </div>
+            </div>
+          )}
           <button
             onClick={onStartBattle}
             disabled={gameState.playerTank.pieces.length === 0}
@@ -329,6 +351,8 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
         onPurchase={onPurchasePiece}
         onReroll={onRerollShop}
         rerollCost={2}
+        lockedIndex={gameState.lockedShopIndex}
+        onToggleLock={onToggleShopLock}
       />
     </div>
   );
