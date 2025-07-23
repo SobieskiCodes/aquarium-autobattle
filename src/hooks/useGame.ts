@@ -115,7 +115,10 @@ const applyConsumableEffects = (pieces: GamePiece[]): GamePiece[] => {
               consumableId: consumable.id,
               consumableName: consumable.name,
               effect: `${attackBonus > 0 ? `+${attackBonus} ATK ` : ''}${healthBonus > 0 ? `+${healthBonus} HP ` : ''}${speedBonus > 0 ? `+${speedBonus} SPD ` : ''}(battle)`.trim(),
-              appliedAt: Date.now()
+              appliedAt: Date.now(),
+              attackBonus,
+              healthBonus,
+              speedBonus
             };
             
             const enhancedPiece = p as EnhancedGamePiece;

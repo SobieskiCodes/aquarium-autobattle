@@ -5,6 +5,9 @@ export interface ConsumedEffect {
   consumableName: string;
   effect: string;
   appliedAt: number; // timestamp
+  attackBonus?: number;
+  healthBonus?: number;
+  speedBonus?: number;
 }
 
 export interface EnhancedGamePiece extends GamePiece {
@@ -303,22 +306,44 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]):
   // Add consumed effects to bonuses (stack duplicates)
   const enhancedPiece = piece as EnhancedGamePiece;
   if (enhancedPiece.consumedEffects) {
-    // Group consumed effects by consumable name and effect
-    const consumedGroups = new Map<string, { count: number; effect: string }>();
+    // Group consumed effects by consumable name (not by effect, since effects should be identical for same consumable type)
+    const consumedGroups = new Map<string, { count: number; attackBonus: number; healthBonus: number; speedBonus: number }>();
     
     enhancedPiece.consumedEffects.forEach(effect => {
-      const key = `${effect.consumableName}:${effect.effect}`;
-      if (consumedGroups.has(key)) {
-        consumedGroups.get(key)!.count++;
+      const consumableName = effect.consumableName;
+      if (consumedGroups.has(consumableName)) {
+        const existing = consumedGroups.get(consumableName)!;
+        existing.count++;
+        // Accumulate bonuses
+        existing.attackBonus += effect.attackBonus || 0;
+        existing.healthBonus += effect.healthBonus || 0;
+        existing.speedBonus += effect.speedBonus || 0;
       } else {
-        consumedGroups.set(key, { count: 1, effect: effect.effect });
+        // Parse the effect to extract bonuses (fallback if not stored separately)
+        const attackMatch = effect.effect.match(/\+(\d+) ATK/);
+        const healthMatch = effect.effect.match(/\+(\d+) HP/);
+        const speedMatch = effect.effect.match(/\+(\d+) SPD/);
+        
+        consumedGroups.set(consumableName, {
+          count: 1,
+          attackBonus: attackMatch ? parseInt(attackMatch[1]) : 0,
+          healthBonus: healthMatch ? parseInt(healthMatch[1]) : 0,
+          speedBonus: speedMatch ? parseInt(speedMatch[1]) : 0
+        });
       }
     });
     
     // Add stacked bonuses
-    consumedGroups.forEach(({ count, effect }, key) => {
-      const consumableName = key.split(':')[0];
-      const displayEffect = count > 1 ? `${effect} (×${count})` : effect;
+    consumedGroups.forEach(({ count, attackBonus, healthBonus, speedBonus }, consumableName) => {
+      // Build effect string from accumulated bonuses
+      let effectParts: string[] = [];
+      if (attackBonus > 0) effectParts.push(`+${attackBonus} ATK`);
+      if (healthBonus > 0) effectParts.push(`+${healthBonus} HP`);
+      if (speedBonus > 0) effectParts.push(`+${speedBonus} SPD`);
+      
+      const effectText = effectParts.join(' ') + ' (battle)';
+      const displayEffect = count > 1 ? `${effectText} (×${count})` : effectText;
+      
       bonuses.push({ 
         source: consumableName, 
         effect: displayEffect, 
