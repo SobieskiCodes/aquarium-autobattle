@@ -103,6 +103,13 @@ const applyConsumableEffects = (pieces: GamePiece[]): GamePiece[] => {
             const healthBonus = consumable.healthBonus || 0;
             const speedBonus = consumable.speedBonus || 0;
 
+            console.log(`Applying ${consumable.name} bonuses:`, {
+              attackBonus,
+              healthBonus, 
+              speedBonus,
+              consumableData: consumable
+            });
+
             // Create consumed effect record
             const consumedEffect: ConsumedEffect = {
               consumableId: consumable.id,
