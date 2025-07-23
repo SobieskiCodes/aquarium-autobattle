@@ -322,37 +322,6 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           )}
         </div>
       </div>
-    </div>
-  );
-
-  const renderPlacementPhase = () => (
-    // Just render the shop phase - placement instructions are already shown there
-    renderShopPhase()
-  );
-
-  const renderBattlePhase = () => (
-    <BattleView
-      playerPieces={gameState.playerTank.pieces}
-      opponentPieces={gameState.opponentTank.pieces}
-      playerWaterQuality={gameState.playerTank.waterQuality}
-      opponentWaterQuality={gameState.opponentTank.waterQuality}
-      onBattleComplete={onCompleteBattle}
-    />
-  );
-
-  switch (gameState.phase) {
-    case 'shop':
-      return renderShopPhase();
-    case 'placement':
-      return renderPlacementPhase();
-    case 'battle':
-      return renderBattlePhase();
-    default:
-      return renderShopPhase();
-  }
-};
-        </div>
-      </div>
       
       <Shop
         pieces={gameState.shop}
