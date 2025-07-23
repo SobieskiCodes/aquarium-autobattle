@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 import { GameState, GamePiece, Position } from '../types/game';
 import { getRandomShop, PIECE_LIBRARY, getRarityWeight } from '../data/pieces';
 import { EnhancedGamePiece, ConsumedEffect } from '../utils/tankAnalysis';
-import '../utils/consumableTest'; // Import test for debugging
 
 const INITIAL_STATE: GameState = {
   phase: 'shop',
@@ -49,24 +48,12 @@ const INITIAL_STATE: GameState = {
 
 // Helper function to apply consumable effects to pieces
 const applyConsumableEffects = (pieces: GamePiece[]): GamePiece[] => {
-  console.log('=== APPLYING CONSUMABLE EFFECTS ===');
-  console.log('Input pieces:', pieces.map(p => ({ name: p.name, type: p.type, position: p.position })));
-  
   let battlePieces = [...pieces];
   const consumables = battlePieces.filter(p => p.type === 'consumable');
   
-  console.log('Found consumables:', consumables.map(c => ({ name: c.name, position: c.position, attackBonus: c.attackBonus, healthBonus: c.healthBonus })));
-  
   // Apply each consumable's effect to adjacent fish
   consumables.forEach(consumable => {
-    console.log(`Processing consumable: ${consumable.name}`);
-    console.log('Consumable object:', consumable);
-    console.log('attackBonus:', consumable.attackBonus);
-    console.log('healthBonus:', consumable.healthBonus);
-    console.log('speedBonus:', consumable.speedBonus);
-    
     if (consumable.position) {
-      console.log(`Consumable ${consumable.name} has position:`, consumable.position);
       // Get all adjacent positions for all tiles of the consumable
       const adjacentPositions: Position[] = [];
       const checkedPositions = new Set<string>();
@@ -101,8 +88,6 @@ const applyConsumableEffects = (pieces: GamePiece[]): GamePiece[] => {
         });
       });
       
-      console.log('Adjacent positions for', consumable.name, ':', adjacentPositions);
-      
       battlePieces = battlePieces.map(p => {
         if (p.type === 'fish' && p.position) {
           // Check if any tile of this fish is adjacent to any tile of the consumable
@@ -113,20 +98,10 @@ const applyConsumableEffects = (pieces: GamePiece[]): GamePiece[] => {
           });
           
           if (isAdjacent) {
-            console.log(`Fish ${p.name} is adjacent to consumable ${consumable.name}`);
-            
-            console.log('Consumable object:', consumable);
-            console.log('attackBonus:', consumable.attackBonus);
-            console.log('healthBonus:', consumable.healthBonus);
-            console.log('speedBonus:', consumable.speedBonus);
-            
             // Use the consumable's bonus fields directly
-            const attackBonus = consumable.attackBonus ?? 1;
-            const healthBonus = consumable.healthBonus ?? 1;
-            const speedBonus = consumable.speedBonus ?? 0;
-            
-            console.log('Final bonuses - attack:', attackBonus, 'health:', healthBonus, 'speed:', speedBonus);
-            console.log('Original fish stats:', p.stats);
+            const attackBonus = consumable.attackBonus || 0;
+            const healthBonus = consumable.healthBonus || 0;
+            const speedBonus = consumable.speedBonus || 0;
 
             // Create consumed effect record
             const consumedEffect: ConsumedEffect = {
@@ -156,9 +131,6 @@ const applyConsumableEffects = (pieces: GamePiece[]): GamePiece[] => {
                 speed: p.stats.speed + speedBonus
               }
             } as EnhancedGamePiece;
-            
-            console.log('Enhanced fish stats:', enhancedPiece.stats);
-            return enhancedPiece;
           }
         }
         return p;
@@ -167,10 +139,7 @@ const applyConsumableEffects = (pieces: GamePiece[]): GamePiece[] => {
   });
   
   // Remove consumables after applying effects
-  const finalPieces = battlePieces.filter(p => p.type !== 'consumable');
-  console.log('Final pieces after consumable effects:', finalPieces.map(p => ({ name: p.name, stats: p.stats })));
-  console.log('=== END CONSUMABLE EFFECTS ===');
-  return finalPieces;
+  return battlePieces.filter(p => p.type !== 'consumable');
 };
 
 // AI opponent logic
@@ -621,7 +590,6 @@ export const useGame = () => {
 
   const startBattle = useCallback(() => {
     setGameState(prev => {
-      console.log('=== START BATTLE - APPLYING CONSUMABLE EFFECTS ===');
       // Simulate opponent's turn first
       const opponentResult = simulateOpponentTurn(
         prev.opponentGold, 
@@ -630,9 +598,7 @@ export const useGame = () => {
       );
       
       // Apply consumable effects to player pieces before battle
-      console.log('Player pieces before consumable effects:', prev.playerTank.pieces.map(p => ({ name: p.name, type: p.type, position: p.position })));
       const battlePieces = applyConsumableEffects(prev.playerTank.pieces);
-      console.log('Player pieces after consumable effects:', battlePieces.map(p => ({ name: p.name, stats: p.stats })));
       
       // Update grid to remove consumables
       const newGrid = Array(6).fill(null).map(() => Array(8).fill(null));
