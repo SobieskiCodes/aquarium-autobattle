@@ -101,11 +101,6 @@ export const GoldTracker: React.FC<GoldTrackerProps> = ({
       >
         <Eye size={16} />
         <span>Gold Tracker</span>
-        {nextInterest > 0 && (
-          <span className="text-xs bg-white/20 px-1 rounded">
-            +{nextInterest} next
-          </span>
-        )}
       </button>
     );
   }

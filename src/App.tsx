@@ -42,6 +42,14 @@ function App() {
               <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1 rounded-full font-bold">
                 <span>💰</span>
                 <span>{gameState.gold}g</span>
+                {(() => {
+                  const nextInterest = Math.min(Math.floor(gameState.gold / 10), 5);
+                  return nextInterest > 0 ? (
+                    <span className="text-yellow-200 text-xs ml-1">
+                      (+{nextInterest} next)
+                    </span>
+                  ) : null;
+                })()}
                 {gameState.lossStreak > 0 && (
                   <span className="text-red-200 text-xs ml-1">
                     (L{gameState.lossStreak})
