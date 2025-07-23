@@ -139,23 +139,15 @@ export const PIECE_LIBRARY: GamePiece[] = [
 
 export function getRandomShop(count: number = 5): (GamePiece | null)[] {
   const shop: (GamePiece | null)[] = [];
-  const usedIndices = new Set<number>();
   
   for (let i = 0; i < count; i++) {
-    let randomIndex;
-    let attempts = 0;
-    
-    // Try to find an unused piece, but allow duplicates if we've tried too many times
-    do {
-      randomIndex = Math.floor(Math.random() * PIECE_LIBRARY.length);
-      attempts++;
-    } while (usedIndices.has(randomIndex) && attempts < 20);
-    
-    usedIndices.add(randomIndex);
+    // Allow complete duplicates - this is how autobattlers work
+    const randomIndex = Math.floor(Math.random() * PIECE_LIBRARY.length);
     const randomPiece = PIECE_LIBRARY[randomIndex];
     
     shop.push({
       ...randomPiece,
+      // Give each shop instance a unique ID even if it's the same piece type
       id: `${randomPiece.id}-${Math.random().toString(36).substr(2, 9)}`
     });
   }
