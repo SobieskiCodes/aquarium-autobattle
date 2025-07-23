@@ -54,7 +54,7 @@ export const Shop: React.FC<ShopProps> = ({
       
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {pieces.map((piece, index) => (
-          <div key={index} className="min-h-[200px]">
+          <div key={piece ? piece.id : `empty-${index}`} className="min-h-[200px]">
             <div className="text-xs text-gray-500 mb-1 text-center">
               Slot {index + 1}
             </div>
