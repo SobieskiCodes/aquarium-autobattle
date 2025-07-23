@@ -93,7 +93,7 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
         if (adjacentPiece.id.includes('anubias')) {
           bonusHealth += 1;
         }
-        // Consumable bonus (if piece is fish)
+        // Consumable bonus (if piece is fish) - each adjacent consumable gives +1/+1
         if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
           bonusAttack += 1;
           bonusHealth += 1;
@@ -198,9 +198,9 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]) 
       if (adjacentPiece.id.includes('anubias')) {
         bonuses.push({ source: 'Anubias', effect: '+1 HP', color: 'text-green-500' });
       }
-      // Consumable bonus (if piece is fish)
+      // Consumable bonus (if piece is fish) - show each adjacent consumable
       if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-        bonuses.push({ source: 'Brine Shrimp', effect: '+1 ATK +1 HP (battle)', color: 'text-orange-500' });
+        bonuses.push({ source: adjacentPiece.name, effect: '+1 ATK +1 HP (battle)', color: 'text-orange-500' });
       }
     }
   });
