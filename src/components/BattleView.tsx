@@ -602,7 +602,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
       )}
       
       {/* CSS for floating text animation */}
-      <style jsx>{`
+      <style>{`
         @keyframes floatUp {
           0% {
             opacity: 1;
