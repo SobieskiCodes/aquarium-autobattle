@@ -657,15 +657,54 @@ export const useGame = () => {
       
       // If this was the final round, we need to handle game completion
       if (isFinalRound) {
-        // For now, we'll continue the game but this is where we'd handle
-        // game completion, stats tracking, new opponent, etc.
-        // TODO: Add game completion logic here
+        // Complete reset after round 15 - start fresh campaign
+        return {
+          ...INITIAL_STATE,
+          round: 1,
+          gold: 10,
+          wins: 0,
+          losses: 0,
+          opponentWins: 0,
+          opponentLosses: 0,
+          lossStreak: 0,
+          opponentLossStreak: 0,
+          playerTank: {
+            id: 'player',
+            pieces: [],
+            waterQuality: 5,
+            temperature: 25,
+            grid: Array(6).fill(null).map(() => Array(8).fill(null))
+          },
+          opponentTank: {
+            id: 'opponent',
+            pieces: [],
+            waterQuality: 5,
+            temperature: 25,
+            grid: Array(6).fill(null).map(() => Array(8).fill(null))
+          },
+          shop: getRandomShop(),
+          opponentShop: getRandomShop(),
+          battleEvents: [],
+          selectedPiece: null,
+          lockedShopIndex: null,
+          rerollsThisRound: 0,
+          goldHistory: [
+            {
+              id: 'campaign-complete',
+              round: 1,
+              type: 'round_start',
+              amount: 10,
+              description: 'New campaign started - Starting gold',
+              timestamp: Date.now()
+            }
+          ]
+        };
       }
       
       return {
         ...prev,
         phase: 'shop' as const,
-        round: isFinalRound ? 1 : prev.round + 1, // Reset to round 1 after 15 rounds for now
+        round: prev.round + 1,
         gold: currentGoldAfterReward + interestAmount,
         lossStreak: playerLossStreak,
         opponentLossStreak: opponentLossStreak,
