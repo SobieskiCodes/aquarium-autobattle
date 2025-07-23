@@ -100,17 +100,14 @@ export const BattleView: React.FC<BattleViewProps> = ({
   };
 
   const simulateBattle = () => {
-    // Apply bonuses to get enhanced pieces for battle
-    const enhancedPlayerPieces = applyBonusesToPieces(playerPieces, playerPieces);
-    const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces, opponentPieces);
-    
-    let playerBattlePieces = enhancedPlayerPieces.map(piece => ({
+    // Use pieces as they come (already enhanced from game state)
+    let playerBattlePieces = playerPieces.map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
     }));
     
-    let opponentBattlePieces = enhancedOpponentPieces.map(piece => ({
+    let opponentBattlePieces = opponentPieces.map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
@@ -218,16 +215,24 @@ export const BattleView: React.FC<BattleViewProps> = ({
         // Apply damage
         target.currentHealth = Math.max(0, target.currentHealth - damage);
         
+        console.log(`${attacker.name} dealt ${damage} damage to ${target.name}. Target health: ${target.currentHealth}/${target.stats.health}`);
+        
         // Update the piece's alive status immediately
         if (target.currentHealth <= 0) {
           target.isAlive = false;
         }
         
-        // Update health bars in real-time
+        // Calculate current total health for both sides
+        const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+        const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+        
+        console.log(`Health update - Player: ${currentPlayerHealth}, Opponent: ${currentOpponentHealth}`);
+        
+        // Update health bars in real-time with current totals
         setBattleState(prev => ({
           ...prev,
-          playerHealth: playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0),
-          opponentHealth: opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0)
+          playerHealth: currentPlayerHealth,
+          opponentHealth: currentOpponentHealth
         }));
         
         // Add floating text
