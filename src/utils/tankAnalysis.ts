@@ -266,7 +266,17 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]):
       }
       // Consumable bonus (if piece is fish) - show each adjacent consumable
       if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-        bonuses.push({ source: adjacentPiece.name, effect: '+1 ATK +1 HP (battle)', color: 'text-orange-500', type: 'consumable' });
+        const attackBonus = adjacentPiece.attackBonus || 0;
+        const healthBonus = adjacentPiece.healthBonus || 0;
+        const speedBonus = adjacentPiece.speedBonus || 0;
+        
+        let effectText = '';
+        if (attackBonus > 0) effectText += `+${attackBonus} ATK `;
+        if (healthBonus > 0) effectText += `+${healthBonus} HP `;
+        if (speedBonus > 0) effectText += `+${speedBonus} SPD `;
+        effectText += '(battle)';
+        
+        bonuses.push({ source: adjacentPiece.name, effect: effectText.trim(), color: 'text-orange-500', type: 'consumable' });
       }
     }
   });
