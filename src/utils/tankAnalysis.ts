@@ -1,5 +1,22 @@
 import { GamePiece } from '../types/game';
 
+export interface ConsumedEffect {
+  consumableId: string;
+  consumableName: string;
+  effect: string;
+  appliedAt: number; // timestamp
+}
+
+export interface EnhancedGamePiece extends GamePiece {
+  consumedEffects?: ConsumedEffect[];
+  originalStats?: {
+    attack: number;
+    health: number;
+    speed: number;
+    maxHealth: number;
+  };
+}
+
 export interface TankAnalysis {
   totalAttack: number;
   baseAttack: number;
@@ -14,10 +31,11 @@ export interface TankAnalysis {
   totalPieces: number;
   enhancedPieces: GamePiece[];
   pieceBreakdown: Array<{
-    piece: GamePiece;
+    piece: EnhancedGamePiece;
     originalStats: { attack: number; health: number; speed: number };
     bonuses: { attack: number; health: number; speed: number };
-    activeBonuses: Array<{ source: string; effect: string; color: string }>;
+    activeBonuses: Array<{ source: string; effect: string; color: string; type: 'adjacency' | 'consumable' | 'ability' }>;
+    consumedItems: ConsumedEffect[];
   }>;
 }
 
@@ -25,7 +43,7 @@ const GRID_WIDTH = 8;
 const GRID_HEIGHT = 6;
 
 // Helper function for applying bonuses to pieces
-export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]): GamePiece[] => {
+export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]): EnhancedGamePiece[] => {
   // Create grid with piece occupancy
   const grid = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null));
   allPieces.forEach(piece => {
@@ -42,6 +60,14 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
 
   return pieces.map(piece => {
     if (!piece.position) return piece;
+    
+    // Store original stats if not already stored
+    const originalStats = (piece as EnhancedGamePiece).originalStats || {
+      attack: piece.stats.attack,
+      health: piece.stats.health,
+      speed: piece.stats.speed,
+      maxHealth: piece.stats.maxHealth
+    };
     
     let bonusAttack = 0;
     let bonusHealth = 0;
@@ -121,8 +147,10 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
     }
     
     // Create a deep copy of the piece to avoid mutating the original
-    return {
+    const enhancedPiece: EnhancedGamePiece = {
       ...piece,
+      originalStats,
+      consumedEffects: (piece as EnhancedGamePiece).consumedEffects || [],
       stats: {
         attack: piece.stats.attack + bonusAttack,
         health: piece.stats.health + bonusHealth,
@@ -130,14 +158,16 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
         speed: piece.stats.speed + bonusSpeed
       }
     };
+    
+    return enhancedPiece;
   });
 };
 
 // Calculate bonuses for a specific piece (used for tooltips)
-export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]) => {
+export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]): Array<{ source: string; effect: string; color: string; type: 'adjacency' | 'consumable' | 'ability' }> => {
   if (!piece.position) return [];
   
-  const bonuses: Array<{ source: string; effect: string; color: string }> = [];
+  const bonuses: Array<{ source: string; effect: string; color: string; type: 'adjacency' | 'consumable' | 'ability' }> = [];
   
   // Create grid with piece occupancy
   const grid = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null));
@@ -192,15 +222,15 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]) 
     if (adjacentPiece && adjacentPiece.id !== piece.id) {
       // Java Fern bonus
       if (adjacentPiece.id.includes('java-fern')) {
-        bonuses.push({ source: 'Java Fern', effect: '+1 ATK +1 HP', color: 'text-green-600' });
+        bonuses.push({ source: 'Java Fern', effect: '+1 ATK +1 HP', color: 'text-green-600', type: 'adjacency' });
       }
       // Anubias bonus
       if (adjacentPiece.id.includes('anubias')) {
-        bonuses.push({ source: 'Anubias', effect: '+1 HP', color: 'text-green-500' });
+        bonuses.push({ source: 'Anubias', effect: '+1 HP', color: 'text-green-500', type: 'adjacency' });
       }
       // Consumable bonus (if piece is fish) - show each adjacent consumable
       if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-        bonuses.push({ source: adjacentPiece.name, effect: '+1 ATK +1 HP (battle)', color: 'text-orange-500' });
+        bonuses.push({ source: adjacentPiece.name, effect: '+1 ATK +1 HP (battle)', color: 'text-orange-500', type: 'consumable' });
       }
     }
   });
@@ -214,14 +244,27 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]) 
     
     if (schoolingCount > 0) {
       if (piece.id.includes('neon-tetra')) {
-        bonuses.push({ source: 'Schooling', effect: `+${schoolingCount} ATK`, color: 'text-blue-500' });
+        bonuses.push({ source: 'Schooling', effect: `+${schoolingCount} ATK`, color: 'text-blue-500', type: 'ability' });
         if (schoolingCount >= 3) {
-          bonuses.push({ source: 'Large School', effect: 'Double Speed', color: 'text-cyan-500' });
+          bonuses.push({ source: 'Large School', effect: 'Double Speed', color: 'text-cyan-500', type: 'ability' });
         }
       } else if (piece.id.includes('cardinal-tetra')) {
-        bonuses.push({ source: 'Schooling', effect: `+${schoolingCount * 2} ATK`, color: 'text-blue-600' });
+        bonuses.push({ source: 'Schooling', effect: `+${schoolingCount * 2} ATK`, color: 'text-blue-600', type: 'ability' });
       }
     }
+  }
+  
+  // Add consumed effects to bonuses
+  const enhancedPiece = piece as EnhancedGamePiece;
+  if (enhancedPiece.consumedEffects) {
+    enhancedPiece.consumedEffects.forEach(effect => {
+      bonuses.push({ 
+        source: effect.consumableName, 
+        effect: effect.effect, 
+        color: 'text-orange-600', 
+        type: 'consumable' 
+      });
+    });
   }
   
   return bonuses;
@@ -329,21 +372,23 @@ export const analyzeTank = (pieces: GamePiece[]): TankAnalysis => {
   // Create detailed breakdown
   const pieceBreakdown = enhancedFish.map(enhancedPiece => {
     const originalPiece = fishPieces.find(p => p.id === enhancedPiece.id)!;
+    const originalStats = enhancedPiece.originalStats || originalPiece.stats;
     const bonuses = {
-      attack: enhancedPiece.stats.attack - originalPiece.stats.attack,
-      health: enhancedPiece.stats.health - originalPiece.stats.health,
-      speed: enhancedPiece.stats.speed - originalPiece.stats.speed
+      attack: enhancedPiece.stats.attack - originalStats.attack,
+      health: enhancedPiece.stats.health - originalStats.health,
+      speed: enhancedPiece.stats.speed - originalStats.speed
     };
     
     return {
       piece: enhancedPiece,
       originalStats: {
-        attack: originalPiece.stats.attack,
-        health: originalPiece.stats.health,
-        speed: originalPiece.stats.speed
+        attack: originalStats.attack,
+        health: originalStats.health,
+        speed: originalStats.speed
       },
       bonuses,
-      activeBonuses: calculatePieceBonuses(originalPiece, pieces)
+      activeBonuses: calculatePieceBonuses(originalPiece, pieces),
+      consumedItems: enhancedPiece.consumedEffects || []
     };
   });
   

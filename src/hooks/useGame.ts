@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { GameState, GamePiece, Position } from '../types/game';
 import { getRandomShop, PIECE_LIBRARY, getRarityWeight } from '../data/pieces';
-import { applyBonusesToPieces } from '../utils/tankAnalysis';
+import { applyBonusesToPieces, EnhancedGamePiece, ConsumedEffect } from '../utils/tankAnalysis';
 
 const INITIAL_STATE: GameState = {
   phase: 'shop',
@@ -549,15 +549,33 @@ export const useGame = () => {
               });
               
               if (isAdjacent) {
+                // Create consumed effect record
+                const consumedEffect: ConsumedEffect = {
+                  consumableId: consumable.id,
+                  consumableName: consumable.name,
+                  effect: '+1 ATK +1 HP (consumed)',
+                  appliedAt: Date.now()
+                };
+                
+                const enhancedPiece = p as EnhancedGamePiece;
+                const existingEffects = enhancedPiece.consumedEffects || [];
+                
                 return {
                   ...p,
+                  originalStats: enhancedPiece.originalStats || {
+                    attack: p.stats.attack,
+                    health: p.stats.health,
+                    speed: p.stats.speed,
+                    maxHealth: p.stats.maxHealth
+                  },
+                  consumedEffects: [...existingEffects, consumedEffect],
                   stats: {
                     ...p.stats,
                     attack: p.stats.attack + 1,
                     health: p.stats.health + 1,
                     maxHealth: p.stats.maxHealth + 1
                   }
-                };
+                } as EnhancedGamePiece;
               }
             }
             return p;
