@@ -497,17 +497,10 @@ export const TankGrid: React.FC<TankGridProps> = ({
                   </div>
                 </div>
               )}
-              {(isPreviewCell(x, y) || isDragPreviewCell(x, y)) && !cell && !isDraggedPieceCell(x, y) && (
+              {(isPreviewCell(x, y) || isDragPreviewCell(x, y)) && !cell && (
                 <div className="text-center text-gray-600">
                   <div className="text-xs leading-tight opacity-70">
                     {(selectedPiece || currentDraggedPiece)?.name.split(' ')[0]}
-                  </div>
-                </div>
-              )}
-              {isDragPreviewCell(x, y) && isDraggedPieceCell(x, y) && (
-                <div className="text-center text-gray-600">
-                  <div className="text-xs leading-tight opacity-70">
-                    {currentDraggedPiece?.name.split(' ')[0]}
                   </div>
                 </div>
               )}

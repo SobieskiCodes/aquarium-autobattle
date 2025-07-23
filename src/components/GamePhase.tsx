@@ -46,16 +46,16 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   };
 
   const handleDragPlace = (piece: any, position: any) => {
-    // If dragging from shop, purchase first then place
-    if (!piece.position && gameState.gold >= piece.cost) {
+    if (piece.position) {
+      // Moving existing piece
+      onMovePiece(piece, position);
+    } else if (gameState.gold >= piece.cost) {
+      // If dragging from shop, purchase first then place
       onPurchasePiece(piece);
       // The piece will be placed automatically after purchase
       setTimeout(() => {
         onPlacePiece(piece, position);
       }, 0);
-    } else if (piece.position) {
-      // Moving existing piece
-      onMovePiece(piece, position);
     } else {
       // Placing from inventory
       onPlacePiece(piece, position);
