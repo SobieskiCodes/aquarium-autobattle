@@ -264,14 +264,6 @@ export const BattleView: React.FC<BattleViewProps> = ({
           opponentHealth: aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0)
         }));
         
-        // Call onBattleComplete with the correct result
-        setTimeout(() => {
-          if (isDraw) {
-            onBattleComplete('draw');
-          } else {
-            onBattleComplete(playerWon ? 'player' : 'opponent');
-          }
-        }, 100);
         return;
       }
       
