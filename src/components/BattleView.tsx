@@ -169,10 +169,15 @@ export const BattleView: React.FC<BattleViewProps> = ({
         setBattleResult(isDraw ? 'draw' : (playerWon ? 'player' : 'opponent'));
         setBattleLog(events);
         
+        const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+        const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+        
         setBattleState(prev => ({
           ...prev,
           winner: isDraw ? null : (playerWon ? 'player' : 'opponent'),
-          battleActive: false
+          battleActive: false,
+          playerHealth: currentPlayerHealth,
+          opponentHealth: currentOpponentHealth
         }));
         
         return;
@@ -219,13 +224,10 @@ export const BattleView: React.FC<BattleViewProps> = ({
         }
         
         // Update health bars in real-time
-        const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
-        const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
-        
         setBattleState(prev => ({
           ...prev,
-          playerHealth: currentPlayerHealth,
-          opponentHealth: currentOpponentHealth
+          playerHealth: playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0),
+          opponentHealth: opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0)
         }));
         
         // Add floating text
@@ -296,6 +298,18 @@ export const BattleView: React.FC<BattleViewProps> = ({
         addFloatingText('Poison!', 'opponent', 'text-purple-500');
       }
 
+      // Update battle state
+      const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+      const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+
+      setBattleState(prev => ({
+        ...prev,
+        playerHealth: currentPlayerHealth,
+        opponentHealth: currentOpponentHealth,
+        currentRound: battleTurn,
+        battleEvents: [...events]
+      }));
+
       battleTurn++;
       
       // Safety valve: if battle goes on too long (20 turns), force end with health comparison
@@ -323,7 +337,9 @@ export const BattleView: React.FC<BattleViewProps> = ({
         setBattleState(prev => ({
           ...prev,
           winner: isDraw ? null : (playerWon ? 'player' : 'opponent'),
-          battleActive: false
+          battleActive: false,
+          playerHealth: currentPlayerHealth,
+          opponentHealth: currentOpponentHealth
         }));
       }
     }, 800); // 0.8 seconds per battle turn for good pacing
