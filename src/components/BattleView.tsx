@@ -236,7 +236,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
       isAlive: true
     }));
     
-    let round = 1;
+    let battleTurn = 1;
     const events: BattleEvent[] = [];
 
     const battleInterval = setInterval(() => {
@@ -251,19 +251,31 @@ export const BattleView: React.FC<BattleViewProps> = ({
       const alivePlayerStructures = alivePlayerPieces.filter(p => p.type === 'plant' || p.type === 'equipment');
       const aliveOpponentStructures = aliveOpponentPieces.filter(p => p.type === 'plant' || p.type === 'equipment');
       
-      // Battle ends when one side has no fish AND no structures, OR when both sides have no fish
+      // Battle ends when one side has no units left (fish, plants, or equipment)
       const playerHasUnits = alivePlayerFish.length > 0 || alivePlayerStructures.length > 0;
       const opponentHasUnits = aliveOpponentFish.length > 0 || aliveOpponentStructures.length > 0;
       
-      console.log(`Round ${round}: Player units: ${playerHasUnits} (${alivePlayerFish.length} fish, ${alivePlayerStructures.length} structures), Opponent units: ${opponentHasUnits} (${aliveOpponentFish.length} fish, ${aliveOpponentStructures.length} structures)`);
+      console.log(`Battle Turn ${battleTurn}: Player units: ${playerHasUnits} (${alivePlayerFish.length} fish, ${alivePlayerStructures.length} structures), Opponent units: ${opponentHasUnits} (${aliveOpponentFish.length} fish, ${aliveOpponentStructures.length} structures)`);
       
-      if (!playerHasUnits || !opponentHasUnits || (alivePlayerFish.length === 0 && aliveOpponentFish.length === 0)) {
+      // Battle continues until one side is completely eliminated
+      if (!playerHasUnits || !opponentHasUnits) {
         clearInterval(battleInterval);
         
-        // Determine winner: check for draw first, then compare health
+        // Determine winner
         let playerWon;
         let isDraw = false;
-        if (alivePlayerFish.length === 0 && aliveOpponentFish.length === 0) {
+        
+        if (!playerHasUnits && !opponentHasUnits) {
+          // Both sides eliminated simultaneously - draw
+          isDraw = true;
+          playerWon = false;
+        } else {
+          // One side has units remaining
+          playerWon = playerHasUnits && !opponentHasUnits;
+        }
+        
+        // If both sides still have units but no fish, compare remaining health
+        if (playerHasUnits && opponentHasUnits && alivePlayerFish.length === 0 && aliveOpponentFish.length === 0) {
           const playerTotalHealth = alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0);
           const opponentTotalHealth = aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0);
           if (playerTotalHealth === opponentTotalHealth) {
@@ -272,12 +284,6 @@ export const BattleView: React.FC<BattleViewProps> = ({
           } else {
             playerWon = playerTotalHealth > opponentTotalHealth;
           }
-        } else if (!playerHasUnits && !opponentHasUnits) {
-          // Both sides have no units left - it's a draw
-          isDraw = true;
-          playerWon = false;
-        } else {
-          playerWon = playerHasUnits && !opponentHasUnits;
         }
         
         setBattleState(prev => ({
@@ -366,7 +372,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
           source: `${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}`,
           target: `${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType} for ${fullDamageText} damage`,
           value: damage,
-          round
+          round: battleTurn
         });
         
         if (target.currentHealth <= 0) {
@@ -377,7 +383,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
             source: `${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}`,
             target: `${koText} ${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType}`,
             value: 0,
-            round
+            round: battleTurn
           });
         }
         
@@ -402,7 +408,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
           source: 'Poor Water Quality',
           target: 'Your Fish',
           value: 0,
-          round
+          round: battleTurn
         });
         addFloatingText('Poison!', 'player', 'text-purple-500');
       }
@@ -418,7 +424,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
           source: 'Poor Water Quality',
           target: 'Enemy Fish',
           value: 0,
-          round
+          round: battleTurn
         });
         addFloatingText('Poison!', 'opponent', 'text-purple-500');
       }
@@ -431,16 +437,17 @@ export const BattleView: React.FC<BattleViewProps> = ({
         ...prev,
         playerHealth: currentPlayerHealth,
         opponentHealth: currentOpponentHealth,
-        currentRound: round,
+        currentRound: battleTurn,
         battleEvents: [...events]
       }));
 
-      round++;
+      battleTurn++;
       
-      // Max 3 rounds for quicker battles - this is an autobattler, not a long RPG fight
-      if (round > 3) {
+      // Safety valve: if battle goes on too long (20 turns), force end with health comparison
+      if (battleTurn > 20) {
         clearInterval(battleInterval);
-        // Check for draw in timeout scenario
+        
+        // Force end - compare remaining health
         let playerWon;
         let isDraw = false;
         if (currentPlayerHealth === currentOpponentHealth) {
@@ -461,7 +468,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
           source: 'Time Limit',
           target: isDraw ? 'Draw! Battle Ended' : 'Battle Ended',
           value: 0,
-          round
+          round: battleTurn
         });
 
         setBattleState(prev => ({
@@ -478,7 +485,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
           }
         }, 100);
       }
-    }, 1200); // 1.2 seconds per round for faster battles
+    }, 800); // 0.8 seconds per battle turn for good pacing
   };
 
   const getHealthPercentage = (current: number, max: number) => {
@@ -501,10 +508,6 @@ export const BattleView: React.FC<BattleViewProps> = ({
             <h2 className="text-2xl font-bold">Battle Arena</h2>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Clock size={20} />
-              <span>Battle Round {battleState.currentRound}/3</span>
-            </div>
             <div className="text-sm bg-white/20 px-3 py-1 rounded-lg">
               <div>You: {playerPieces.length} pieces</div>
               <div>Opponent: {opponentPieces.length} pieces</div>
@@ -1079,7 +1082,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
               >
                 <div>
                   <span className="font-medium">
-                    Round {event.round}: {event.source}
+                    Turn {event.round}: {event.source}
                   </span>
                   {event.value > 0 && (
                     <span className="font-bold text-current opacity-80">
