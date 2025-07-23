@@ -52,10 +52,10 @@ export const BattleView: React.FC<BattleViewProps> = ({
 
   // Apply bonuses to get enhanced pieces for display
   const enhancedPlayerPieces = React.useMemo(() => 
-    playerPieces, [playerPieces]
+    applyBonusesToPieces(playerPieces, playerPieces), [playerPieces]
   );
   const enhancedOpponentPieces = React.useMemo(() => 
-    opponentPieces, [opponentPieces]
+    applyBonusesToPieces(opponentPieces, opponentPieces), [opponentPieces]
   );
 
   // Analyze both tanks using original pieces (analyzeTank will apply bonuses internally)
@@ -112,14 +112,14 @@ export const BattleView: React.FC<BattleViewProps> = ({
   };
 
   const simulateBattle = () => {
-    // Use the already enhanced pieces from the battle start (which include consumable effects)
-    let playerBattlePieces = enhancedPlayerPieces.filter(p => p.position && p.type !== 'consumable').map(piece => ({
+    // Create battle copies with current health tracking
+    let playerBattlePieces = applyBonusesToPieces(playerPieces, playerPieces).filter(p => p.position).map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
     }));
     
-    let opponentBattlePieces = enhancedOpponentPieces.filter(p => p.position && p.type !== 'consumable').map(piece => ({
+    let opponentBattlePieces = applyBonusesToPieces(opponentPieces, opponentPieces).filter(p => p.position).map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
