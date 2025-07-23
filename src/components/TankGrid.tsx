@@ -212,8 +212,29 @@ export const TankGrid: React.FC<TankGridProps> = ({
             // so don't recalculate bonuses from consumables that are no longer there
             const bonuses = isBattlePhase ? [] : calculatePieceBonuses(hoveredPiece, pieces);
             
-            // Get the original stats before any enhancements
+            // Add consumed effects to bonuses (stack duplicates)
             const enhancedPiece = hoveredPiece as any; // EnhancedGamePiece type
+            if (enhancedPiece.consumedEffects) {
+             // Group consumed effects by consumable name and show them clearly
+             const consumedGroups = new Map<string, number>();
+             
+             enhancedPiece.consumedEffects.forEach(effect => {
+               const count = consumedGroups.get(effect.consumableName) || 0;
+               consumedGroups.set(effect.consumableName, count + 1);
+             });
+             
+             // Add each consumed item type as a separate bonus line
+             consumedGroups.forEach((count, consumableName) => {
+               bonuses.push({ 
+                 source: consumableName, 
+                 effect: `×${count}`, 
+                 color: 'text-orange-600', 
+                 type: 'consumable' 
+               });
+             });
+            }
+            
+            // Get the original stats before any enhancements
             const originalStats = enhancedPiece.originalStats || {
               attack: hoveredPiece.stats.attack,
               health: hoveredPiece.stats.health,
