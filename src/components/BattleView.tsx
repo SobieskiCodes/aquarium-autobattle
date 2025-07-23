@@ -51,96 +51,202 @@ export const BattleView: React.FC<BattleViewProps> = ({
   };
 
   const simulateBattle = () => {
-    const log: string[] = [];
-    const playerFish = enhancedPlayerPieces.filter(p => p.type === 'fish' && p.position);
-    const opponentFish = enhancedOpponentPieces.filter(p => p.type === 'fish' && p.position);
+    // Apply bonuses first, then create battle copies
+    const enhancedPlayerPieces = applyBonusesToPieces(playerPieces, playerPieces);
+    const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces, opponentPieces);
     
-    if (playerFish.length === 0 && opponentFish.length === 0) {
-      setBattleResult('draw');
-      setBattleLog(['No fish to battle! It\'s a draw.']);
-      return;
-    }
+    let playerBattlePieces = enhancedPlayerPieces.map(piece => ({
+      ...piece,
+      currentHealth: piece.stats.health,
+      isAlive: true
+    }));
     
-    if (playerFish.length === 0) {
-      setBattleResult('opponent');
-      setBattleLog(['You have no fish! Opponent wins.']);
-      return;
-    }
+    let opponentBattlePieces = enhancedOpponentPieces.map(piece => ({
+      ...piece,
+      currentHealth: piece.stats.health,
+      isAlive: true
+    }));
     
-    if (opponentFish.length === 0) {
-      setBattleResult('player');
-      setBattleLog(['Opponent has no fish! You win!']);
-      return;
-    }
+    let battleTurn = 1;
+    const events: string[] = [];
 
-    // Simple power comparison with some randomness
-    const playerPower = playerFish.reduce((total, fish) => 
-      total + fish.stats.attack + fish.stats.health + fish.stats.speed, 0
-    );
-    const opponentPower = opponentFish.reduce((total, fish) => 
-      total + fish.stats.attack + fish.stats.health + fish.stats.speed, 0
-    );
-    
-    log.push(`Your tank power: ${playerPower}`);
-    log.push(`Opponent tank power: ${opponentPower}`);
-    log.push('Battle in progress...');
-    
-    // Add some battle flavor text
-    const playerFishNames = playerFish.map(f => f.name.split(' ')[0]);
-    const opponentFishNames = opponentFish.map(f => f.name.split(' ')[0]);
-    
-    // Simulate some combat exchanges
-    if (playerFishNames.length > 0 && opponentFishNames.length > 0) {
-      const playerFish1 = playerFishNames[0];
-      const opponentFish1 = opponentFishNames[0];
+    const battleInterval = setInterval(() => {
+      // Get alive pieces
+      // Recalculate alive pieces after each round
+      const alivePlayerPieces = playerBattlePieces.filter(p => p.isAlive);
+      const aliveOpponentPieces = opponentBattlePieces.filter(p => p.isAlive);
       
-      // Add water quality bonus info if significant
-      const waterQualityText = playerWaterQuality > 6 ? ' (+20% water quality)' : '';
+      // Check if battle should end
+      const alivePlayerFish = alivePlayerPieces.filter(p => p.type === 'fish');
+      const aliveOpponentFish = aliveOpponentPieces.filter(p => p.type === 'fish');
+      const alivePlayerStructures = alivePlayerPieces.filter(p => p.type === 'plant' || p.type === 'equipment');
+      const aliveOpponentStructures = aliveOpponentPieces.filter(p => p.type === 'plant' || p.type === 'equipment');
       
-      log.push(`Turn 1: Your ${playerFish1} → Enemy ${opponentFish1} for 4+1=4${waterQualityText} damage`);
+      // Battle ends when one side has no units left (fish, plants, or equipment)
+      const playerHasUnits = alivePlayerFish.length > 0 || alivePlayerStructures.length > 0;
+      const opponentHasUnits = aliveOpponentFish.length > 0 || aliveOpponentStructures.length > 0;
       
-      if (opponentFishNames.length > 1) {
-        log.push(`Turn 1: Your ${playerFish1} → KO! Enemy ${opponentFish1}`);
+      console.log(`Battle Turn ${battleTurn}: Player units: ${playerHasUnits} (${alivePlayerFish.length} fish, ${alivePlayerStructures.length} structures), Opponent units: ${opponentHasUnits} (${aliveOpponentFish.length} fish, ${aliveOpponentStructures.length} structures)`);
+      
+      // Battle continues until one side is completely eliminated
+      if (!playerHasUnits || !opponentHasUnits) {
+        clearInterval(battleInterval);
+        
+        // Determine winner
+        let playerWon;
+        let isDraw = false;
+        
+        if (!playerHasUnits && !opponentHasUnits) {
+          // Both sides eliminated simultaneously - draw
+          isDraw = true;
+          playerWon = false;
+        } else {
+          // One side has units remaining
+          playerWon = playerHasUnits && !opponentHasUnits;
+        }
+        
+        // If both sides still have units but no fish, compare remaining health
+        if (playerHasUnits && opponentHasUnits && alivePlayerFish.length === 0 && aliveOpponentFish.length === 0) {
+          const playerTotalHealth = alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0);
+          const opponentTotalHealth = aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0);
+          if (playerTotalHealth === opponentTotalHealth) {
+            isDraw = true;
+            playerWon = false; // Will be overridden by draw logic
+          } else {
+            playerWon = playerTotalHealth > opponentTotalHealth;
+          }
+        }
+        
+        setBattleResult(isDraw ? 'draw' : (playerWon ? 'player' : 'opponent'));
+        setBattleLog(events);
+        
+        return;
       }
       
-      if (opponentFishNames.length > 0) {
-        const enemyFish = opponentFishNames[Math.floor(Math.random() * opponentFishNames.length)];
-        const targetFish = playerFishNames[Math.floor(Math.random() * playerFishNames.length)];
-        log.push(`Turn 1: Enemy ${enemyFish} → Your ${targetFish} for 2+1=3 damage`);
+      // Sort pieces by speed for turn order
+      const allPieces = [
+        ...playerBattlePieces.filter(p => p.isAlive && p.type === 'fish').map(p => ({ ...p, side: 'player' as const })),
+        ...opponentBattlePieces.filter(p => p.isAlive && p.type === 'fish').map(p => ({ ...p, side: 'opponent' as const }))
+      ]
+       .sort((a, b) => b.stats.speed - a.stats.speed);
+      
+      // Each piece attacks in speed order
+      allPieces.forEach((attacker, index) => {
+        // Skip if attacker is dead
+        const attackerPiece = attacker.side === 'player' ? 
+          playerBattlePieces.find(p => p.id === attacker.id) : 
+          opponentBattlePieces.find(p => p.id === attacker.id);
+        
+        if (!attackerPiece || !attackerPiece.isAlive) return;
+        
+        // Target any alive enemy piece randomly (fish, plants, equipment)
+        const targets = attacker.side === 'player' ? 
+          opponentBattlePieces.filter(p => p.isAlive && (p.type === 'fish' || p.type === 'plant' || p.type === 'equipment')) : 
+          playerBattlePieces.filter(p => p.isAlive && (p.type === 'fish' || p.type === 'plant' || p.type === 'equipment'));
+          
+        if (targets.length === 0) return;
+        
+        // Choose random target
+        const target = targets[Math.floor(Math.random() * targets.length)];
+        let damage = attacker.stats.attack;
+        
+        // Apply water quality modifier
+        const waterQuality = attacker.side === 'player' ? playerWaterQuality : opponentWaterQuality;
+        if (waterQuality < 3) damage = Math.floor(damage * 0.7);
+        else if (waterQuality > 7) damage = Math.floor(damage * 1.2);
+        
+        // Apply damage
+        target.currentHealth = Math.max(0, target.currentHealth - damage);
+        
+        // Update the piece's alive status immediately
+        if (target.currentHealth <= 0) {
+          target.isAlive = false;
+        }
+        
+        // Create attack event with detailed damage breakdown
+        const targetType = target.type === 'fish' ? '' : ` (${target.type})`;
+        const baseDamage = attacker.stats.attack;
+        const originalAttacker = (attacker.side === 'player' ? playerPieces : opponentPieces).find(p => p.id === attacker.id);
+        const baseAttack = originalAttacker ? originalAttacker.stats.attack : baseDamage;
+        const attackBonus = baseDamage - baseAttack;
+        
+        // Build detailed damage breakdown
+        let damageBreakdown = '';
+        let waterQualityNote = '';
+        
+        if (attackBonus > 0) {
+          damageBreakdown = `${baseAttack}+${attackBonus}=${baseDamage}`;
+        } else {
+          damageBreakdown = `${baseDamage}`;
+        }
+        
+        // Add water quality modification
+        if (waterQuality < 3) {
+          const originalDamage = Math.floor(baseDamage / 0.7);
+          waterQualityNote = ` → ${damage} (-30% water quality)`;
+        } else if (waterQuality > 7) {
+          const originalDamage = Math.floor(baseDamage / 1.2);
+          waterQualityNote = ` → ${damage} (+20% water quality)`;
+        } else if (damage !== baseDamage) {
+          waterQualityNote = ` → ${damage}`;
+        }
+        
+        const fullDamageText = damageBreakdown + waterQualityNote;
+        
+        events.push(`Turn ${battleTurn}: ${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}→ ${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType} for ${fullDamageText} damage`);
+        
+        if (target.currentHealth <= 0) {
+          // Add KO event
+          const koText = target.type === 'fish' ? 'KO!' : 'Destroyed!';
+          events.push(`Turn ${battleTurn}: ${attacker.side === 'player' ? 'Your' : 'Enemy'} ${attacker.name}→ ${koText} ${attacker.side === 'player' ? 'Enemy' : 'Your'} ${target.name}${targetType}`);
+        }
+      });
+
+      // Apply environmental effects
+      if (playerWaterQuality < 3) {
+        alivePlayerPieces.filter(p => p.type === 'fish').forEach(piece => {
+          const poisonDamage = Math.max(1, Math.floor(piece.stats.health * 0.1));
+          piece.currentHealth = Math.max(0, piece.currentHealth - poisonDamage);
+          if (piece.currentHealth <= 0) piece.isAlive = false;
+        });
+        events.push(`Turn ${battleTurn}: Poor Water Quality→ Your Fish (poison damage)`);
       }
-    }
-    
-    // Determine winner based on power with some randomness
-    const randomFactor = (Math.random() - 0.5) * 0.3; // ±15% randomness
-    const playerChance = playerPower / (playerPower + opponentPower) + randomFactor;
-    
-    let result: 'player' | 'opponent' | 'draw';
-    if (Math.abs(playerPower - opponentPower) < 5) {
-      // Very close battle - higher chance of draw
-      const drawChance = 0.2;
-      const rand = Math.random();
-      if (rand < drawChance) {
-        result = 'draw';
-        log.push('Victory! All enemy fish defeated!');
-      } else if (rand < drawChance + playerChance) {
-        result = 'player';
-        log.push('Victory! All enemy fish defeated!');
-      } else {
-        result = 'opponent';
-        log.push('All your fish have been defeated! Opponent wins.');
+
+      if (opponentWaterQuality < 3) {
+        aliveOpponentPieces.filter(p => p.type === 'fish').forEach(piece => {
+          const poisonDamage = Math.max(1, Math.floor(piece.stats.health * 0.1));
+          piece.currentHealth = Math.max(0, piece.currentHealth - poisonDamage);
+          if (piece.currentHealth <= 0) piece.isAlive = false;
+        });
+        events.push(`Turn ${battleTurn}: Poor Water Quality→ Enemy Fish (poison damage)`);
       }
-    } else if (playerChance > 0.5) {
-      result = 'player';
-      log.push('Victory! All enemy fish defeated!');
-    } else {
-      result = 'opponent';
-      log.push('All your fish have been defeated! Opponent wins.');
-    }
-    
-    setBattleResult(result);
-    setBattleLog(log);
+
+      battleTurn++;
+      
+      // Safety valve: if battle goes on too long (20 turns), force end with health comparison
+      if (battleTurn > 20) {
+        clearInterval(battleInterval);
+        
+        // Force end - compare remaining health
+        const currentPlayerHealth = alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0);
+        const currentOpponentHealth = aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0);
+        
+        let playerWon;
+        let isDraw = false;
+        if (currentPlayerHealth === currentOpponentHealth) {
+          isDraw = true;
+          playerWon = false;
+        } else {
+          playerWon = currentPlayerHealth > currentOpponentHealth;
+        }
+        
+        events.push(`Battle timeout! ${isDraw ? 'Draw!' : (playerWon ? 'Victory!' : 'Defeat!')} ${isDraw ? 'Equal health remaining' : 'Health comparison'}`);
+        
+        setBattleResult(isDraw ? 'draw' : (playerWon ? 'player' : 'opponent'));
+        setBattleLog(events);
+      }
+    }, 800); // 0.8 seconds per battle turn for good pacing
   };
-
   const getResultColor = () => {
     switch (battleResult) {
       case 'player': return 'from-green-500 to-emerald-600';
