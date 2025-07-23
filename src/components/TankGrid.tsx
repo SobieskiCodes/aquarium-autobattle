@@ -295,7 +295,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
                   </div>
                   {consumableBonuses.map((bonus, index) => (
                     <div key={index} className={bonus.color}>
-                      • {bonus.effect} (from {bonus.source})
+                      • {bonus.effect}
                     </div>
                   ))}
                 </div>
