@@ -299,7 +299,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Tank Pieces</h2>
           {gameState.playerTank.pieces.length > 0 ? (
-            <div className="max-h-[600px] overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-lg p-4 max-h-[600px] overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 justify-items-center">
               {gameState.playerTank.pieces.map((piece, index) => (
                 <div key={`${piece.id}-${index}`} className="min-h-0 w-full max-w-[280px]">
@@ -315,11 +315,42 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-md p-6 text-center text-gray-500">
+            <div className="bg-white rounded-lg shadow-lg p-6 text-center text-gray-500">
               <p>No pieces in your tank yet.</p>
               <p className="text-sm">Purchase some from the shop below!</p>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPlacementPhase = () => (
+    // Just render the shop phase - placement instructions are already shown there
+    renderShopPhase()
+  );
+
+  const renderBattlePhase = () => (
+    <BattleView
+      playerPieces={gameState.playerTank.pieces}
+      opponentPieces={gameState.opponentTank.pieces}
+      playerWaterQuality={gameState.playerTank.waterQuality}
+      opponentWaterQuality={gameState.opponentTank.waterQuality}
+      onBattleComplete={onCompleteBattle}
+    />
+  );
+
+  switch (gameState.phase) {
+    case 'shop':
+      return renderShopPhase();
+    case 'placement':
+      return renderPlacementPhase();
+    case 'battle':
+      return renderBattlePhase();
+    default:
+      return renderShopPhase();
+  }
+};
         </div>
       </div>
       
