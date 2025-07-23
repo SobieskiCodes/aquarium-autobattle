@@ -31,6 +31,18 @@ export const BattleView: React.FC<BattleViewProps> = ({
   const [battleStarted, setBattleStarted] = useState(false);
   const [battleResult, setBattleResult] = useState<'player' | 'opponent' | 'draw' | null>(null);
   const [battleLog, setBattleLog] = useState<string[]>([]);
+  const [playerCurrentHealth, setPlayerCurrentHealth] = useState(0);
+  const [opponentCurrentHealth, setOpponentCurrentHealth] = useState(0);
+  const [playerMaxHealth, setPlayerMaxHealth] = useState(0);
+  const [opponentMaxHealth, setOpponentMaxHealth] = useState(0);
+  const [floatingTexts, setFloatingTexts] = useState<Array<{
+    id: string;
+    text: string;
+    x: number;
+    y: number;
+    color: string;
+    side: 'player' | 'opponent';
+  }>>([]);
 
   // Apply bonuses to pieces for battle calculations
   const enhancedPlayerPieces = applyBonusesToPieces(playerPieces, playerPieces);
@@ -40,6 +52,34 @@ export const BattleView: React.FC<BattleViewProps> = ({
   const playerAnalysis = analyzeTank(playerPieces);
   const opponentAnalysis = analyzeTank(opponentPieces);
 
+  // Calculate initial health totals
+  React.useEffect(() => {
+    const playerTotal = enhancedPlayerPieces.reduce((total, piece) => total + piece.stats.health, 0);
+    const opponentTotal = enhancedOpponentPieces.reduce((total, piece) => total + piece.stats.health, 0);
+    
+    setPlayerMaxHealth(playerTotal);
+    setOpponentMaxHealth(opponentTotal);
+    setPlayerCurrentHealth(playerTotal);
+    setOpponentCurrentHealth(opponentTotal);
+  }, [enhancedPlayerPieces, enhancedOpponentPieces]);
+
+  const addFloatingText = (text: string, side: 'player' | 'opponent', color: string) => {
+    const newText = {
+      id: Math.random().toString(),
+      text,
+      x: Math.random() * 100 + 50,
+      y: Math.random() * 50 + 100,
+      color,
+      side
+    };
+    
+    setFloatingTexts(prev => [...prev, newText]);
+    
+    // Remove after animation
+    setTimeout(() => {
+      setFloatingTexts(prev => prev.filter(t => t.id !== newText.id));
+    }, 2000);
+  };
   const startBattle = () => {
     setBattleStarted(true);
     setBattleLog([]);
@@ -163,6 +203,21 @@ export const BattleView: React.FC<BattleViewProps> = ({
           target.isAlive = false;
         }
         
+        // Update health bars in real-time
+        const currentPlayerHealth = playerBattlePieces.filter(p => p.isAlive).reduce((total, p) => total + p.currentHealth, 0);
+        const currentOpponentHealth = opponentBattlePieces.filter(p => p.isAlive).reduce((total, p) => total + p.currentHealth, 0);
+        
+        setPlayerCurrentHealth(currentPlayerHealth);
+        setOpponentCurrentHealth(currentOpponentHealth);
+        
+        // Add floating text
+        addFloatingText(`-${damage}`, attacker.side === 'player' ? 'opponent' : 'player', 'text-red-500');
+        
+        if (!target.isAlive) {
+          const koText = target.type === 'fish' ? 'KO!' : 'Destroyed!';
+          addFloatingText(koText, attacker.side === 'player' ? 'opponent' : 'player', 'text-red-700');
+        }
+        
         // Create attack event with detailed damage breakdown
         const targetType = target.type === 'fish' ? '' : ` (${target.type})`;
         const baseDamage = attacker.stats.attack;
@@ -210,6 +265,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
           if (piece.currentHealth <= 0) piece.isAlive = false;
         });
         events.push(`Turn ${battleTurn}: Poor Water Quality→ Your Fish (poison damage)`);
+        addFloatingText('Poison!', 'player', 'text-purple-500');
       }
 
       if (opponentWaterQuality < 3) {
@@ -219,6 +275,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
           if (piece.currentHealth <= 0) piece.isAlive = false;
         });
         events.push(`Turn ${battleTurn}: Poor Water Quality→ Enemy Fish (poison damage)`);
+        addFloatingText('Poison!', 'opponent', 'text-purple-500');
       }
 
       battleTurn++;
@@ -276,6 +333,15 @@ export const BattleView: React.FC<BattleViewProps> = ({
   const healthAdvantage = getAdvantage(playerAnalysis.totalHealth, opponentAnalysis.totalHealth);
   const speedAdvantage = getAdvantage(playerAnalysis.averageSpeed, opponentAnalysis.averageSpeed);
 
+  const getHealthPercentage = (current: number, max: number) => {
+    return Math.max(0, (current / max) * 100);
+  };
+
+  const getHealthColor = (percentage: number) => {
+    if (percentage > 60) return 'bg-green-500';
+    if (percentage > 30) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -337,6 +403,37 @@ export const BattleView: React.FC<BattleViewProps> = ({
             )}
           </div>
         </div>
+        
+        {/* Live Health Bars */}
+        {battleStarted && (
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex-1 mr-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium">Your Tank</span>
+                <span className="text-sm font-bold">{playerCurrentHealth}/{playerMaxHealth}</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-3">
+                <div 
+                  className={`h-3 rounded-full transition-all duration-300 ${getHealthColor(getHealthPercentage(playerCurrentHealth, playerMaxHealth))}`}
+                  style={{ width: `${getHealthPercentage(playerCurrentHealth, playerMaxHealth)}%` }}
+                />
+              </div>
+            </div>
+            
+            <div className="flex-1 ml-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium">Opponent Tank</span>
+                <span className="text-sm font-bold">{opponentCurrentHealth}/{opponentMaxHealth}</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-3">
+                <div 
+                  className={`h-3 rounded-full transition-all duration-300 ${getHealthColor(getHealthPercentage(opponentCurrentHealth, opponentMaxHealth))}`}
+                  style={{ width: `${getHealthPercentage(opponentCurrentHealth, opponentMaxHealth)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Battle Stats Comparison */}
@@ -402,7 +499,22 @@ export const BattleView: React.FC<BattleViewProps> = ({
       </div>
 
       {/* Tank Grids */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-6 relative">
+        {/* Floating Damage Text */}
+        {floatingTexts.map(text => (
+          <div
+            key={text.id}
+            className={`absolute pointer-events-none font-bold text-lg animate-bounce z-10 ${text.color}`}
+            style={{
+              left: text.side === 'player' ? `${text.x}%` : `${50 + text.x}%`,
+              top: `${text.y}px`,
+              animation: 'floatUp 2s ease-out forwards'
+            }}
+          >
+            {text.text}
+          </div>
+        ))}
+        
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-gray-900">Your Tank</h2>
           <TankGrid
@@ -451,6 +563,20 @@ export const BattleView: React.FC<BattleViewProps> = ({
           </div>
         </div>
       )}
+      
+      {/* CSS for floating text animation */}
+      <style jsx>{`
+        @keyframes floatUp {
+          0% {
+            opacity: 1;
+            transform: translateY(0px);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-50px);
+          }
+        }
+      `}</style>
     </div>
   );
 };
