@@ -35,6 +35,32 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   onToggleShopLock,
   onClearShopLock
 }) => {
+  const [draggedPiece, setDraggedPiece] = React.useState<any>(null);
+
+  const handleDragStart = (piece: any) => {
+    setDraggedPiece(piece);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedPiece(null);
+  };
+
+  const handleDragPlace = (piece: any, position: any) => {
+    // If dragging from shop, purchase first then place
+    if (!piece.position && gameState.gold >= piece.cost) {
+      onPurchasePiece(piece);
+      // The piece will be placed automatically after purchase
+      setTimeout(() => {
+        onPlacePiece(piece, position);
+      }, 0);
+    } else if (piece.position) {
+      // Moving existing piece
+      onMovePiece(piece, position);
+    } else {
+      // Placing from inventory
+      onPlacePiece(piece, position);
+    }
+  };
   // Helper function for applying bonuses to pieces
   const applyBonusesToPieces = (pieces: any[], allPieces: any[]) => {
     const GRID_WIDTH = 8;
@@ -296,6 +322,8 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             onPieceMove={onMovePiece}
             selectedPiece={gameState.selectedPiece}
             waterQuality={gameState.playerTank.waterQuality}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
           />
           
           {gameState.selectedPiece && (
@@ -331,6 +359,8 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
                     onSell={onSellPiece}
                     isSelected={gameState.selectedPiece?.id === piece.id}
                     showSellOption={true}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
                   />
                 </div>
               ))}
@@ -353,6 +383,8 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
         rerollCost={2}
         lockedIndex={gameState.lockedShopIndex}
         onToggleLock={onToggleShopLock}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
       />
     </div>
   );

@@ -265,7 +265,13 @@ export const useGame = () => {
           waterQuality
         },
         selectedPiece: null,
-        phase: 'shop' as const
+        phase: 'shop' as const,
+        // If this was a drag-and-drop purchase, remove from shop
+        shop: existingPieceIndex < 0 ? prev.shop.map(shopPiece => 
+          shopPiece?.id === piece.id ? null : shopPiece
+        ) : prev.shop,
+        // Deduct gold if this was a new purchase
+        gold: existingPieceIndex < 0 ? prev.gold - piece.cost : prev.gold
       };
     });
   }, []);

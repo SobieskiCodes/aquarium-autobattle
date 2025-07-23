@@ -13,6 +13,8 @@ interface PieceCardProps {
   canAfford?: boolean;
   showSellOption?: boolean;
   isLocked?: boolean;
+  onDragStart?: (piece: GamePiece) => void;
+  onDragEnd?: () => void;
 }
 
 export const PieceCard: React.FC<PieceCardProps> = ({
@@ -24,8 +26,12 @@ export const PieceCard: React.FC<PieceCardProps> = ({
   isInShop = false,
   canAfford = true,
   showSellOption = false,
-  isLocked = false
+  isLocked = false,
+  onDragStart,
+  onDragEnd
 }) => {
+  const [isDragging, setIsDragging] = React.useState(false);
+
   const handleClick = () => {
     if (isInShop && onPurchase) {
       onPurchase(piece);
@@ -41,6 +47,21 @@ export const PieceCard: React.FC<PieceCardProps> = ({
     }
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('application/json', JSON.stringify(piece));
+    e.dataTransfer.effectAllowed = 'move';
+    setIsDragging(true);
+    if (onDragStart) {
+      onDragStart(piece);
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setIsDragging(false);
+    if (onDragEnd) {
+      onDragEnd();
+    }
+  };
   const sellValue = Math.floor(piece.cost * 0.75);
 
   return (
@@ -59,8 +80,12 @@ export const PieceCard: React.FC<PieceCardProps> = ({
         }
         ${isInShop && !canAfford ? 'opacity-50 cursor-not-allowed' : ''}
         ${isLocked ? 'bg-yellow-50' : ''}
+        ${isDragging ? 'opacity-50 transform rotate-2' : ''}
       `}
       onClick={canAfford ? handleClick : undefined}
+      draggable={canAfford && (isInShop || showSellOption)}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       style={{
         borderTopColor: getRarityColor(piece.rarity),
         borderTopWidth: '4px'

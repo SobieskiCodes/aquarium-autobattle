@@ -10,6 +10,8 @@ interface TankGridProps {
   isInteractive?: boolean;
   waterQuality?: number;
   previewPosition?: Position | null;
+  onDragStart?: (piece: GamePiece) => void;
+  onDragEnd?: () => void;
 }
 
 export const TankGrid: React.FC<TankGridProps> = ({
@@ -19,13 +21,17 @@ export const TankGrid: React.FC<TankGridProps> = ({
   selectedPiece,
   isInteractive = true,
   waterQuality = 5,
-  previewPosition = null
+  previewPosition = null,
+  onDragStart,
+  onDragEnd
 }) => {
   const GRID_WIDTH = 8;
   const GRID_HEIGHT = 6;
   const [hoveredPosition, setHoveredPosition] = React.useState<Position | null>(null);
   const [hoveredPiece, setHoveredPiece] = React.useState<GamePiece | null>(null);
   const [tooltipPosition, setTooltipPosition] = React.useState<{ x: number; y: number } | null>(null);
+  const [draggedPiece, setDraggedPiece] = React.useState<GamePiece | null>(null);
+  const [isDragOver, setIsDragOver] = React.useState<Position | null>(null);
 
   // Create grid with piece occupancy
   const grid = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null));
@@ -167,6 +173,103 @@ export const TankGrid: React.FC<TankGridProps> = ({
     setHoveredPosition(null);
   };
 
+  const handleDragStart = (e: React.DragEvent, piece: GamePiece) => {
+    e.dataTransfer.setData('application/json', JSON.stringify(piece));
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedPiece(piece);
+    if (onDragStart) {
+      onDragStart(piece);
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedPiece(null);
+    setIsDragOver(null);
+    if (onDragEnd) {
+      onDragEnd();
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, x: number, y: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    // Check if we can place the piece here
+    const pieceData = e.dataTransfer.getData('application/json');
+    if (pieceData) {
+      try {
+        const piece = JSON.parse(pieceData);
+        const canPlace = piece.shape.every((offset: Position) => {
+          const newX = x + offset.x;
+          const newY = y + offset.y;
+          if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
+            return false;
+          }
+          
+          // Allow placement if cell is empty OR occupied by the same piece we're moving
+          const occupyingPiece = grid[newY][newX];
+          return !occupyingPiece || occupyingPiece.id === piece.id;
+        });
+        
+        if (canPlace) {
+          setIsDragOver({ x, y });
+        } else {
+          setIsDragOver(null);
+        }
+      } catch (e) {
+        setIsDragOver(null);
+      }
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Only clear drag over if we're actually leaving the grid area
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setIsDragOver(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, x: number, y: number) => {
+    e.preventDefault();
+    const pieceData = e.dataTransfer.getData('application/json');
+    
+    if (pieceData) {
+      try {
+        const piece = JSON.parse(pieceData);
+        
+        // Check if piece can be placed at this position
+        const canPlace = piece.shape.every((offset: Position) => {
+          const newX = x + offset.x;
+          const newY = y + offset.y;
+          if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
+            return false;
+          }
+          
+          // Allow placement if cell is empty OR occupied by the same piece we're moving
+          const occupyingPiece = grid[newY][newX];
+          return !occupyingPiece || occupyingPiece.id === piece.id;
+        });
+
+        if (canPlace) {
+          if (piece.position && onPieceMove) {
+            // Moving existing piece
+            onPieceMove(piece, { x, y });
+          } else if (onPiecePlace) {
+            // Placing new piece
+            onPiecePlace(piece, { x, y });
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing dropped piece data:', error);
+      }
+    }
+    
+    setIsDragOver(null);
+  };
   const handlePieceHover = (piece: GamePiece, event: React.MouseEvent) => {
     setHoveredPiece(piece);
     const rect = event.currentTarget.getBoundingClientRect();
@@ -204,6 +307,13 @@ export const TankGrid: React.FC<TankGridProps> = ({
     );
   };
 
+  const isDragPreviewCell = (x: number, y: number) => {
+    if (!isDragOver || !draggedPiece) return false;
+    
+    return draggedPiece.shape.some((offset: Position) => 
+      isDragOver.x + offset.x === x && isDragOver.y + offset.y === y
+    );
+  };
   const isBonusProvider = (piece: GamePiece) => {
     if (!hoveredPiece) return false;
     const providers = getBonusProviders(hoveredPiece);
@@ -313,6 +423,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
             radial-gradient(circle at 80% 20%, rgba(0,255,127,0.2) 0%, transparent 50%)
           `
         }}
+        onDragLeave={handleDragLeave}
       >
         {grid.map((row, y) =>
           row.map((cell, x) => (
@@ -324,13 +435,14 @@ export const TankGrid: React.FC<TankGridProps> = ({
                 ${cell 
                   ? 'border-gray-400 text-white shadow-md transform hover:scale-105' 
                   : `border-gray-300 bg-white/30 ${
-                      isPreviewCell(x, y) 
+                      isPreviewCell(x, y) || isDragPreviewCell(x, y)
                         ? canPlaceAt(hoveredPosition?.x || previewPosition?.x || 0, hoveredPosition?.y || previewPosition?.y || 0)
                           ? 'bg-green-200 border-green-400' 
                           : 'bg-red-200 border-red-400'
                         : 'hover:bg-white/50'
                     }`
                 }
+                ${isDragPreviewCell(x, y) ? 'ring-2 ring-blue-400 ring-opacity-50' : ''}
               `}
               style={{
                 backgroundColor: cell ? getTypeColor(cell.type) : undefined,
@@ -339,12 +451,17 @@ export const TankGrid: React.FC<TankGridProps> = ({
               onClick={() => handleCellClick(x, y)}
               onMouseEnter={() => handleCellHover(x, y)}
               onMouseLeave={handleCellLeave}
+              onDragOver={(e) => handleDragOver(e, x, y)}
+              onDrop={(e) => handleDrop(e, x, y)}
             >
               {cell && (
                 <div 
                   className="text-center w-full h-full flex flex-col justify-center"
                   onMouseEnter={(e) => handlePieceHover(cell, e)}
                   onMouseLeave={handlePieceLeave}
+                  draggable={isInteractive}
+                  onDragStart={(e) => handleDragStart(e, cell)}
+                  onDragEnd={handleDragEnd}
                 >
                   <div className="text-xs leading-tight">{cell.name.split(' ')[0]}</div>
                   <div className="text-xs opacity-80">
@@ -352,10 +469,10 @@ export const TankGrid: React.FC<TankGridProps> = ({
                   </div>
                 </div>
               )}
-              {isPreviewCell(x, y) && !cell && (
+              {(isPreviewCell(x, y) || isDragPreviewCell(x, y)) && !cell && (
                 <div className="text-center text-gray-600">
                   <div className="text-xs leading-tight opacity-70">
-                    {selectedPiece?.name.split(' ')[0]}
+                    {(selectedPiece || draggedPiece)?.name.split(' ')[0]}
                   </div>
                 </div>
               )}
