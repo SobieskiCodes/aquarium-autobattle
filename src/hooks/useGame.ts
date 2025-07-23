@@ -274,12 +274,6 @@ export const useGame = () => {
     setGameState(prev => {
       if (prev.gold < piece.cost) return prev;
       
-      // Check if this is a consumable - if so, it must be placed immediately
-      if (piece.type === 'consumable') {
-        // Don't add consumables to inventory - they must be placed directly
-        return prev;
-      }
-      
       // Remove the purchased piece from shop
       const newShop = prev.shop.map(shopPiece => 
         shopPiece?.id === piece.id ? null : shopPiece

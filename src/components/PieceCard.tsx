@@ -36,11 +36,8 @@ export const PieceCard: React.FC<PieceCardProps> = ({
   const [isDragging, setIsDragging] = React.useState(false);
 
   const handleClick = () => {
-    if (isInShop && onPurchase && canAfford && piece.type !== 'consumable') {
+    if (isInShop && onPurchase && canAfford) {
       onPurchase(piece);
-    } else if (isInShop && piece.type === 'consumable') {
-      // Consumables can't be purchased directly - must be dragged to grid
-      return;
     }
   };
 
@@ -100,12 +97,13 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           ? 'border-blue-500 bg-blue-50 transform scale-105' 
           : 'border-gray-300 bg-white hover:border-gray-400 hover:shadow-md'
         }
-       ${isInShop && (!canAfford || piece.type === 'consumable') ? 'opacity-50' : ''}
-       ${isInShop && piece.type === 'consumable' ? 'cursor-grab' : isInShop && !canAfford ? 'cursor-not-allowed' : ''}
+       ${isInShop && !canAfford ? 'opacity-50' : ''}
+       ${isInShop && !canAfford ? 'cursor-not-allowed' : ''}
         ${isLocked ? 'bg-yellow-50' : ''}
         ${isDragging ? 'opacity-50 transform rotate-2' : ''}
       `}
      onClick={canAfford && piece.type !== 'consumable' ? handleClick : undefined}
+      onClick={canAfford ? handleClick : undefined}
       draggable={canAfford && (isInShop || showSellOption)}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -250,10 +248,10 @@ export const PieceCard: React.FC<PieceCardProps> = ({
               </li>
             ))}
             {piece.type === 'consumable' && (
-              <li className="text-orange-600 font-medium text-xs">⚡ Consumed at battle start</li>
+              <li className="text-orange-600 font-medium text-xs">⚡ Consumed at battle start if placed</li>
             )}
-           {isInShop && piece.type === 'consumable' && (
-             <li className="text-red-600 font-medium text-xs">⚠️ Must drag to grid - can't store!</li>
+           {!piece.position && showSellOption && piece.type === 'consumable' && (
+             <li className="text-red-600 font-medium text-xs">⚠️ Will disappear if not placed before battle!</li>
            )}
           </ul>
           

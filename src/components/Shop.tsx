@@ -40,8 +40,8 @@ export const Shop: React.FC<ShopProps> = ({
             />
             <div className="absolute left-0 top-6 bg-gray-900 text-white text-sm p-3 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap">
               <div className="space-y-2">
-                <div>You can buy multiple items at once - they'll go into your storage to place later</div>
-                <div className="text-orange-300 font-medium">⚠️ Consumables must be placed immediately or they disappear!</div>
+                <div>🛒 You can buy multiple items at once - they'll go into your storage to place later</div>
+                <div className="text-orange-300 font-medium">⚠️ Consumables disappear if not placed on grid when battle starts!</div>
               </div>
             </div>
           </div>
