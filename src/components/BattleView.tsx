@@ -31,10 +31,16 @@ export const BattleView: React.FC<BattleViewProps> = ({
   const [battleStarted, setBattleStarted] = useState(false);
   const [battleResult, setBattleResult] = useState<'player' | 'opponent' | 'draw' | null>(null);
   const [battleLog, setBattleLog] = useState<string[]>([]);
-  const [playerCurrentHealth, setPlayerCurrentHealth] = useState(0);
-  const [opponentCurrentHealth, setOpponentCurrentHealth] = useState(0);
-  const [playerMaxHealth, setPlayerMaxHealth] = useState(0);
-  const [opponentMaxHealth, setOpponentMaxHealth] = useState(0);
+  const [battleState, setBattleState] = useState({
+    battleActive: false,
+    currentRound: 1,
+    playerHealth: 0,
+    opponentHealth: 0,
+    playerMaxHealth: 0,
+    opponentMaxHealth: 0,
+    winner: null as 'player' | 'opponent' | null,
+    battleEvents: [] as any[]
+  });
   const [floatingTexts, setFloatingTexts] = useState<Array<{
     id: string;
     text: string;
@@ -57,10 +63,13 @@ export const BattleView: React.FC<BattleViewProps> = ({
     const playerTotal = enhancedPlayerPieces.reduce((total, piece) => total + piece.stats.health, 0);
     const opponentTotal = enhancedOpponentPieces.reduce((total, piece) => total + piece.stats.health, 0);
     
-    setPlayerMaxHealth(playerTotal);
-    setOpponentMaxHealth(opponentTotal);
-    setPlayerCurrentHealth(playerTotal);
-    setOpponentCurrentHealth(opponentTotal);
+    setBattleState(prev => ({
+      ...prev,
+      playerHealth: playerTotal,
+      opponentHealth: opponentTotal,
+      playerMaxHealth: playerTotal,
+      opponentMaxHealth: opponentTotal
+    }));
   }, [enhancedPlayerPieces, enhancedOpponentPieces]);
 
   const addFloatingText = (text: string, side: 'player' | 'opponent', color: string) => {
@@ -160,6 +169,12 @@ export const BattleView: React.FC<BattleViewProps> = ({
         setBattleResult(isDraw ? 'draw' : (playerWon ? 'player' : 'opponent'));
         setBattleLog(events);
         
+        setBattleState(prev => ({
+          ...prev,
+          winner: isDraw ? null : (playerWon ? 'player' : 'opponent'),
+          battleActive: false
+        }));
+        
         return;
       }
       
@@ -204,11 +219,14 @@ export const BattleView: React.FC<BattleViewProps> = ({
         }
         
         // Update health bars in real-time
-        const currentPlayerHealth = playerBattlePieces.filter(p => p.isAlive).reduce((total, p) => total + p.currentHealth, 0);
-        const currentOpponentHealth = opponentBattlePieces.filter(p => p.isAlive).reduce((total, p) => total + p.currentHealth, 0);
+        const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+        const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
         
-        setPlayerCurrentHealth(currentPlayerHealth);
-        setOpponentCurrentHealth(currentOpponentHealth);
+        setBattleState(prev => ({
+          ...prev,
+          playerHealth: currentPlayerHealth,
+          opponentHealth: currentOpponentHealth
+        }));
         
         // Add floating text
         addFloatingText(`-${damage}`, attacker.side === 'player' ? 'opponent' : 'player', 'text-red-500');
@@ -285,8 +303,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
         clearInterval(battleInterval);
         
         // Force end - compare remaining health
-        const currentPlayerHealth = alivePlayerPieces.reduce((total, p) => total + p.currentHealth, 0);
-        const currentOpponentHealth = aliveOpponentPieces.reduce((total, p) => total + p.currentHealth, 0);
+        const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+        const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
         
         let playerWon;
         let isDraw = false;
@@ -301,24 +319,22 @@ export const BattleView: React.FC<BattleViewProps> = ({
         
         setBattleResult(isDraw ? 'draw' : (playerWon ? 'player' : 'opponent'));
         setBattleLog(events);
+        
+        setBattleState(prev => ({
+          ...prev,
+          winner: isDraw ? null : (playerWon ? 'player' : 'opponent'),
+          battleActive: false
+        }));
       }
     }, 800); // 0.8 seconds per battle turn for good pacing
   };
-  const getResultColor = () => {
-    switch (battleResult) {
-      case 'player': return 'from-green-500 to-emerald-600';
-      case 'opponent': return 'from-red-500 to-pink-600';
-      case 'draw': return 'from-yellow-500 to-orange-600';
-      default: return 'from-blue-500 to-cyan-600';
-    }
-  };
 
-  const getResultText = () => {
+  const getResultIcon = () => {
     switch (battleResult) {
-      case 'player': return 'Victory!';
-      case 'opponent': return 'Defeat!';
-      case 'draw': return 'Draw!';
-      default: return `Battle Arena - Round ${currentRound}/15`;
+      case 'player': return '🏆 Victory!';
+      case 'opponent': return '💀 Defeat!';
+      case 'draw': return '🤝 Draw!';
+      default: return '';
     }
   };
 
@@ -345,12 +361,17 @@ export const BattleView: React.FC<BattleViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className={`bg-gradient-to-r ${getResultColor()} text-white p-4 rounded-lg`}>
+      <div className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white p-4 rounded-lg">
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3">
               <Sword size={24} />
-              <h1 className="text-2xl font-bold">{getResultText()}</h1>
+              <h1 className="text-2xl font-bold">
+                Battle Arena - Round {currentRound}/15
+                {battleResult && (
+                  <span className="ml-3 text-yellow-300">{getResultIcon()}</span>
+                )}
+              </h1>
             </div>
             <div className="flex items-center gap-4 mt-1">
               <p className="text-sm opacity-90">
@@ -410,12 +431,12 @@ export const BattleView: React.FC<BattleViewProps> = ({
             <div className="flex-1 mr-4">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-medium">Your Tank</span>
-                <span className="text-sm font-bold">{playerCurrentHealth}/{playerMaxHealth}</span>
+                <span className="text-sm font-bold">{battleState.playerHealth}/{battleState.playerMaxHealth}</span>
               </div>
               <div className="w-full bg-white/20 rounded-full h-3">
                 <div 
-                  className={`h-3 rounded-full transition-all duration-300 ${getHealthColor(getHealthPercentage(playerCurrentHealth, playerMaxHealth))}`}
-                  style={{ width: `${getHealthPercentage(playerCurrentHealth, playerMaxHealth)}%` }}
+                  className={`h-3 rounded-full transition-all duration-500 ${getHealthColor(getHealthPercentage(battleState.playerHealth, battleState.playerMaxHealth))}`}
+                  style={{ width: `${getHealthPercentage(battleState.playerHealth, battleState.playerMaxHealth)}%` }}
                 />
               </div>
             </div>
@@ -423,12 +444,12 @@ export const BattleView: React.FC<BattleViewProps> = ({
             <div className="flex-1 ml-4">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-medium">Opponent Tank</span>
-                <span className="text-sm font-bold">{opponentCurrentHealth}/{opponentMaxHealth}</span>
+                <span className="text-sm font-bold">{battleState.opponentHealth}/{battleState.opponentMaxHealth}</span>
               </div>
               <div className="w-full bg-white/20 rounded-full h-3">
                 <div 
-                  className={`h-3 rounded-full transition-all duration-300 ${getHealthColor(getHealthPercentage(opponentCurrentHealth, opponentMaxHealth))}`}
-                  style={{ width: `${getHealthPercentage(opponentCurrentHealth, opponentMaxHealth)}%` }}
+                  className={`h-3 rounded-full transition-all duration-500 ${getHealthColor(getHealthPercentage(battleState.opponentHealth, battleState.opponentMaxHealth))}`}
+                  style={{ width: `${getHealthPercentage(battleState.opponentHealth, battleState.opponentMaxHealth)}%` }}
                 />
               </div>
             </div>
