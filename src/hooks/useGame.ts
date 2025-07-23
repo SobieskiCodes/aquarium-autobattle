@@ -114,7 +114,7 @@ const applyConsumableEffects = (pieces: GamePiece[]): GamePiece[] => {
             const consumedEffect: ConsumedEffect = {
               consumableId: consumable.id,
               consumableName: consumable.name,
-              effect: `${attackBonus > 0 ? `+${attackBonus} ATK ` : ''}${healthBonus > 0 ? `+${healthBonus} HP ` : ''}${speedBonus > 0 ? `+${speedBonus} SPD ` : ''}(battle)`.trim(),
+              effect: `${attackBonus > 0 ? `+${attackBonus} ATK ` : ''}${healthBonus > 0 ? `+${healthBonus} HP ` : ''}${speedBonus > 0 ? `+${speedBonus} SPD ` : ''}`.trim(),
               appliedAt: Date.now(),
               attackBonus,
               healthBonus,
