@@ -13,7 +13,8 @@ function App() {
     startBattle,
     completeBattle,
     selectPiece,
-    cancelPlacement
+    cancelPlacement,
+    sellPiece
   } = useGame();
 
   return (
@@ -84,6 +85,7 @@ function App() {
           onCompleteBattle={(result) => completeBattle(result)}
           onSelectPiece={selectPiece}
           onCancelPlacement={cancelPlacement}
+          onSellPiece={sellPiece}
         />
       </main>
 

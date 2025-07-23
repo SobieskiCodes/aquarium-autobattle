@@ -491,6 +491,51 @@ export const useGame = () => {
     }));
   }, []);
 
+  const sellPiece = useCallback((pieceToSell: GamePiece) => {
+    setGameState(prev => {
+      const sellValue = Math.floor(pieceToSell.cost * 0.75);
+      
+      // Remove piece from tank
+      const newPieces = prev.playerTank.pieces.filter(p => p.id !== pieceToSell.id);
+      
+      // Clear piece from grid
+      const newGrid = prev.playerTank.grid.map(row => [...row]);
+      if (pieceToSell.position) {
+        pieceToSell.shape.forEach(offset => {
+          const x = pieceToSell.position!.x + offset.x;
+          const y = pieceToSell.position!.y + offset.y;
+          if (x >= 0 && x < 8 && y >= 0 && y < 6) {
+            newGrid[y][x] = null;
+          }
+        });
+      }
+      
+      // Recalculate water quality
+      let waterQuality = 5;
+      const plantsAndFilters = newPieces.filter(p => 
+        p.tags.includes('plant') || p.tags.includes('filtration')
+      ).length;
+      waterQuality += plantsAndFilters;
+      
+      const fishCount = newPieces.filter(p => p.type === 'fish').length;
+      if (fishCount > 4) waterQuality -= (fishCount - 4);
+      
+      waterQuality = Math.max(0, Math.min(10, waterQuality));
+      
+      return {
+        ...prev,
+        gold: prev.gold + sellValue,
+        playerTank: {
+          ...prev.playerTank,
+          pieces: newPieces,
+          grid: newGrid,
+          waterQuality
+        },
+        selectedPiece: prev.selectedPiece?.id === pieceToSell.id ? null : prev.selectedPiece
+      };
+    });
+  }, []);
+
   return {
     gameState,
     purchasePiece,
@@ -500,6 +545,7 @@ export const useGame = () => {
     startBattle,
     completeBattle,
     selectPiece,
-    cancelPlacement
+    cancelPlacement,
+    sellPiece
   };
 };

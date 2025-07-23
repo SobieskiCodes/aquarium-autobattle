@@ -1,24 +1,28 @@
 import React from 'react';
 import { GamePiece } from '../types/game';
 import { getRarityColor, getTypeColor } from '../data/pieces';
-import { Sword, Heart, Zap, DollarSign } from 'lucide-react';
+import { Sword, Heart, Zap, DollarSign, X } from 'lucide-react';
 
 interface PieceCardProps {
   piece: GamePiece;
   onSelect?: (piece: GamePiece) => void;
   onPurchase?: (piece: GamePiece) => void;
+  onSell?: (piece: GamePiece) => void;
   isSelected?: boolean;
   isInShop?: boolean;
   canAfford?: boolean;
+  showSellOption?: boolean;
 }
 
 export const PieceCard: React.FC<PieceCardProps> = ({
   piece,
   onSelect,
   onPurchase,
+  onSell,
   isSelected = false,
   isInShop = false,
-  canAfford = true
+  canAfford = true,
+  showSellOption = false
 }) => {
   const handleClick = () => {
     if (isInShop && onPurchase) {
@@ -28,8 +32,17 @@ export const PieceCard: React.FC<PieceCardProps> = ({
     }
   };
 
+  const handleSell = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onSell) {
+      onSell(piece);
+    }
+  };
+
+  const sellValue = Math.floor(piece.cost * 0.75);
+
   return (
-    <div
+    <div className="relative"
       className={`
         relative p-2 rounded-lg border-2 cursor-pointer transition-all duration-200
         ${isSelected 
@@ -44,6 +57,17 @@ export const PieceCard: React.FC<PieceCardProps> = ({
         borderTopWidth: '4px'
       }}
     >
+      {/* Sell Button */}
+      {showSellOption && onSell && (
+        <button
+          onClick={handleSell}
+          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors z-10 shadow-md"
+          title={`Sell for ${sellValue}g (75% of ${piece.cost}g cost)`}
+        >
+          <X size={12} />
+        </button>
+      )}
+
       {/* Piece Name & Type */}
       <div className="mb-1">
         <h3 className="font-bold text-sm text-gray-900">{piece.name}</h3>
@@ -70,6 +94,13 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           <div className="flex items-center gap-1 text-yellow-600 ml-auto">
             <DollarSign size={12} />
             <span className="font-bold">{piece.cost}</span>
+          </div>
+        )}
+        {showSellOption && (
+          <div className="flex items-center gap-1 text-green-600 ml-auto text-xs">
+            <span>Sell:</span>
+            <DollarSign size={10} />
+            <span className="font-bold">{sellValue}</span>
           </div>
         )}
       </div>
