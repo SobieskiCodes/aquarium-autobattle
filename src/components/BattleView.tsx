@@ -51,8 +51,12 @@ export const BattleView: React.FC<BattleViewProps> = ({
   }>>([]);
 
   // Apply bonuses to get enhanced pieces for display
-  const enhancedPlayerPieces = applyBonusesToPieces(playerPieces, playerPieces);
-  const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces, opponentPieces);
+  const enhancedPlayerPieces = React.useMemo(() => 
+    applyBonusesToPieces(playerPieces, playerPieces), [playerPieces]
+  );
+  const enhancedOpponentPieces = React.useMemo(() => 
+    applyBonusesToPieces(opponentPieces, opponentPieces), [opponentPieces]
+  );
 
   // Analyze both tanks using original pieces (analyzeTank will apply bonuses internally)
   const playerAnalysis = analyzeTank(playerPieces);
@@ -107,13 +111,13 @@ export const BattleView: React.FC<BattleViewProps> = ({
 
   const simulateBattle = () => {
     // Create battle copies with current health tracking
-    let playerBattlePieces = playerPieces.filter(p => p.position).map(piece => ({
+    let playerBattlePieces = enhancedPlayerPieces.filter(p => p.position).map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
     }));
     
-    let opponentBattlePieces = opponentPieces.filter(p => p.position).map(piece => ({
+    let opponentBattlePieces = enhancedOpponentPieces.filter(p => p.position).map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
@@ -248,19 +252,19 @@ export const BattleView: React.FC<BattleViewProps> = ({
         
         // Create attack event with detailed damage breakdown
         const targetType = target.type === 'fish' ? '' : ` (${target.type})`;
-        const baseDamage = attacker.stats.attack;
+        const enhancedAttack = attacker.stats.attack;
         const originalAttacker = (attacker.side === 'player' ? playerPieces : opponentPieces).find(p => p.id === attacker.id);
-        const baseAttack = originalAttacker ? originalAttacker.stats.attack : baseDamage;
-        const attackBonus = baseDamage - baseAttack;
+        const baseAttack = originalAttacker ? originalAttacker.stats.attack : enhancedAttack;
+        const attackBonus = enhancedAttack - baseAttack;
         
         // Build detailed damage breakdown
         let damageBreakdown = '';
         let waterQualityNote = '';
         
         if (attackBonus > 0) {
-          damageBreakdown = `${baseAttack}+${attackBonus}=${baseDamage}`;
+          damageBreakdown = `${baseAttack}+${attackBonus}=${enhancedAttack}`;
         } else {
-          damageBreakdown = `${baseDamage}`;
+          damageBreakdown = `${enhancedAttack}`;
         }
         
         // Add water quality modification
@@ -268,7 +272,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
           waterQualityNote = ` → ${damage} (-30% water quality)`;
         } else if (waterQuality > 7) {
           waterQualityNote = ` → ${damage} (+20% water quality)`;
-        } else if (damage !== baseDamage) {
+        } else if (damage !== enhancedAttack) {
           waterQualityNote = ` → ${damage}`;
         }
         
