@@ -477,7 +477,7 @@ export const useGame = () => {
         shop: (() => {
           // Generate new shop but preserve locked item
           const newShop = getRandomShop(5);
-          if (prev.lockedShopIndex !== null && prev.shop[prev.lockedShopIndex] && prev.shop[prev.lockedShopIndex]!.id) {
+          if (prev.lockedShopIndex !== null && prev.shop[prev.lockedShopIndex]) {
             newShop[prev.lockedShopIndex] = prev.shop[prev.lockedShopIndex];
           }
           return newShop;
