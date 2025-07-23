@@ -28,7 +28,8 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   onStartBattle,
   onCompleteBattle,
   onSelectPiece,
-  onCancelPlacement
+  onCancelPlacement,
+  onSellPiece
 }) => {
   // Helper function for applying bonuses to pieces
   const applyBonusesToPieces = (pieces: any[], allPieces: any[]) => {
