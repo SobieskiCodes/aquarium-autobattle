@@ -8,7 +8,8 @@ interface ShopProps {
   gold: number;
   onPurchase: (piece: GamePiece) => void;
   onReroll: () => void;
-  rerollCost: number;
+  currentRerollCost: number;
+  rerollsThisRound: number;
   lockedIndex: number | null;
   onToggleLock: (index: number) => void;
   onDragStart?: (piece: GamePiece) => void;
@@ -20,7 +21,8 @@ export const Shop: React.FC<ShopProps> = ({
   gold,
   onPurchase,
   onReroll,
-  rerollCost,
+  currentRerollCost,
+  rerollsThisRound,
   lockedIndex,
   onToggleLock,
   onDragStart,
@@ -48,17 +50,18 @@ export const Shop: React.FC<ShopProps> = ({
           </div>
           <button
             onClick={onReroll}
-            disabled={gold < rerollCost}
+            disabled={gold < currentRerollCost}
             className={`
               flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all
-              ${gold >= rerollCost
+              ${gold >= currentRerollCost
                 ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }
             `}
+            title={`Reroll #${rerollsThisRound + 1}${rerollsThisRound >= 5 ? ` (cost increases after 5 rerolls)` : ''}`}
           >
             <RefreshCw size={16} />
-            Reroll ({rerollCost}g)
+            Reroll ({currentRerollCost}g)
           </button>
         </div>
       </div>
