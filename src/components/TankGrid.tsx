@@ -133,15 +133,13 @@ export const TankGrid: React.FC<TankGridProps> = ({
       
       const piece = JSON.parse(pieceData);
       console.log('Dropped piece:', piece.name, 'has position:', !!piece.position);
-      if (piece.name === 'Blood Worm') {
-        console.log('Blood Worm attributes:', {
-          attackBonus: piece.attackBonus,
-          healthBonus: piece.healthBonus,
-          speedBonus: piece.speedBonus,
-          cost: piece.cost,
-          abilities: piece.abilities
-        });
-      }
+      console.log(`${piece.name} attributes:`, {
+        attackBonus: piece.attackBonus,
+        healthBonus: piece.healthBonus,
+        speedBonus: piece.speedBonus,
+        cost: piece.cost,
+        abilities: piece.abilities
+      });
       
       if (!canPlacePieceAt(piece, x, y)) {
         console.log('Cannot place piece at', x, y);
