@@ -31,7 +31,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
   return (
     <div
       className={`
-        relative p-3 rounded-lg border-2 cursor-pointer transition-all duration-200
+        relative p-2 rounded-lg border-2 cursor-pointer transition-all duration-200
         ${isSelected 
           ? 'border-blue-500 bg-blue-50 transform scale-105' 
           : 'border-gray-300 bg-white hover:border-gray-400 hover:shadow-md'
@@ -45,7 +45,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       }}
     >
       {/* Piece Name & Type */}
-      <div className="mb-2">
+      <div className="mb-1">
         <h3 className="font-bold text-sm text-gray-900">{piece.name}</h3>
         <p className="text-xs capitalize" style={{ color: getTypeColor(piece.type) }}>
           {piece.type} • {piece.rarity}
@@ -53,7 +53,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       </div>
 
       {/* Stats */}
-      <div className="flex items-center gap-2 mb-2 text-xs">
+      <div className="flex items-center gap-2 mb-1 text-xs">
         <div className="flex items-center gap-1 text-red-600">
           <Sword size={12} />
           <span>{piece.stats.attack}</span>
@@ -75,7 +75,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       </div>
 
       {/* Tags */}
-      <div className="flex flex-wrap gap-1 mb-2">
+      <div className="flex flex-wrap gap-1 mb-1">
         {piece.tags.slice(0, 3).map(tag => (
           <span
             key={tag}
@@ -87,16 +87,16 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       </div>
 
       {/* Shape Preview */}
-      <div className="mb-2">
+      <div className="mb-1">
         <div className="text-xs text-gray-600 mb-1">Shape:</div>
-        <div className="grid grid-cols-3 gap-0.5 w-fit">
+        <div className="grid grid-cols-3 gap-0.5 w-fit mx-auto">
           {Array(3).fill(null).map((_, y) =>
             Array(3).fill(null).map((_, x) => {
               const isOccupied = piece.shape.some(pos => pos.x === x && pos.y === y);
               return (
                 <div
                   key={`${x}-${y}`}
-                  className={`w-2 h-2 border ${
+                  className={`w-1.5 h-1.5 border ${
                     isOccupied 
                       ? 'bg-current border-current' 
                       : 'bg-gray-100 border-gray-200'
@@ -111,14 +111,14 @@ export const PieceCard: React.FC<PieceCardProps> = ({
 
       {/* Abilities */}
       {piece.abilities && piece.abilities.length > 0 && (
-        <div className="text-xs text-gray-600">
+        <div className="text-xs text-gray-600 mt-1">
           <div className="font-medium mb-1">Abilities:</div>
-          <ul className="space-y-0.5">
+          <ul className="space-y-0.5 text-xs">
             {piece.abilities.slice(0, 2).map((ability, index) => (
-              <li key={index} className="leading-tight">• {ability}</li>
+              <li key={index} className="leading-tight text-xs">• {ability}</li>
             ))}
             {piece.type === 'consumable' && (
-              <li className="text-orange-600 font-medium">⚡ Consumed at battle start</li>
+              <li className="text-orange-600 font-medium text-xs">⚡ Consumed at battle start</li>
             )}
           </ul>
         </div>

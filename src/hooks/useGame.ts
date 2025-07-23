@@ -65,7 +65,7 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
   }
   
   // AI strategy based on round
-  const maxPieces = Math.min(15, 4 + Math.floor(round * 1.2)); // Scale up to 15 pieces
+  const maxPieces = Math.min(48, 4 + Math.floor(round * 1.5)); // Scale up to full board (48 slots)
   const targetSpending = Math.min(gold, Math.max(round * 2, 8)); // Always spend at least 8 gold if available
   
   // Filter affordable pieces from shop
