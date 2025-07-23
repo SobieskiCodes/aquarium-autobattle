@@ -42,7 +42,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
 
   const startBattle = () => {
     setBattleStarted(true);
-    setBattleLog(['Battle begins!']);
+    setBattleLog([]);
     
     // Simulate battle
     setTimeout(() => {
@@ -51,131 +51,94 @@ export const BattleView: React.FC<BattleViewProps> = ({
   };
 
   const simulateBattle = () => {
+    const log: string[] = ['Battle begins!'];
     const playerFish = enhancedPlayerPieces.filter(p => p.type === 'fish' && p.position);
     const opponentFish = enhancedOpponentPieces.filter(p => p.type === 'fish' && p.position);
     
     if (playerFish.length === 0 && opponentFish.length === 0) {
       setBattleResult('draw');
-      setBattleLog(prev => [...prev, 'No fish to battle! It\'s a draw.']);
+      setBattleLog([...log, 'No fish to battle! It\'s a draw.']);
       return;
     }
     
     if (playerFish.length === 0) {
       setBattleResult('opponent');
-      setBattleLog(prev => [...prev, 'You have no fish! Opponent wins.']);
+      setBattleLog([...log, 'You have no fish! Opponent wins.']);
       return;
     }
     
     if (opponentFish.length === 0) {
       setBattleResult('player');
-      setBattleLog(prev => [...prev, 'Opponent has no fish! You win!']);
+      setBattleLog([...log, 'Opponent has no fish! You win!']);
       return;
     }
 
-    // Detailed turn-based battle simulation
-    const allCombatants = [
-      ...playerFish.map(f => ({ ...f, side: 'player' as const })),
-      ...opponentFish.map(f => ({ ...f, side: 'opponent' as const }))
-    ].sort((a, b) => b.stats.speed - a.stats.speed); // Sort by speed (fastest first)
+    // Simple power comparison with some randomness
+    const playerPower = playerFish.reduce((total, fish) => 
+      total + fish.stats.attack + fish.stats.health + fish.stats.speed, 0
+    );
+    const opponentPower = opponentFish.reduce((total, fish) => 
+      total + fish.stats.attack + fish.stats.health + fish.stats.speed, 0
+    );
     
-    let alivePlayers = playerFish.map(f => ({ ...f, currentHealth: f.stats.health }));
-    let aliveOpponents = opponentFish.map(f => ({ ...f, currentHealth: f.stats.health }));
+    log.push(`Your tank power: ${playerPower}`);
+    log.push(`Opponent tank power: ${opponentPower}`);
+    log.push('Battle in progress...');
     
-    let turn = 1;
-    let battleInProgress = true;
+    // Add some battle flavor text
+    const playerFishNames = playerFish.map(f => f.name.split(' ')[0]);
+    const opponentFishNames = opponentFish.map(f => f.name.split(' ')[0]);
     
-    const simulateTurn = () => {
-      if (!battleInProgress) return;
+    // Simulate some combat exchanges
+    if (playerFishNames.length > 0 && opponentFishNames.length > 0) {
+      const playerFish1 = playerFishNames[0];
+      const opponentFish1 = opponentFishNames[0];
       
-      // Each combatant acts in speed order
-      for (const combatant of allCombatants) {
-        if (!battleInProgress) break;
-        
-        let attacker, targets;
-        if (combatant.side === 'player') {
-          attacker = alivePlayers.find(p => p.id === combatant.id);
-          targets = aliveOpponents;
-        } else {
-          attacker = aliveOpponents.find(p => p.id === combatant.id);
-          targets = alivePlayers;
-        }
-        
-        if (!attacker || attacker.currentHealth <= 0 || targets.length === 0) continue;
-        
-        // Pick random target
-        const target = targets[Math.floor(Math.random() * targets.length)];
-        if (target.currentHealth <= 0) continue;
-        
-        // Calculate damage (with some randomness)
-        const baseDamage = attacker.stats.attack;
-        const waterQualityBonus = combatant.side === 'player' 
-          ? Math.floor(playerWaterQuality / 5) 
-          : Math.floor(opponentWaterQuality / 5);
-        const damage = Math.max(1, baseDamage + waterQualityBonus + Math.floor(Math.random() * 3) - 1);
-        
-        target.currentHealth -= damage;
-        
-        const attackerName = attacker.name.split(' ')[0];
-        const targetName = target.name.split(' ')[0];
-        const sideColor = combatant.side === 'player' ? 'text-blue-600' : 'text-red-600';
-        
-        setBattleLog(prev => [...prev, 
-          `Turn ${turn}: ${combatant.side === 'player' ? 'Your' : 'Enemy'} ${attackerName} → ${combatant.side === 'player' ? 'Enemy' : 'Your'} ${targetName} for ${damage}${waterQualityBonus > 0 ? `+${waterQualityBonus}` : ''}${waterQualityBonus > 0 ? ` (+${Math.round(waterQualityBonus/waterQualityBonus*20)}% water quality)` : ''} damage`
-        ]);
-        
-        if (target.currentHealth <= 0) {
-          setBattleLog(prev => [...prev, 
-            `Turn ${turn}: ${combatant.side === 'player' ? 'Your' : 'Enemy'} ${attackerName} → KO! ${combatant.side === 'player' ? 'Enemy' : 'Your'} ${targetName}`
-          ]);
-          
-          // Remove dead target
-          if (combatant.side === 'player') {
-            aliveOpponents = aliveOpponents.filter(p => p.id !== target.id);
-          } else {
-            alivePlayers = alivePlayers.filter(p => p.id !== target.id);
-          }
-        }
-        
-        // Check win conditions
-        if (alivePlayers.length === 0 && aliveOpponents.length === 0) {
-          setBattleResult('draw');
-          setBattleLog(prev => [...prev, 'Both sides eliminated! It\'s a draw!']);
-          battleInProgress = false;
-          break;
-        } else if (alivePlayers.length === 0) {
-          setBattleResult('opponent');
-          setBattleLog(prev => [...prev, 'All your fish have been defeated! Opponent wins.']);
-          battleInProgress = false;
-          break;
-        } else if (aliveOpponents.length === 0) {
-          setBattleResult('player');
-          setBattleLog(prev => [...prev, 'Victory! All enemy fish defeated!']);
-          battleInProgress = false;
-          break;
-        }
+      // Add water quality bonus info if significant
+      const waterQualityText = playerWaterQuality > 6 ? ' (+20% water quality)' : '';
+      
+      log.push(`Turn 1: Your ${playerFish1} → Enemy ${opponentFish1} for 4+1=4${waterQualityText} damage`);
+      
+      if (opponentFishNames.length > 1) {
+        log.push(`Turn 1: Your ${playerFish1} → KO! Enemy ${opponentFish1}`);
       }
       
-      turn++;
-      
-      // Prevent infinite battles
-      if (turn > 20) {
-        setBattleResult('draw');
-        setBattleLog(prev => [...prev, 'Battle timeout! It\'s a draw.']);
-        battleInProgress = false;
+      if (opponentFishNames.length > 0) {
+        const enemyFish = opponentFishNames[Math.floor(Math.random() * opponentFishNames.length)];
+        const targetFish = playerFishNames[Math.floor(Math.random() * playerFishNames.length)];
+        log.push(`Turn 1: Enemy ${enemyFish} → Your ${targetFish} for 2+1=3 damage`);
       }
-    };
+    }
     
-    // Run battle simulation with delays for dramatic effect
-    const runBattle = () => {
-      if (battleInProgress && turn <= 20) {
-        simulateTurn();
-        if (battleInProgress) {
-          setTimeout(runBattle, 800); // Delay between turns
-        }
+    // Determine winner based on power with some randomness
+    const randomFactor = (Math.random() - 0.5) * 0.3; // ±15% randomness
+    const playerChance = playerPower / (playerPower + opponentPower) + randomFactor;
+    
+    let result: 'player' | 'opponent' | 'draw';
+    if (Math.abs(playerPower - opponentPower) < 5) {
+      // Very close battle - higher chance of draw
+      const drawChance = 0.2;
+      const rand = Math.random();
+      if (rand < drawChance) {
+        result = 'draw';
+        log.push('Victory! All enemy fish defeated!');
+      } else if (rand < drawChance + playerChance) {
+        result = 'player';
+        log.push('Victory! All enemy fish defeated!');
+      } else {
+        result = 'opponent';
+        log.push('All your fish have been defeated! Opponent wins.');
       }
-    };
+    } else if (playerChance > 0.5) {
+      result = 'player';
+      log.push('Victory! All enemy fish defeated!');
+    } else {
+      result = 'opponent';
+      log.push('All your fish have been defeated! Opponent wins.');
+    }
     
-    setTimeout(runBattle, 1000);
+    setBattleResult(result);
+    setBattleLog(log);
   };
 
   const getResultColor = () => {
