@@ -15,6 +15,7 @@ interface PieceCardProps {
   isLocked?: boolean;
   onDragStart?: (piece: GamePiece) => void;
   onDragEnd?: () => void;
+  onHover?: (piece: GamePiece | null) => void;
 }
 
 export const PieceCard: React.FC<PieceCardProps> = ({
@@ -28,7 +29,8 @@ export const PieceCard: React.FC<PieceCardProps> = ({
   showSellOption = false,
   isLocked = false,
   onDragStart,
-  onDragEnd
+  onDragEnd,
+  onHover
 }) => {
   const [isDragging, setIsDragging] = React.useState(false);
 
@@ -60,6 +62,19 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       onDragEnd();
     }
   };
+
+  const handleMouseEnter = () => {
+    if (onHover && piece.position) {
+      onHover(piece);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (onHover) {
+      onHover(null);
+    }
+  };
+
   const sellValue = Math.floor(piece.cost * 0.75);
 
   return (
@@ -84,6 +99,8 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       draggable={canAfford && (isInShop || showSellOption)}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       style={{
         borderTopColor: getRarityColor(piece.rarity),
         borderTopWidth: '4px'

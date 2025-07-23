@@ -11,6 +11,7 @@ interface TankGridProps {
   onDragStart?: (piece: GamePiece) => void;
   onDragEnd?: () => void;
   currentDraggedPiece?: GamePiece | null;
+  hoveredCardPiece?: GamePiece | null;
 }
 
 export const TankGrid: React.FC<TankGridProps> = ({
@@ -21,7 +22,8 @@ export const TankGrid: React.FC<TankGridProps> = ({
   waterQuality = 5,
   onDragStart,
   onDragEnd,
-  currentDraggedPiece
+  currentDraggedPiece,
+  hoveredCardPiece
 }) => {
   const GRID_WIDTH = 8;
   const GRID_HEIGHT = 6;
@@ -140,7 +142,8 @@ export const TankGrid: React.FC<TankGridProps> = ({
   };
 
   const isHoveredPiece = (piece: GamePiece) => {
-    return hoveredPiece && hoveredPiece.id === piece.id;
+    return (hoveredPiece && hoveredPiece.id === piece.id) || 
+           (hoveredCardPiece && hoveredCardPiece.id === piece.id);
   };
 
   const getWaterQualityGradient = () => {
