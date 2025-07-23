@@ -51,25 +51,25 @@ export const BattleView: React.FC<BattleViewProps> = ({
   };
 
   const simulateBattle = () => {
-    const log: string[] = ['Battle begins!'];
+    const log: string[] = [];
     const playerFish = enhancedPlayerPieces.filter(p => p.type === 'fish' && p.position);
     const opponentFish = enhancedOpponentPieces.filter(p => p.type === 'fish' && p.position);
     
     if (playerFish.length === 0 && opponentFish.length === 0) {
       setBattleResult('draw');
-      setBattleLog([...log, 'No fish to battle! It\'s a draw.']);
+      setBattleLog(['No fish to battle! It\'s a draw.']);
       return;
     }
     
     if (playerFish.length === 0) {
       setBattleResult('opponent');
-      setBattleLog([...log, 'You have no fish! Opponent wins.']);
+      setBattleLog(['You have no fish! Opponent wins.']);
       return;
     }
     
     if (opponentFish.length === 0) {
       setBattleResult('player');
-      setBattleLog([...log, 'Opponent has no fish! You win!']);
+      setBattleLog(['Opponent has no fish! You win!']);
       return;
     }
 
