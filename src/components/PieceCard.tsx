@@ -1,7 +1,7 @@
 import React from 'react';
 import { GamePiece } from '../types/game';
 import { getRarityColor, getTypeColor } from '../data/pieces';
-import { Sword, Heart, Zap, DollarSign, X } from 'lucide-react';
+import { Sword, Heart, Zap, DollarSign, X, Lock } from 'lucide-react';
 
 interface PieceCardProps {
   piece: GamePiece;
