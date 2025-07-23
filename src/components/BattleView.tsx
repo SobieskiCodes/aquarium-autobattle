@@ -565,7 +565,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-gray-900">Your Tank</h2>
           <TankGrid
-            pieces={enhancedPlayerPieces}
+            pieces={playerPieces}
             isInteractive={false}
             waterQuality={playerWaterQuality}
           />
@@ -574,7 +574,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-gray-900">Opponent Tank</h2>
           <TankGrid
-            pieces={enhancedOpponentPieces}
+            pieces={opponentPieces}
             isInteractive={false}
             waterQuality={opponentWaterQuality}
           />
