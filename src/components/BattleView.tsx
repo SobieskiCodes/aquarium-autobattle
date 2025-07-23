@@ -220,6 +220,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
 
     const battleInterval = setInterval(() => {
       // Get alive pieces
+      // Recalculate alive pieces after each round
       const alivePlayerPieces = playerBattlePieces.filter(p => p.isAlive);
       const aliveOpponentPieces = opponentBattlePieces.filter(p => p.isAlive);
       
@@ -232,6 +233,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
       // Battle ends when one side has no fish AND no structures, OR when both sides have no fish
       const playerHasUnits = alivePlayerFish.length > 0 || alivePlayerStructures.length > 0;
       const opponentHasUnits = aliveOpponentFish.length > 0 || aliveOpponentStructures.length > 0;
+      
+      console.log(`Round ${round}: Player units: ${playerHasUnits} (${alivePlayerFish.length} fish, ${alivePlayerStructures.length} structures), Opponent units: ${opponentHasUnits} (${aliveOpponentFish.length} fish, ${aliveOpponentStructures.length} structures)`);
       
       if (!playerHasUnits || !opponentHasUnits || (alivePlayerFish.length === 0 && aliveOpponentFish.length === 0)) {
         clearInterval(battleInterval);
@@ -269,14 +272,19 @@ export const BattleView: React.FC<BattleViewProps> = ({
       
       // Sort pieces by speed for turn order
       const allPieces = [
-        ...alivePlayerPieces.filter(p => p.type === 'fish').map(p => ({ ...p, side: 'player' as const })),
-        ...aliveOpponentPieces.filter(p => p.type === 'fish').map(p => ({ ...p, side: 'opponent' as const }))
+        ...playerBattlePieces.filter(p => p.isAlive && p.type === 'fish').map(p => ({ ...p, side: 'player' as const })),
+        ...opponentBattlePieces.filter(p => p.isAlive && p.type === 'fish').map(p => ({ ...p, side: 'opponent' as const }))
       ]
        .sort((a, b) => b.stats.speed - a.stats.speed);
       
       // Each piece attacks in speed order
       allPieces.forEach((attacker, index) => {
-        if (!attacker.isAlive) return;
+        // Skip if attacker is dead
+        const attackerPiece = attacker.side === 'player' ? 
+          playerBattlePieces.find(p => p.id === attacker.id) : 
+          opponentBattlePieces.find(p => p.id === attacker.id);
+        
+        if (!attackerPiece || !attackerPiece.isAlive) return;
         
         // Target any alive enemy piece randomly (fish, plants, equipment)
         const targets = attacker.side === 'player' ? 
@@ -296,6 +304,11 @@ export const BattleView: React.FC<BattleViewProps> = ({
         
         // Apply damage
         target.currentHealth = Math.max(0, target.currentHealth - damage);
+        
+        // Update the piece's alive status immediately
+        if (target.currentHealth <= 0) {
+          target.isAlive = false;
+        }
         
         // Create attack event with detailed damage breakdown
         const targetType = target.type === 'fish' ? '' : ` (${target.type})`;
@@ -336,8 +349,6 @@ export const BattleView: React.FC<BattleViewProps> = ({
         });
         
         if (target.currentHealth <= 0) {
-          target.isAlive = false;
-          
           // Add KO event
           const koText = target.type === 'fish' ? 'KO!' : 'Destroyed!';
           events.push({
