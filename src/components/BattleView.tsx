@@ -437,8 +437,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
 
       round++;
       
-      // Max 10 rounds to prevent infinite battles
-      if (round > 10) {
+      // Max 3 rounds for quicker battles - this is an autobattler, not a long RPG fight
+      if (round > 3) {
         clearInterval(battleInterval);
         // Check for draw in timeout scenario
         let playerWon;
@@ -478,7 +478,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
           }
         }, 100);
       }
-    }, 1500); // 1.5 seconds per round
+    }, 1200); // 1.2 seconds per round for faster battles
   };
 
   const getHealthPercentage = (current: number, max: number) => {
@@ -503,7 +503,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Clock size={20} />
-              <span>Battle Round {battleState.currentRound}/8</span>
+              <span>Battle Round {battleState.currentRound}/3</span>
             </div>
             <div className="text-sm bg-white/20 px-3 py-1 rounded-lg">
               <div>You: {playerPieces.length} pieces</div>
