@@ -58,19 +58,25 @@ export const BattleView: React.FC<BattleViewProps> = ({
   const playerAnalysis = analyzeTank(playerPieces);
   const opponentAnalysis = analyzeTank(opponentPieces);
 
-  // Calculate initial health totals
+  // Calculate initial health totals (only once when component mounts)
   React.useEffect(() => {
-    const playerTotal = enhancedPlayerPieces.reduce((total, piece) => total + piece.stats.health, 0);
-    const opponentTotal = enhancedOpponentPieces.reduce((total, piece) => total + piece.stats.health, 0);
+    const playerTotal = playerPieces.filter(p => p.position).reduce((total, piece) => total + piece.stats.health, 0);
+    const opponentTotal = opponentPieces.filter(p => p.position).reduce((total, piece) => total + piece.stats.health, 0);
     
-    setBattleState(prev => ({
-      ...prev,
-      playerHealth: playerTotal,
-      opponentHealth: opponentTotal,
-      playerMaxHealth: playerTotal,
-      opponentMaxHealth: opponentTotal
-    }));
-  }, [enhancedPlayerPieces, enhancedOpponentPieces]);
+    setBattleState(prev => {
+      // Only update if values have actually changed to prevent infinite loop
+      if (prev.playerMaxHealth !== playerTotal || prev.opponentMaxHealth !== opponentTotal) {
+        return {
+          ...prev,
+          playerHealth: playerTotal,
+          opponentHealth: opponentTotal,
+          playerMaxHealth: playerTotal,
+          opponentMaxHealth: opponentTotal
+        };
+      }
+      return prev;
+    });
+  }, []); // Empty dependency array - only run once on mount
 
   const addFloatingText = (text: string, side: 'player' | 'opponent', color: string) => {
     const newText = {
