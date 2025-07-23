@@ -81,6 +81,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
       }
       return prev;
     });
+  }, [enhancedPlayerPieces, enhancedOpponentPieces]);
 
   const addFloatingText = (text: string, side: 'player' | 'opponent', color: string) => {
     const newText = {
@@ -99,6 +100,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
       setFloatingTexts(prev => prev.filter(t => t.id !== newText.id));
     }, 2000);
   };
+  
   const startBattle = () => {
     setBattleStarted(true);
     setBattleLog([]);
@@ -384,6 +386,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
     if (percentage > 30) return 'bg-yellow-500';
     return 'bg-red-500';
   };
+  
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -638,6 +641,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
           </div>
         </div>
       </div>
+      
       {/* Tank Grids */}
       <div className="grid lg:grid-cols-2 gap-6 relative">
         {/* Floating Damage Text */}
