@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GamePiece, BattleEvent } from '../types/game';
 import { TankGrid } from './TankGrid';
-import { Play, Pause, SkipForward, Trophy } from 'lucide-react';
+import { Play, Pause, SkipForward, Trophy, ScrollText, Sword } from 'lucide-react';
 
 interface BattleViewProps {
   playerPieces: GamePiece[];
@@ -506,7 +506,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
       <div className="bg-gradient-to-r from-blue-600 to-teal-600 text-white p-6 rounded-lg shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Swords size={24} />
+            <Sword size={24} />
             <h2 className="text-2xl font-bold">Battle Arena - Round {currentRound}/15
               {currentRound === 15 && <span className="ml-2">🏁</span>}
             </h2>
