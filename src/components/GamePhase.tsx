@@ -324,6 +324,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             waterQuality={gameState.playerTank.waterQuality}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            currentDraggedPiece={draggedPiece}
           />
           
           {gameState.selectedPiece && (

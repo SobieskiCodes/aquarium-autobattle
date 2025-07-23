@@ -12,6 +12,7 @@ interface TankGridProps {
   previewPosition?: Position | null;
   onDragStart?: (piece: GamePiece) => void;
   onDragEnd?: () => void;
+  currentDraggedPiece?: GamePiece | null;
 }
 
 export const TankGrid: React.FC<TankGridProps> = ({
@@ -23,7 +24,8 @@ export const TankGrid: React.FC<TankGridProps> = ({
   waterQuality = 5,
   previewPosition = null,
   onDragStart,
-  onDragEnd
+  onDragEnd,
+  currentDraggedPiece
 }) => {
   const GRID_WIDTH = 8;
   const GRID_HEIGHT = 6;
@@ -197,29 +199,23 @@ export const TankGrid: React.FC<TankGridProps> = ({
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
     
-    // Check if we can place the piece here
-    const pieceData = e.dataTransfer.getData('application/json');
-    if (pieceData) {
-      try {
-        const piece = JSON.parse(pieceData);
-        const canPlace = piece.shape.every((offset: Position) => {
-          const newX = x + offset.x;
-          const newY = y + offset.y;
-          if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
-            return false;
-          }
-          
-          // Allow placement if cell is empty OR occupied by the same piece we're moving
-          const occupyingPiece = grid[newY][newX];
-          return !occupyingPiece || occupyingPiece.id === piece.id;
-        });
-        
-        if (canPlace) {
-          setIsDragOver({ x, y });
-        } else {
-          setIsDragOver(null);
+    // Use the globally tracked dragged piece for consistent preview
+    if (currentDraggedPiece) {
+      const canPlace = currentDraggedPiece.shape.every((offset: Position) => {
+        const newX = x + offset.x;
+        const newY = y + offset.y;
+        if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
+          return false;
         }
-      } catch (e) {
+        
+        // Allow placement if cell is empty OR occupied by the same piece we're moving
+        const occupyingPiece = grid[newY][newX];
+        return !occupyingPiece || occupyingPiece.id === currentDraggedPiece.id;
+      });
+      
+      if (canPlace) {
+        setIsDragOver({ x, y });
+      } else {
         setIsDragOver(null);
       }
     }
@@ -320,16 +316,16 @@ export const TankGrid: React.FC<TankGridProps> = ({
     );
   };
   const isDragPreviewCell = (x: number, y: number) => {
-    if (!isDragOver || !draggedPiece) return false;
+    if (!isDragOver || !currentDraggedPiece) return false;
     
-    return draggedPiece.shape.some((offset: Position) => 
+    return currentDraggedPiece.shape.some((offset: Position) => 
       isDragOver.x + offset.x === x && isDragOver.y + offset.y === y
     );
   };
 
   const canDragPlaceAt = (x: number, y: number) => {
-    if (!isDragOver || !draggedPiece) return false;
-    return draggedPiece.shape.every((offset: Position) => {
+    if (!isDragOver || !currentDraggedPiece) return false;
+    return currentDraggedPiece.shape.every((offset: Position) => {
       const newX = x + offset.x;
       const newY = y + offset.y;
       if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
@@ -338,7 +334,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
       
       // Allow placement if cell is empty OR occupied by the same piece we're moving
       const occupyingPiece = grid[newY][newX];
-      return !occupyingPiece || occupyingPiece.id === draggedPiece.id;
+      return !occupyingPiece || occupyingPiece.id === currentDraggedPiece.id;
     });
   };
   const isBonusProvider = (piece: GamePiece) => {
@@ -474,7 +470,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
                     }`
                 }
                 ${isDragPreviewCell(x, y) ? 'ring-2 ring-blue-400 ring-opacity-50' : ''}
-                ${isBonusProvider(cell) ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}
+                ${cell && isBonusProvider(cell) ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}
               `}
               style={{
                 backgroundColor: cell ? getTypeColor(cell.type) : undefined,
@@ -504,14 +500,14 @@ export const TankGrid: React.FC<TankGridProps> = ({
               {(isPreviewCell(x, y) || isDragPreviewCell(x, y)) && !cell && !isDraggedPieceCell(x, y) && (
                 <div className="text-center text-gray-600">
                   <div className="text-xs leading-tight opacity-70">
-                    {(selectedPiece || draggedPiece)?.name.split(' ')[0]}
+                    {(selectedPiece || currentDraggedPiece)?.name.split(' ')[0]}
                   </div>
                 </div>
               )}
               {isDragPreviewCell(x, y) && isDraggedPieceCell(x, y) && (
                 <div className="text-center text-gray-600">
                   <div className="text-xs leading-tight opacity-70">
-                    {draggedPiece?.name.split(' ')[0]}
+                    {currentDraggedPiece?.name.split(' ')[0]}
                   </div>
                 </div>
               )}
