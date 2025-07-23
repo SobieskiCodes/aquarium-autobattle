@@ -93,32 +93,57 @@ export const BattleView: React.FC<BattleViewProps> = ({
       let bonusHealth = 0;
       let bonusSpeed = 0;
       
-      // Check adjacent cells for bonus sources
-      const adjacentPositions = [
-        { x: piece.position.x - 1, y: piece.position.y },
-        { x: piece.position.x + 1, y: piece.position.y },
-        { x: piece.position.x, y: piece.position.y - 1 },
-        { x: piece.position.x, y: piece.position.y + 1 }
-      ];
+      // Get all adjacent positions for ALL tiles this piece occupies
+      const adjacentPositions: Position[] = [];
+      const checkedPositions = new Set<string>();
+      
+      piece.shape.forEach(shapeOffset => {
+        const pieceX = piece.position!.x + shapeOffset.x;
+        const pieceY = piece.position!.y + shapeOffset.y;
+        
+        // Check all 4 directions from each tile of this piece
+        const directions = [
+          { x: pieceX - 1, y: pieceY },
+          { x: pieceX + 1, y: pieceY },
+          { x: pieceX, y: pieceY - 1 },
+          { x: pieceX, y: pieceY + 1 }
+        ];
+        
+        directions.forEach(pos => {
+          const posKey = `${pos.x},${pos.y}`;
+          if (!checkedPositions.has(posKey) && 
+              pos.x >= 0 && pos.x < GRID_WIDTH && 
+              pos.y >= 0 && pos.y < GRID_HEIGHT) {
+            // Make sure this position isn't occupied by the same piece
+            const isOwnTile = piece.shape.some(offset => 
+              piece.position!.x + offset.x === pos.x && 
+              piece.position!.y + offset.y === pos.y
+            );
+            if (!isOwnTile) {
+              adjacentPositions.push(pos);
+              checkedPositions.add(posKey);
+            }
+          }
+        });
+      });
       
       adjacentPositions.forEach(pos => {
-        if (pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT) {
-          const adjacentPiece = grid[pos.y][pos.x];
-          if (adjacentPiece && adjacentPiece.id !== piece.id) {
-            // Java Fern bonus
-            if (adjacentPiece.id.includes('java-fern')) {
-              bonusAttack += 1;
-              bonusHealth += 1;
-            }
-            // Anubias bonus
-            if (adjacentPiece.id.includes('anubias')) {
-              bonusHealth += 1;
-            }
-            // Consumable bonus (if piece is fish)
-            if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-              bonusAttack += 1;
-              bonusHealth += 1;
-            }
+        const adjacentPiece = grid[pos.y][pos.x];
+        if (adjacentPiece && adjacentPiece.id !== piece.id) {
+          // Java Fern bonus
+          if (adjacentPiece.id.includes('java-fern')) {
+            bonusAttack += 1;
+            bonusHealth += 1;
+          }
+          // Anubias bonus
+          if (adjacentPiece.id.includes('anubias')) {
+            bonusHealth += 1;
+          }
+          // Consumable bonus (if piece is fish)
+          if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
+            bonusAttack += 1;
+            bonusHealth += 1;
+          }
           }
         }
       });
@@ -126,11 +151,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
       // Check for schooling bonuses
       if (piece.tags.includes('schooling')) {
         const schoolingCount = adjacentPositions.filter(pos => {
-          if (pos.x >= 0 && pos.x < GRID_WIDTH && pos.y >= 0 && pos.y < GRID_HEIGHT) {
-            const adjacentPiece = grid[pos.y][pos.x];
-            return adjacentPiece && adjacentPiece.tags.includes('schooling') && adjacentPiece.id !== piece.id;
-          }
-          return false;
+          const adjacentPiece = grid[pos.y][pos.x];
+          return adjacentPiece && adjacentPiece.tags.includes('schooling') && adjacentPiece.id !== piece.id;
         }).length;
         
         if (schoolingCount > 0) {
