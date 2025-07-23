@@ -86,9 +86,33 @@ export const TankGrid: React.FC<TankGridProps> = ({
   const handlePieceHover = (piece: GamePiece, event: React.MouseEvent) => {
     setHoveredPiece(piece);
     const rect = event.currentTarget.getBoundingClientRect();
+    const containerRect = event.currentTarget.closest('.relative')?.getBoundingClientRect();
+    
+    // Position tooltip near mouse but ensure it stays in viewport
+    let x = event.clientX + 10;
+    let y = event.clientY - 10;
+    
+    // Adjust if tooltip would go off screen
+    const tooltipWidth = 320; // approximate tooltip width
+    const tooltipHeight = 200; // approximate tooltip height
+    
+    if (x + tooltipWidth > window.innerWidth) {
+      x = event.clientX - tooltipWidth - 10;
+    }
+    
+    if (y + tooltipHeight > window.innerHeight) {
+      y = event.clientY - tooltipHeight - 10;
+    }
+    
+    // Convert to relative positioning if we have a container
+    if (containerRect) {
+      x = x - containerRect.left;
+      y = y - containerRect.top;
+    }
+    
     setTooltipPosition({
-      x: rect.right + 10,
-      y: rect.top
+      x: Math.max(10, x),
+      y: Math.max(10, y)
     });
   };
 
@@ -199,11 +223,10 @@ export const TankGrid: React.FC<TankGridProps> = ({
       {/* Tooltip */}
       {hoveredPiece && tooltipPosition && (
         <div
-          className="absolute z-50 bg-gray-900 text-white p-3 rounded-lg shadow-xl border border-gray-700 max-w-xs pointer-events-none"
+          className="fixed z-50 bg-gray-900 text-white p-3 rounded-lg shadow-xl border border-gray-700 max-w-xs pointer-events-none"
           style={{
             left: tooltipPosition.x,
-            top: tooltipPosition.y,
-            transform: 'translateY(-50%)'
+            top: tooltipPosition.y
           }}
         >
           <div className="text-sm font-bold mb-1">{hoveredPiece.name}</div>
