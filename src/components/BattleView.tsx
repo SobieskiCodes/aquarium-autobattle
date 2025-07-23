@@ -891,13 +891,29 @@ export const BattleView: React.FC<BattleViewProps> = ({
             {(() => {
               const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
               const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
-              const playerAttack = enhancedPlayerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
-              const opponentAttack = enhancedOpponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
+              
+              // Calculate total attack including water quality
+              let playerAttack = enhancedPlayerPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
+              let opponentAttack = enhancedOpponentPieces.filter(piece => piece.type === 'fish').reduce((total, piece) => total + piece.stats.attack, 0);
+              
+              // Apply water quality modifiers
+              if (playerWaterQuality < 3) {
+                playerAttack = Math.max(1, Math.floor(playerAttack * 0.7));
+              } else if (playerWaterQuality > 7) {
+                playerAttack = Math.floor(playerAttack * 1.2);
+              }
+              
+              if (opponentWaterQuality < 3) {
+                opponentAttack = Math.max(1, Math.floor(opponentAttack * 0.7));
+              } else if (opponentWaterQuality > 7) {
+                opponentAttack = Math.floor(opponentAttack * 1.2);
+              }
+              
               const diff = playerAttack - opponentAttack;
               if (diff > 0) {
                 return <div className="text-green-600 font-bold">+{diff} You</div>;
               } else if (diff < 0) {
-                return <div className="text-red-600 font-bold">{diff} Opponent</div>;
+                return <div className="text-red-600 font-bold">{Math.abs(diff)} Opponent</div>;
               } else {
                 return <div className="text-gray-600 font-bold">Even</div>;
               }
@@ -908,17 +924,17 @@ export const BattleView: React.FC<BattleViewProps> = ({
             {(() => {
               const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
               const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
-              const playerHealth = playerPieces.filter(piece => 
+              const playerHealth = enhancedPlayerPieces.filter(piece => 
                 piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
               ).reduce((total, piece) => total + piece.stats.health, 0);
-              const opponentHealth = opponentPieces.filter(piece => 
+              const opponentHealth = enhancedOpponentPieces.filter(piece => 
                 piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
               ).reduce((total, piece) => total + piece.stats.health, 0);
               const diff = playerHealth - opponentHealth;
               if (diff > 0) {
                 return <div className="text-green-600 font-bold">+{diff} You</div>;
               } else if (diff < 0) {
-                return <div className="text-red-600 font-bold">{diff} Opponent</div>;
+                return <div className="text-red-600 font-bold">{Math.abs(diff)} Opponent</div>;
               } else {
                 return <div className="text-gray-600 font-bold">Even</div>;
               }
@@ -929,15 +945,15 @@ export const BattleView: React.FC<BattleViewProps> = ({
             {(() => {
               const enhancedPlayerPieces = applyBonusesToPieces(playerPieces);
               const enhancedOpponentPieces = applyBonusesToPieces(opponentPieces);
-              const playerFish = playerPieces.filter(piece => piece.type === 'fish');
-              const opponentFish = opponentPieces.filter(piece => piece.type === 'fish');
-              const playerSpeed = Math.round(playerFish.reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, playerFish.length));
-              const opponentSpeed = Math.round(opponentFish.reduce((total, piece) => total + piece.stats.speed, 0) / Math.max(1, opponentFish.length));
+              const playerFish = enhancedPlayerPieces.filter(piece => piece.type === 'fish');
+              const opponentFish = enhancedOpponentPieces.filter(piece => piece.type === 'fish');
+              const playerSpeed = playerFish.length > 0 ? Math.round(playerFish.reduce((total, piece) => total + piece.stats.speed, 0) / playerFish.length) : 0;
+              const opponentSpeed = opponentFish.length > 0 ? Math.round(opponentFish.reduce((total, piece) => total + piece.stats.speed, 0) / opponentFish.length) : 0;
               const diff = playerSpeed - opponentSpeed;
               if (diff > 0) {
                 return <div className="text-green-600 font-bold">+{diff} You</div>;
               } else if (diff < 0) {
-                return <div className="text-red-600 font-bold">{diff} Opponent</div>;
+                return <div className="text-red-600 font-bold">{Math.abs(diff)} Opponent</div>;
               } else {
                 return <div className="text-gray-600 font-bold">Even</div>;
               }
