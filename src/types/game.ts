@@ -59,6 +59,7 @@ export interface GameState {
   opponentShop: (GamePiece | null)[];
   lockedShopIndex: number | null;
   goldHistory: GoldTransaction[];
+  rerollsThisRound: number;
 }
 
 export interface GoldTransaction {

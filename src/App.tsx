@@ -42,23 +42,19 @@ function App() {
               <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1 rounded-full font-bold">
                 <span>💰</span>
                 <span>{gameState.gold}g</span>
+                {(() => {
+                  const nextInterest = Math.min(Math.floor(gameState.gold / 10), 5);
+                  return nextInterest > 0 ? (
+                    <span className="text-yellow-200 text-xs ml-1" title={`Interest: +${nextInterest}g next round (1g per 10g held, max 5g)`}>
+                      (+{nextInterest})
+                    </span>
+                  ) : null;
+                })()}
                 {gameState.lossStreak > 0 && (
                   <span className="text-red-200 text-xs ml-1">
                     (L{gameState.lossStreak})
                   </span>
                 )}
-                {(() => {
-                  const calculateInterest = (gold: number) => Math.min(Math.floor(gold / 10), 5);
-                  const nextInterest = calculateInterest(gameState.gold);
-                  return nextInterest > 0 ? (
-                    <span 
-                      className="text-yellow-100 text-xs ml-1 cursor-help" 
-                      title={`Interest Preview: You'll earn +${nextInterest} gold at the end of this round (1g per 10g held, max 5g)`}
-                    >
-                      (+{nextInterest})
-                    </span>
-                  ) : null;
-                })()}
               </div>
               <div className="flex items-center gap-2 bg-gradient-to-r from-red-400 to-pink-400 text-white px-3 py-1 rounded-full font-bold">
                 <span>🤖</span>

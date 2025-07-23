@@ -41,7 +41,8 @@ const INITIAL_STATE: GameState = {
       description: 'Starting gold',
       timestamp: Date.now()
     }
-  ]
+  ],
+  rerollsThisRound: 0
 };
 
 // Helper function for applying bonuses to pieces
@@ -536,8 +537,10 @@ export const useGame = () => {
   }, []);
 
   const rerollShop = useCallback(() => {
-    const rerollCost = 2;
     setGameState(prev => {
+      // Calculate escalating reroll cost: 2g for first 5, then +1g for each additional
+      const rerollCost = prev.rerollsThisRound < 5 ? 2 : 2 + (prev.rerollsThisRound - 4);
+      
       if (prev.gold < rerollCost) return prev;
       
       // Generate new shop but preserve locked item
@@ -550,7 +553,7 @@ export const useGame = () => {
       const transaction = addGoldTransaction(
         'reroll',
         -rerollCost,
-        'Shop reroll',
+        `Shop reroll #${prev.rerollsThisRound + 1}`,
         prev.round
       );
       
@@ -558,7 +561,8 @@ export const useGame = () => {
         ...prev,
         gold: prev.gold - rerollCost,
         shop: newShop,
-        goldHistory: [...prev.goldHistory, transaction]
+        goldHistory: [...prev.goldHistory, transaction],
+        rerollsThisRound: prev.rerollsThisRound + 1
       };
     });
   }, []);
@@ -748,6 +752,7 @@ export const useGame = () => {
         opponentWins: newOpponentWins,
         opponentLosses: newOpponentLosses,
         opponentGold: prev.opponentGold + opponentGoldReward,
+        rerollsThisRound: 0, // Reset reroll count for new round
         shop: (() => {
           // Generate new shop but preserve locked item
           const newShop = getRandomShop(5);
