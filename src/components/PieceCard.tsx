@@ -36,8 +36,11 @@ export const PieceCard: React.FC<PieceCardProps> = ({
   const [isDragging, setIsDragging] = React.useState(false);
 
   const handleClick = () => {
-    if (isInShop && onPurchase && canAfford) {
+    if (isInShop && onPurchase && canAfford && piece.type !== 'consumable') {
       onPurchase(piece);
+    } else if (isInShop && piece.type === 'consumable') {
+      // Consumables can't be purchased directly - must be dragged to grid
+      return;
     }
   };
 
@@ -97,11 +100,12 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           ? 'border-blue-500 bg-blue-50 transform scale-105' 
           : 'border-gray-300 bg-white hover:border-gray-400 hover:shadow-md'
         }
-        ${isInShop && !canAfford ? 'opacity-50 cursor-not-allowed' : ''}
+       ${isInShop && (!canAfford || piece.type === 'consumable') ? 'opacity-50' : ''}
+       ${isInShop && piece.type === 'consumable' ? 'cursor-grab' : isInShop && !canAfford ? 'cursor-not-allowed' : ''}
         ${isLocked ? 'bg-yellow-50' : ''}
         ${isDragging ? 'opacity-50 transform rotate-2' : ''}
       `}
-      onClick={canAfford ? handleClick : undefined}
+     onClick={canAfford && piece.type !== 'consumable' ? handleClick : undefined}
       draggable={canAfford && (isInShop || showSellOption)}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -241,11 +245,16 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           <div className="font-medium mb-1">Abilities:</div>
           <ul className="space-y-0.5 text-xs flex-1">
             {piece.abilities.slice(0, 2).map((ability, index) => (
-              <li key={index} className="leading-tight text-xs">• {ability}</li>
+              <li key={index} className="leading-tight text-xs">
+                • <span dangerouslySetInnerHTML={{ __html: ability.replace(/~~(.+?)~~/g, '<del>$1</del>') }} />
+              </li>
             ))}
             {piece.type === 'consumable' && (
               <li className="text-orange-600 font-medium text-xs">⚡ Consumed at battle start</li>
             )}
+           {isInShop && piece.type === 'consumable' && (
+             <li className="text-red-600 font-medium text-xs">⚠️ Must drag to grid - can't store!</li>
+           )}
           </ul>
           
           {/* Show consumed items summary */}

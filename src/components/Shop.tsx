@@ -39,7 +39,10 @@ export const Shop: React.FC<ShopProps> = ({
               className="text-gray-400 hover:text-gray-600 cursor-help transition-colors" 
             />
             <div className="absolute left-0 top-6 bg-gray-900 text-white text-sm p-3 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap">
-              You can buy multiple items at once - they'll go into your storage to place later
+              <div className="space-y-2">
+                <div>You can buy multiple items at once - they'll go into your storage to place later</div>
+                <div className="text-orange-300 font-medium">⚠️ Consumables must be placed immediately or they disappear!</div>
+              </div>
             </div>
           </div>
         </div>
