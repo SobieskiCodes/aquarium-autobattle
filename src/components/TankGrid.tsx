@@ -200,6 +200,15 @@ export const TankGrid: React.FC<TankGridProps> = ({
           <div className="text-sm font-bold mb-1">{hoveredPiece.name}</div>
           {(() => {
             const bonuses = calculatePieceBonuses(hoveredPiece, pieces);
+            
+            // Get the original stats before any enhancements
+            const enhancedPiece = hoveredPiece as any; // EnhancedGamePiece type
+            const originalStats = enhancedPiece.originalStats || {
+              attack: hoveredPiece.stats.attack,
+              health: hoveredPiece.stats.health,
+              speed: hoveredPiece.stats.speed
+            };
+            
             const bonusAttack = bonuses.filter(b => b.effect.includes('ATK')).reduce((sum, b) => {
               const match = b.effect.match(/\+(\d+) ATK/);
               return sum + (match ? parseInt(match[1]) : 0);
@@ -208,31 +217,37 @@ export const TankGrid: React.FC<TankGridProps> = ({
               const match = b.effect.match(/\+(\d+) HP/);
               return sum + (match ? parseInt(match[1]) : 0);
             }, 0);
-            const bonusSpeed = bonuses.some(b => b.effect.includes('Double Speed')) ? hoveredPiece.stats.speed : 0;
+            const bonusSpeed = bonuses.some(b => b.effect.includes('Double Speed')) ? originalStats.speed : 0;
             
-            const finalAttack = hoveredPiece.stats.attack + bonusAttack;
-            const finalHealth = hoveredPiece.stats.health + bonusHealth;
-            const finalSpeed = hoveredPiece.stats.speed + bonusSpeed;
+            // Calculate final stats from original stats + all bonuses
+            const finalAttack = originalStats.attack + bonusAttack + (hoveredPiece.stats.attack - originalStats.attack);
+            const finalHealth = originalStats.health + bonusHealth + (hoveredPiece.stats.health - originalStats.health);
+            const finalSpeed = originalStats.speed + bonusSpeed + (hoveredPiece.stats.speed - originalStats.speed);
+            
+            // Calculate total bonuses (including consumed items)
+            const totalAttackBonus = finalAttack - originalStats.attack;
+            const totalHealthBonus = finalHealth - originalStats.health;
+            const totalSpeedBonus = finalSpeed - originalStats.speed;
             
             return (
               <div className="text-xs text-gray-300 mb-2">
                 <div className="flex gap-4">
                   <span>
                     ATK: <span className="text-red-400 font-bold">{finalAttack}</span>
-                    {bonusAttack > 0 && <span className="text-green-400"> (+{bonusAttack})</span>}
+                    {totalAttackBonus > 0 && <span className="text-green-400"> (+{totalAttackBonus})</span>}
                   </span>
                   <span>
                     HP: <span className="text-green-400 font-bold">{finalHealth}</span>
-                    {bonusHealth > 0 && <span className="text-green-400"> (+{bonusHealth})</span>}
+                    {totalHealthBonus > 0 && <span className="text-green-400"> (+{totalHealthBonus})</span>}
                   </span>
                   <span>
                     SPD: <span className="text-blue-400 font-bold">{finalSpeed}</span>
-                    {bonusSpeed > 0 && <span className="text-cyan-400"> (+{bonusSpeed})</span>}
+                    {totalSpeedBonus > 0 && <span className="text-cyan-400"> (+{totalSpeedBonus})</span>}
                   </span>
                 </div>
-                {(bonusAttack > 0 || bonusHealth > 0 || bonusSpeed > 0) && (
+                {(totalAttackBonus > 0 || totalHealthBonus > 0 || totalSpeedBonus > 0) && (
                   <div className="text-xs text-gray-400 mt-1">
-                    Base: {hoveredPiece.stats.attack}/{hoveredPiece.stats.health}/{hoveredPiece.stats.speed}
+                    Base: {originalStats.attack}/{originalStats.health}/{originalStats.speed}
                   </div>
                 )}
               </div>
