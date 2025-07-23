@@ -112,14 +112,14 @@ export const BattleView: React.FC<BattleViewProps> = ({
   };
 
   const simulateBattle = () => {
-    // Create battle copies with current health tracking
-    let playerBattlePieces = applyBonusesToPieces(playerPieces, playerPieces).filter(p => p.position).map(piece => ({
+    // Use the already enhanced pieces from the battle start (which include consumable effects)
+    let playerBattlePieces = enhancedPlayerPieces.filter(p => p.position && p.type !== 'consumable').map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
     }));
     
-    let opponentBattlePieces = applyBonusesToPieces(opponentPieces, opponentPieces).filter(p => p.position).map(piece => ({
+    let opponentBattlePieces = enhancedOpponentPieces.filter(p => p.position && p.type !== 'consumable').map(piece => ({
       ...piece,
       currentHealth: piece.stats.health,
       isAlive: true
