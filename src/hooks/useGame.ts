@@ -505,26 +505,60 @@ export const useGame = () => {
       // Apply each consumable's effect
       consumables.forEach(consumable => {
         if (consumable.position) {
-          const adjacentPositions = [
-            { x: consumable.position.x - 1, y: consumable.position.y },
-            { x: consumable.position.x + 1, y: consumable.position.y },
-            { x: consumable.position.x, y: consumable.position.y - 1 },
-            { x: consumable.position.x, y: consumable.position.y + 1 }
-          ];
+          // Get all adjacent positions for all tiles of the consumable
+          const adjacentPositions: Position[] = [];
+          const checkedPositions = new Set<string>();
+          
+          consumable.shape.forEach(shapeOffset => {
+            const consumableX = consumable.position!.x + shapeOffset.x;
+            const consumableY = consumable.position!.y + shapeOffset.y;
+            
+            // Check all 4 directions from each tile of this consumable
+            const directions = [
+              { x: consumableX - 1, y: consumableY },
+              { x: consumableX + 1, y: consumableY },
+              { x: consumableX, y: consumableY - 1 },
+              { x: consumableX, y: consumableY + 1 }
+            ];
+            
+            directions.forEach(pos => {
+              const posKey = `${pos.x},${pos.y}`;
+              if (!checkedPositions.has(posKey) && 
+                  pos.x >= 0 && pos.x < 8 && 
+                  pos.y >= 0 && pos.y < 6) {
+                // Make sure this position isn't occupied by the same consumable
+                const isOwnTile = consumable.shape.some(offset => 
+                  consumable.position!.x + offset.x === pos.x && 
+                  consumable.position!.y + offset.y === pos.y
+                );
+                if (!isOwnTile) {
+                  adjacentPositions.push(pos);
+                  checkedPositions.add(posKey);
+                }
+              }
+            });
+          });
           
           battlePieces = battlePieces.map(p => {
-            if (p.type === 'fish' && p.position && adjacentPositions.some(adj => 
-              adj.x === p.position!.x && adj.y === p.position!.y
-            )) {
-              return {
-                ...p,
-                stats: {
-                  ...p.stats,
-                  attack: p.stats.attack + 1,
-                  health: p.stats.health + 1,
-                  maxHealth: p.stats.maxHealth + 1
-                }
-              };
+            if (p.type === 'fish' && p.position) {
+              // Check if any tile of this fish is adjacent to any tile of the consumable
+              const isAdjacent = p.shape.some(fishOffset => {
+                const fishX = p.position!.x + fishOffset.x;
+                const fishY = p.position!.y + fishOffset.y;
+                return adjacentPositions.some(adj => adj.x === fishX && adj.y === fishY);
+              });
+              
+              if (isAdjacent) {
+                return {
+                  ...p,
+                  stats: {
+                    ...p.stats,
+                    attack: p.stats.attack + 1,
+                    health: p.stats.health + 1,
+                    maxHealth: p.stats.maxHealth + 1
+                  }
+                };
+              }
             }
             return p;
           });
@@ -657,15 +691,54 @@ export const useGame = () => {
       
       // If this was the final round, we need to handle game completion
       if (isFinalRound) {
-        // For now, we'll continue the game but this is where we'd handle
-        // game completion, stats tracking, new opponent, etc.
-        // TODO: Add game completion logic here
+        // Complete reset after round 15 - start fresh campaign
+        return {
+          ...INITIAL_STATE,
+          round: 1,
+          gold: 10,
+          wins: 0,
+          losses: 0,
+          opponentWins: 0,
+          opponentLosses: 0,
+          lossStreak: 0,
+          opponentLossStreak: 0,
+          playerTank: {
+            id: 'player',
+            pieces: [],
+            waterQuality: 5,
+            temperature: 25,
+            grid: Array(6).fill(null).map(() => Array(8).fill(null))
+          },
+          opponentTank: {
+            id: 'opponent',
+            pieces: [],
+            waterQuality: 5,
+            temperature: 25,
+            grid: Array(6).fill(null).map(() => Array(8).fill(null))
+          },
+          shop: getRandomShop(),
+          opponentShop: getRandomShop(),
+          battleEvents: [],
+          selectedPiece: null,
+          lockedShopIndex: null,
+          rerollsThisRound: 0,
+          goldHistory: [
+            {
+              id: 'campaign-complete',
+              round: 1,
+              type: 'round_start',
+              amount: 10,
+              description: 'New campaign started - Starting gold',
+              timestamp: Date.now()
+            }
+          ]
+        };
       }
       
       return {
         ...prev,
         phase: 'shop' as const,
-        round: isFinalRound ? 1 : prev.round + 1, // Reset to round 1 after 15 rounds for now
+        round: prev.round + 1,
         gold: currentGoldAfterReward + interestAmount,
         lossStreak: playerLossStreak,
         opponentLossStreak: opponentLossStreak,

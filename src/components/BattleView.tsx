@@ -64,9 +64,9 @@ export const BattleView: React.FC<BattleViewProps> = ({
 
   // Calculate initial health totals (only once when component mounts)
   React.useEffect(() => {
-    // Use enhanced pieces for health calculation to match battle stats display
-    const playerTotal = enhancedPlayerPieces.filter(p => p.position).reduce((total, piece) => total + piece.stats.health, 0);
-    const opponentTotal = enhancedOpponentPieces.filter(p => p.position).reduce((total, piece) => total + piece.stats.health, 0);
+    // Use enhanced pieces for health calculation, but exclude consumables since they don't participate in battle
+    const playerTotal = enhancedPlayerPieces.filter(p => p.position && p.type !== 'consumable').reduce((total, piece) => total + piece.stats.health, 0);
+    const opponentTotal = enhancedOpponentPieces.filter(p => p.position && p.type !== 'consumable').reduce((total, piece) => total + piece.stats.health, 0);
     
     setBattleState(prev => {
       // Only update if values have actually changed to prevent infinite loop
@@ -233,8 +233,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
         }
         
         // Calculate current total health for both sides immediately after damage
-        const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
-        const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+        const currentPlayerHealth = playerBattlePieces.filter(p => p.type !== 'consumable').reduce((total, p) => total + p.currentHealth, 0);
+        const currentOpponentHealth = opponentBattlePieces.filter(p => p.type !== 'consumable').reduce((total, p) => total + p.currentHealth, 0);
         
         // Force immediate state update for health bars
         setBattleState(prev => ({
@@ -311,8 +311,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
       }
 
       // Update battle state
-      const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
-      const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+      const currentPlayerHealth = playerBattlePieces.filter(p => p.type !== 'consumable').reduce((total, p) => total + p.currentHealth, 0);
+      const currentOpponentHealth = opponentBattlePieces.filter(p => p.type !== 'consumable').reduce((total, p) => total + p.currentHealth, 0);
 
       setBattleState(prev => ({
         ...prev,
@@ -329,8 +329,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
         clearInterval(battleInterval);
         
         // Force end - compare remaining health
-        const currentPlayerHealth = playerBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
-        const currentOpponentHealth = opponentBattlePieces.reduce((total, p) => total + p.currentHealth, 0);
+        const currentPlayerHealth = playerBattlePieces.filter(p => p.type !== 'consumable').reduce((total, p) => total + p.currentHealth, 0);
+        const currentOpponentHealth = opponentBattlePieces.filter(p => p.type !== 'consumable').reduce((total, p) => total + p.currentHealth, 0);
         
         let playerWon;
         let isDraw = false;
