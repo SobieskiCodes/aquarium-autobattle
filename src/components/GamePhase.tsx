@@ -332,6 +332,27 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           <h2 className="text-xl font-bold text-gray-900 mb-4">Tank Pieces</h2>
           {gameState.playerTank.pieces.length > 0 ? (
             <div className="bg-white rounded-lg shadow-lg p-4 max-h-[600px] overflow-y-auto">
+              {/* Unplaced pieces warning */}
+              {(() => {
+                const unplacedPieces = gameState.playerTank.pieces.filter(piece => !piece.position);
+                if (unplacedPieces.length > 0) {
+                  return (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-yellow-800">
+                        <span className="text-lg">⚠️</span>
+                        <span className="font-medium">
+                          {unplacedPieces.length} piece{unplacedPieces.length > 1 ? 's' : ''} not placed on grid yet!
+                        </span>
+                      </div>
+                      <div className="text-sm text-yellow-700 mt-1">
+                        Drag them to the tank grid to use them in battle.
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 justify-items-center">
               {gameState.playerTank.pieces.map((piece, index) => (
                 <div key={`${piece.id}-${index}`} className="min-h-0 w-full max-w-[280px]">

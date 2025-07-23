@@ -372,6 +372,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
                       : 'bg-red-200 border-red-400 ring-2 ring-red-400'
                     : ''
                   }
+                  ${cell && isHoveredPiece(cell) ? 'ring-4 ring-blue-400 ring-opacity-75 transform scale-110' : ''}
                   ${cell && isBonusProvider(cell) ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}
                 `}
                 style={{

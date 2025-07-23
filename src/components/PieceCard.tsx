@@ -99,7 +99,10 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       {/* Piece Name & Type */}
       <div className="mb-1 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-sm text-gray-900">{piece.name}</h3>
+          <h3 className={`font-bold text-sm ${!piece.position && showSellOption ? 'text-yellow-800' : 'text-gray-900'}`}>
+            {piece.name}
+            {!piece.position && showSellOption && <span className="ml-1 text-yellow-600">⚠️</span>}
+          </h3>
           {/* Sell Button */}
           {showSellOption && onSell && (
             <button
