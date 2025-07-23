@@ -210,15 +210,19 @@ export const TankGrid: React.FC<TankGridProps> = ({
         });
 
         if (canPlace) {
-          // Check if this piece already exists in the tank (has a position)
+          // Check if this piece already exists in the tank
           const existingPiece = pieces.find(p => p.id === piece.id);
           
-          if (existingPiece && existingPiece.position && onPieceMove) {
-            // Moving existing piece within the grid
-            onPieceMove(existingPiece, { x, y });
-          } else if (onPiecePlace) {
-            // Placing new piece from shop or inventory
-            onPiecePlace(piece, { x, y });
+          if (existingPiece) {
+            // This piece is already in the tank - move it
+            if (onPieceMove) {
+              onPieceMove(existingPiece, { x, y });
+            }
+          } else {
+            // This is a new piece from inventory/shop - place it
+            if (onPiecePlace) {
+              onPiecePlace(piece, { x, y });
+            }
           }
         }
       } catch (error) {
