@@ -323,6 +323,9 @@ export const useGame = () => {
       // Check if piece is already in tank (from inventory) or is new (from shop)
       const existingPieceIndex = prev.playerTank.pieces.findIndex(p => p.id === piece.id);
       let newPieces;
+      let newGoldHistory = prev.goldHistory;
+      let newGold = prev.gold;
+      let newShop = prev.shop;
       
       if (existingPieceIndex >= 0) {
         // Update existing piece position (from inventory)
@@ -330,7 +333,28 @@ export const useGame = () => {
           index === existingPieceIndex ? { ...p, position } : p
         );
       } else {
-        // Add new piece to tank (from shop)
+        // This is a new piece being placed from shop via drag-and-drop
+        // We need to purchase it first
+        if (prev.gold < piece.cost) return prev; // Can't afford it
+        
+        // Add purchase transaction
+        const transaction = addGoldTransaction(
+          'purchase',
+          -piece.cost,
+          `Purchased ${piece.name} for ${piece.cost}g`,
+          prev.round,
+          piece.id,
+          piece.name
+        );
+        
+        newGoldHistory = [...prev.goldHistory, transaction];
+        newGold = prev.gold - piece.cost;
+        
+        // Remove from shop
+        newShop = prev.shop.map(shopPiece => 
+          shopPiece?.id === piece.id ? null : shopPiece
+        );
+        
         const newPiece = { ...piece, position };
         newPieces = [...prev.playerTank.pieces, newPiece];
       }
@@ -370,12 +394,9 @@ export const useGame = () => {
         },
         selectedPiece: null,
         phase: 'shop' as const,
-        // If this was a drag-and-drop purchase, remove from shop
-        shop: existingPieceIndex < 0 ? prev.shop.map(shopPiece => 
-          shopPiece?.id === piece.id ? null : shopPiece
-        ) : prev.shop,
-        // Deduct gold if this was a new purchase
-        gold: existingPieceIndex < 0 ? prev.gold - piece.cost : prev.gold
+        shop: newShop,
+        gold: newGold,
+        goldHistory: newGoldHistory
       };
     });
   }, []);
