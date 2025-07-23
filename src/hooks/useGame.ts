@@ -52,6 +52,10 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
   let gold = opponentGold;
   const newPieces: GamePiece[] = [...currentPieces];
   
+  console.log(`=== OPPONENT TURN - Round ${round} ===`);
+  console.log(`Starting gold: ${gold}`);
+  console.log(`Current pieces: ${newPieces.length}`);
+  
   // Improved AI reroll strategy - more conservative, especially after losses
   let currentShop = shop;
   const rerollCost = 2;
@@ -119,8 +123,74 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
   // Now buy pieces with remaining gold
   const affordablePieces = currentShop.filter(piece => piece && piece.cost <= gold);
   
+  // Helper function to check if a consumable can be placed adjacent to fish
+  const canPlaceConsumableEffectively = (consumable: GamePiece) => {
+    if (consumable.type !== 'consumable') return true; // Not a consumable, always OK
+    
+    // Check if we have any fish that could benefit
+    const fishPieces = newPieces.filter(p => p.type === 'fish' && p.position);
+    if (fishPieces.length === 0) return false; // No fish to benefit
+    
+    // Try to find a position where the consumable would be adjacent to at least one fish
+    for (let y = 0; y < 6; y++) {
+      for (let x = 0; x < 8; x++) {
+        // Check if consumable can be placed here
+        const canPlace = consumable.shape.every(offset => {
+          const px = x + offset.x;
+          const py = y + offset.y;
+          return px >= 0 && px < 8 && py >= 0 && py < 6 && 
+                 !newPieces.some(p => p.position && 
+                   p.shape.some(pOffset => 
+                     p.position!.x + pOffset.x === px && 
+                     p.position!.y + pOffset.y === py
+                   )
+                 );
+        });
+        
+        if (!canPlace) continue;
+        
+        // Check if any tile of the consumable would be adjacent to any fish
+        const wouldBeAdjacent = consumable.shape.some(consumableOffset => {
+          const consumableX = x + consumableOffset.x;
+          const consumableY = y + consumableOffset.y;
+          
+          // Check all 4 directions from this consumable tile
+          const directions = [
+            { x: consumableX - 1, y: consumableY },
+            { x: consumableX + 1, y: consumableY },
+            { x: consumableX, y: consumableY - 1 },
+            { x: consumableX, y: consumableY + 1 }
+          ];
+          
+          return directions.some(dir => {
+            if (dir.x < 0 || dir.x >= 8 || dir.y < 0 || dir.y >= 6) return false;
+            
+            // Check if any fish occupies this adjacent position
+            return fishPieces.some(fish => 
+              fish.shape.some(fishOffset => 
+                fish.position!.x + fishOffset.x === dir.x && 
+                fish.position!.y + fishOffset.y === dir.y
+              )
+            );
+          });
+        });
+        
+        if (wouldBeAdjacent) return true;
+      }
+    }
+    
+    return false; // No valid adjacent placement found
+  };
+  
   const goodPieces = affordablePieces.filter(piece => {
       if (!piece) return false;
+      
+      // Skip consumables that can't be placed effectively
+      if (piece.type === 'consumable' && !canPlaceConsumableEffectively(piece)) {
+        console.log(`AI skipping ${piece.name} - no effective placement available`);
+        return false;
+      }
+      
       // More nuanced evaluation of what makes a piece "good"
       const efficiency = (piece.stats.attack + piece.stats.health) / piece.cost;
       const isRare = piece.rarity === 'rare' || piece.rarity === 'epic' || piece.rarity === 'legendary';
@@ -211,15 +281,69 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
     
     if (availablePositions.length > 0) {
       const randomPos = availablePositions[Math.floor(Math.random() * availablePositions.length)];
+      
+      // For consumables, try to find a position adjacent to fish
+      let finalPos = randomPos;
+      if (piece.type === 'consumable') {
+        const fishPieces = newPieces.filter(p => p.type === 'fish' && p.position);
+        
+        // Find the best position adjacent to fish
+        let bestPos = null;
+        let maxAdjacentFish = 0;
+        
+        for (const pos of availablePositions) {
+          let adjacentFishCount = 0;
+          
+          // Count how many fish would be adjacent to this consumable placement
+          piece.shape.forEach(consumableOffset => {
+            const consumableX = pos.x + consumableOffset.x;
+            const consumableY = pos.y + consumableOffset.y;
+            
+            const directions = [
+              { x: consumableX - 1, y: consumableY },
+              { x: consumableX + 1, y: consumableY },
+              { x: consumableX, y: consumableY - 1 },
+              { x: consumableX, y: consumableY + 1 }
+            ];
+            
+            directions.forEach(dir => {
+              if (dir.x >= 0 && dir.x < 8 && dir.y >= 0 && dir.y < 6) {
+                const adjacentFish = fishPieces.filter(fish => 
+                  fish.shape.some(fishOffset => 
+                    fish.position!.x + fishOffset.x === dir.x && 
+                    fish.position!.y + fishOffset.y === dir.y
+                  )
+                );
+                adjacentFishCount += adjacentFish.length;
+              }
+            });
+          });
+          
+          if (adjacentFishCount > maxAdjacentFish) {
+            maxAdjacentFish = adjacentFishCount;
+            bestPos = pos;
+          }
+        }
+        
+        if (bestPos && maxAdjacentFish > 0) {
+          finalPos = bestPos;
+          console.log(`AI placing ${piece.name} adjacent to ${maxAdjacentFish} fish at (${finalPos.x}, ${finalPos.y})`);
+        }
+      }
+      
       newPieces.push({
         ...piece,
         id: `opp-${piece.id}-${Math.random().toString(36).substr(2, 9)}`,
-        position: randomPos
+        position: finalPos
       });
       gold -= piece.cost;
       totalSpent += piece.cost;
+      console.log(`AI purchased: ${piece.name} for ${piece.cost}g (${piece.type})`);
     }
   }
+  
+  console.log(`AI final gold: ${gold}, pieces: ${newPieces.length}`);
+  console.log(`AI pieces breakdown:`, newPieces.map(p => `${p.name} (${p.type})`));
   
   // Calculate water quality for opponent
   let waterQuality = 5;
@@ -502,6 +626,14 @@ export const useGame = () => {
       let battlePieces = [...prev.playerTank.pieces];
       const consumables = battlePieces.filter(p => p.type === 'consumable');
       
+      // Apply consumable effects to opponent pieces too
+      let opponentBattlePieces = [...opponentResult.pieces];
+      const opponentConsumables = opponentBattlePieces.filter(p => p.type === 'consumable');
+      
+      console.log(`=== BATTLE START ===`);
+      console.log(`Player consumables: ${consumables.length}`);
+      console.log(`Opponent consumables: ${opponentConsumables.length}`);
+      
       // Apply each consumable's effect
       consumables.forEach(consumable => {
         if (consumable.position) {
@@ -586,6 +718,96 @@ export const useGame = () => {
       // Remove consumables after applying effects
       battlePieces = battlePieces.filter(p => p.type !== 'consumable');
       
+      // Apply opponent consumable effects
+      opponentConsumables.forEach(consumable => {
+        if (consumable.position) {
+          console.log(`Applying opponent consumable: ${consumable.name}`);
+          
+          // Get all adjacent positions for all tiles of the consumable
+          const adjacentPositions: Position[] = [];
+          const checkedPositions = new Set<string>();
+          
+          consumable.shape.forEach(shapeOffset => {
+            const consumableX = consumable.position!.x + shapeOffset.x;
+            const consumableY = consumable.position!.y + shapeOffset.y;
+            
+            // Check all 4 directions from each tile of this consumable
+            const directions = [
+              { x: consumableX - 1, y: consumableY },
+              { x: consumableX + 1, y: consumableY },
+              { x: consumableX, y: consumableY - 1 },
+              { x: consumableX, y: consumableY + 1 }
+            ];
+            
+            directions.forEach(pos => {
+              const posKey = `${pos.x},${pos.y}`;
+              if (!checkedPositions.has(posKey) && 
+                  pos.x >= 0 && pos.x < 8 && 
+                  pos.y >= 0 && pos.y < 6) {
+                // Make sure this position isn't occupied by the same consumable
+                const isOwnTile = consumable.shape.some(offset => 
+                  consumable.position!.x + offset.x === pos.x && 
+                  consumable.position!.y + offset.y === pos.y
+                );
+                if (!isOwnTile) {
+                  adjacentPositions.push(pos);
+                  checkedPositions.add(posKey);
+                }
+              }
+            });
+          });
+          
+          let affectedFish = 0;
+          opponentBattlePieces = opponentBattlePieces.map(p => {
+            if (p.type === 'fish' && p.position) {
+              // Check if any tile of this fish is adjacent to any tile of the consumable
+              const isAdjacent = p.shape.some(fishOffset => {
+                const fishX = p.position!.x + fishOffset.x;
+                const fishY = p.position!.y + fishOffset.y;
+                return adjacentPositions.some(adj => adj.x === fishX && adj.y === fishY);
+              });
+              
+              if (isAdjacent) {
+                affectedFish++;
+                // Create consumed effect record
+                const consumedEffect: ConsumedEffect = {
+                  consumableId: consumable.id,
+                  consumableName: consumable.name,
+                  effect: '+1 ATK +1 HP (consumed)',
+                  appliedAt: Date.now()
+                };
+                
+                const enhancedPiece = p as EnhancedGamePiece;
+                const existingEffects = enhancedPiece.consumedEffects || [];
+                
+                return {
+                  ...p,
+                  originalStats: enhancedPiece.originalStats || {
+                    attack: p.stats.attack,
+                    health: p.stats.health,
+                    speed: p.stats.speed,
+                    maxHealth: p.stats.maxHealth
+                  },
+                  consumedEffects: [...existingEffects, consumedEffect],
+                  stats: {
+                    ...p.stats,
+                    attack: p.stats.attack + 1,
+                    health: p.stats.health + 1,
+                    maxHealth: p.stats.maxHealth + 1
+                  }
+                } as EnhancedGamePiece;
+              }
+            }
+            return p;
+          });
+          
+          console.log(`Opponent ${consumable.name} affected ${affectedFish} fish`);
+        }
+      });
+      
+      // Remove opponent consumables after applying effects
+      opponentBattlePieces = opponentBattlePieces.filter(p => p.type !== 'consumable');
+      
       // Update grid to remove consumables
       const newGrid = Array(6).fill(null).map(() => Array(8).fill(null));
       battlePieces.forEach(piece => {
@@ -595,6 +817,20 @@ export const useGame = () => {
             const y = piece.position!.y + offset.y;
             if (x >= 0 && x < 8 && y >= 0 && y < 6) {
               newGrid[y][x] = piece.id;
+            }
+          });
+        }
+      });
+
+      // Update opponent grid to remove consumables
+      const opponentGrid = Array(6).fill(null).map(() => Array(8).fill(null));
+      opponentBattlePieces.forEach(piece => {
+        if (piece.position) {
+          piece.shape.forEach(offset => {
+            const x = piece.position!.x + offset.x;
+            const y = piece.position!.y + offset.y;
+            if (x >= 0 && x < 8 && y >= 0 && y < 6) {
+              opponentGrid[y][x] = piece.id;
             }
           });
         }
@@ -610,7 +846,8 @@ export const useGame = () => {
         },
         opponentTank: {
           ...prev.opponentTank,
-          pieces: opponentResult.pieces,
+          pieces: opponentBattlePieces,
+          grid: opponentGrid,
           waterQuality: opponentResult.waterQuality
         },
         opponentGold: opponentResult.remainingGold
