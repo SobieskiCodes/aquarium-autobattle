@@ -44,7 +44,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
   return (
     <div className="relative"
       className={`
-        relative p-2 rounded-lg border-2 cursor-pointer transition-all duration-200
+        relative p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 h-64 flex flex-col
         ${isSelected 
           ? 'border-blue-500 bg-blue-50 transform scale-105' 
           : 'border-gray-300 bg-white hover:border-gray-400 hover:shadow-md'
@@ -58,7 +58,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       }}
     >
       {/* Piece Name & Type */}
-      <div className="mb-1">
+      <div className="mb-1 flex-shrink-0">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-sm text-gray-900">{piece.name}</h3>
           {/* Sell Button */}
@@ -78,7 +78,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       </div>
 
       {/* Stats */}
-      <div className="flex items-center gap-2 mb-1 text-xs">
+      <div className="flex items-center gap-2 mb-1 text-xs flex-shrink-0">
         <div className="flex items-center gap-1 text-red-600">
           <Sword size={12} />
           <span>{piece.stats.attack}</span>
@@ -107,7 +107,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       </div>
 
       {/* Tags */}
-      <div className="flex flex-wrap gap-1 mb-1">
+      <div className="flex flex-wrap gap-1 mb-1 flex-shrink-0">
         {piece.tags.slice(0, 3).map(tag => (
           <span
             key={tag}
@@ -119,7 +119,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       </div>
 
       {/* Shape Preview */}
-      <div className="mb-1">
+      <div className="mb-1 flex-shrink-0">
         <div className="text-xs text-gray-600 mb-1">Shape:</div>
         <div className="grid grid-cols-3 gap-0.5 w-fit mx-auto">
           {Array(3).fill(null).map((_, y) =>
@@ -143,9 +143,9 @@ export const PieceCard: React.FC<PieceCardProps> = ({
 
       {/* Abilities */}
       {piece.abilities && piece.abilities.length > 0 && (
-        <div className="text-xs text-gray-600 mt-1">
+        <div className="text-xs text-gray-600 mt-1 flex-1 flex flex-col">
           <div className="font-medium mb-1">Abilities:</div>
-          <ul className="space-y-0.5 text-xs">
+          <ul className="space-y-0.5 text-xs flex-1">
             {piece.abilities.slice(0, 2).map((ability, index) => (
               <li key={index} className="leading-tight text-xs">• {ability}</li>
             ))}
