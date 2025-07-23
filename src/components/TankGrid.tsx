@@ -177,6 +177,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
     e.dataTransfer.setData('application/json', JSON.stringify(piece));
     e.dataTransfer.effectAllowed = 'move';
     setDraggedPiece(piece);
+    e.stopPropagation();
     if (onDragStart) {
       onDragStart(piece);
     }
@@ -185,6 +186,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
   const handleDragEnd = (e: React.DragEvent) => {
     setDraggedPiece(null);
     setIsDragOver(null);
+    e.stopPropagation();
     if (onDragEnd) {
       onDragEnd();
     }
@@ -192,6 +194,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
 
   const handleDragOver = (e: React.DragEvent, x: number, y: number) => {
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
     
     // Check if we can place the piece here
@@ -223,6 +226,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
+    e.stopPropagation();
     // Only clear drag over if we're actually leaving the grid area
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX;
@@ -235,6 +239,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
 
   const handleDrop = (e: React.DragEvent, x: number, y: number) => {
     e.preventDefault();
+    e.stopPropagation();
     const pieceData = e.dataTransfer.getData('application/json');
     
     if (pieceData) {
@@ -320,6 +325,21 @@ export const TankGrid: React.FC<TankGridProps> = ({
     return draggedPiece.shape.some((offset: Position) => 
       isDragOver.x + offset.x === x && isDragOver.y + offset.y === y
     );
+  };
+
+  const canDragPlaceAt = (x: number, y: number) => {
+    if (!isDragOver || !draggedPiece) return false;
+    return draggedPiece.shape.every((offset: Position) => {
+      const newX = x + offset.x;
+      const newY = y + offset.y;
+      if (newX < 0 || newX >= GRID_WIDTH || newY < 0 || newY >= GRID_HEIGHT) {
+        return false;
+      }
+      
+      // Allow placement if cell is empty OR occupied by the same piece we're moving
+      const occupyingPiece = grid[newY][newX];
+      return !occupyingPiece || occupyingPiece.id === draggedPiece.id;
+    });
   };
   const isBonusProvider = (piece: GamePiece) => {
     if (!hoveredPiece) return false;
@@ -445,13 +465,16 @@ export const TankGrid: React.FC<TankGridProps> = ({
                   ? 'border-gray-400 text-white shadow-md opacity-50'
                   : `border-gray-300 bg-white/30 ${
                       isPreviewCell(x, y) || isDragPreviewCell(x, y)
-                        ? canPlaceAt(hoveredPosition?.x || previewPosition?.x || 0, hoveredPosition?.y || previewPosition?.y || 0)
+                        ? (isPreviewCell(x, y) 
+                            ? canPlaceAt(hoveredPosition?.x || previewPosition?.x || 0, hoveredPosition?.y || previewPosition?.y || 0)
+                            : canDragPlaceAt(isDragOver?.x || 0, isDragOver?.y || 0))
                           ? 'bg-green-200 border-green-400' 
                           : 'bg-red-200 border-red-400'
                         : 'hover:bg-white/50'
                     }`
                 }
                 ${isDragPreviewCell(x, y) ? 'ring-2 ring-blue-400 ring-opacity-50' : ''}
+                ${isBonusProvider(cell) ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}
               `}
               style={{
                 backgroundColor: cell ? getTypeColor(cell.type) : undefined,
@@ -465,7 +488,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
             >
               {cell && !isDraggedPieceCell(x, y) && (
                 <div 
-                  className="text-center w-full h-full flex flex-col justify-center"
+                  className="text-center w-full h-full flex flex-col justify-center cursor-move"
                   onMouseEnter={(e) => handlePieceHover(cell, e)}
                   onMouseLeave={handlePieceLeave}
                   draggable={isInteractive}
