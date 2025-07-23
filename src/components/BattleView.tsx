@@ -144,7 +144,6 @@ export const BattleView: React.FC<BattleViewProps> = ({
             bonusAttack += 1;
             bonusHealth += 1;
           }
-          }
         }
       });
       
