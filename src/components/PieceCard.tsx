@@ -101,6 +101,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
        ${isInShop && !canAfford ? 'cursor-not-allowed' : ''}
         ${isLocked ? 'bg-yellow-50' : ''}
         ${isDragging ? 'opacity-50 transform rotate-2' : ''}
+        ${isInShop ? 'h-44' : 'h-64'}
       `}
      onClick={canAfford && piece.type !== 'consumable' ? handleClick : undefined}
       onClick={canAfford ? handleClick : undefined}

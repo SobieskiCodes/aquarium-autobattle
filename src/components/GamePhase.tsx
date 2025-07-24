@@ -66,7 +66,25 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   };
 
   const renderShopPhase = () => (
-    <div className="space-y-6">
+    <div className="flex gap-6 h-[calc(100vh-200px)]">
+      {/* Left Sidebar - Shop */}
+      <div className="w-80 flex-shrink-0 space-y-4 overflow-y-auto">
+        <Shop
+          pieces={gameState.shop}
+          gold={gameState.gold}
+          onPurchase={onPurchasePiece}
+          onReroll={onRerollShop}
+          currentRerollCost={gameState.rerollsThisRound < 5 ? 2 : 2 + (gameState.rerollsThisRound - 4)}
+          rerollsThisRound={gameState.rerollsThisRound}
+          lockedIndex={gameState.lockedShopIndex}
+          onToggleLock={onToggleShopLock}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        />
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 space-y-6 overflow-y-auto">
       <div className="bg-gradient-to-r from-teal-500 to-blue-600 text-white p-4 rounded-lg">
         <div className="flex items-center justify-between">
           <div>
@@ -120,8 +138,8 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="space-y-4">
+        <div className="space-y-6">
+          <div className="space-y-4">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Your Tank</h2>
           
           {/* Board Stats Summary */}
@@ -150,12 +168,12 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             hoveredCardPiece={hoveredCardPiece}
           />
           
-        </div>
+          </div>
 
-        <div className="space-y-4">
+          <div className="space-y-4">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Tank Pieces</h2>
           {gameState.playerTank.pieces.length > 0 ? (
-            <div className="bg-white rounded-lg shadow-lg p-4 max-h-[600px] overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-lg p-4 max-h-[400px] overflow-y-auto">
               {/* Unplaced pieces warning */}
               {(() => {
                 const unplacedPieces = gameState.playerTank.pieces.filter(piece => !piece.position);
@@ -200,21 +218,9 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
               <p className="text-sm">Purchase some from the shop below!</p>
             </div>
           )}
+          </div>
         </div>
       </div>
-      
-      <Shop
-        pieces={gameState.shop}
-        gold={gameState.gold}
-        onPurchase={onPurchasePiece}
-        onReroll={onRerollShop}
-        currentRerollCost={gameState.rerollsThisRound < 5 ? 2 : 2 + (gameState.rerollsThisRound - 4)}
-        rerollsThisRound={gameState.rerollsThisRound}
-        lockedIndex={gameState.lockedShopIndex}
-        onToggleLock={onToggleShopLock}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      />
     </div>
   );
 
