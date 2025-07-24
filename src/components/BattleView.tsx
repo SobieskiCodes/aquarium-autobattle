@@ -19,6 +19,9 @@ interface BattleViewProps {
 }
 
 export const BattleView: React.FC<BattleViewProps> = ({
+  // THIS IS THE BATTLE PREPARATION SCREEN
+  // Shows stats comparison and "Start Battle" button
+  // When "Start Battle" is clicked, battle animation plays within this component
   playerPieces,
   opponentPieces,
   playerWaterQuality,
@@ -444,7 +447,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
                 className="flex items-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-lg font-bold hover:bg-gray-100 hover:shadow-md transition-all"
               >
                 <ArrowRight size={20} />
-                Continue to Next Round
+                {currentRound >= 15 ? 'Complete Campaign!' : 'Continue to Next Round'}
               </button>
             ) : (
               <div className="px-6 py-3 bg-white/20 rounded-lg">
@@ -665,6 +668,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
             pieces={playerPieces}
             isInteractive={false}
             waterQuality={playerWaterQuality}
+            isBattlePhase={true}
           />
         </div>
 
@@ -674,6 +678,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
             pieces={opponentPieces}
             isInteractive={false}
             waterQuality={opponentWaterQuality}
+            isBattlePhase={true}
           />
         </div>
       </div>

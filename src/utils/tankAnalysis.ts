@@ -5,6 +5,9 @@ export interface ConsumedEffect {
   consumableName: string;
   effect: string;
   appliedAt: number; // timestamp
+  attackBonus?: number;
+  healthBonus?: number;
+  speedBonus?: number;
 }
 
 export interface EnhancedGamePiece extends GamePiece {
@@ -57,6 +60,7 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
       });
     }
   });
+
 
   return pieces.map(piece => {
     if (!piece.position) return piece;
@@ -138,11 +142,20 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
           const bonus = hasSpongeFilter ? 2 : 1; // Amplified by sponge filter
           bonusHealth += bonus;
         }
-        // Consumable bonus (if piece is fish) - each adjacent consumable gives +1/+1
-        if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-          bonusAttack += 1;
-          bonusHealth += 1;
-        }
+      }
+    });
+    
+    // Apply consumable bonuses (stacking) - do this after other bonuses
+    adjacentPositions.forEach(pos => {
+      const adjacentPiece = grid[pos.y][pos.x];
+      if (adjacentPiece && adjacentPiece.id !== piece.id && adjacentPiece.type === 'consumable' && piece.type === 'fish') {
+        const attackBonus = adjacentPiece.attackBonus || 0;
+        const healthBonus = adjacentPiece.healthBonus || 0;
+        const speedBonus = adjacentPiece.speedBonus || 0;
+        
+        bonusAttack += attackBonus;
+        bonusHealth += healthBonus;
+        bonusSpeed += speedBonus;
       }
     });
     
@@ -270,7 +283,16 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]):
       }
       // Consumable bonus (if piece is fish) - show each adjacent consumable
       if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-        bonuses.push({ source: adjacentPiece.name, effect: '+1 ATK +1 HP (battle)', color: 'text-orange-500', type: 'consumable' });
+        const attackBonus = adjacentPiece.attackBonus || 0;
+        const healthBonus = adjacentPiece.healthBonus || 0;
+        const speedBonus = adjacentPiece.speedBonus || 0;
+        
+        let effectText = '';
+        if (attackBonus > 0) effectText += `+${attackBonus} ATK `;
+        if (healthBonus > 0) effectText += `+${healthBonus} HP `;
+        if (speedBonus > 0) effectText += `+${speedBonus} SPD `;
+        
+        bonuses.push({ source: adjacentPiece.name, effect: `${effectText.trim()} (preview)`, color: 'text-orange-500', type: 'consumable' });
       }
     }
   });
@@ -297,26 +319,33 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]):
   // Add consumed effects to bonuses (stack duplicates)
   const enhancedPiece = piece as EnhancedGamePiece;
   if (enhancedPiece.consumedEffects) {
-    // Group consumed effects by consumable name and effect
-    const consumedGroups = new Map<string, { count: number; effect: string }>();
+    // For shop phase, we want to show preview effects stacked by consumable type
+    const consumableEffectMap = new Map<string, { attack: number; health: number; speed: number; count: number }>();
     
     enhancedPiece.consumedEffects.forEach(effect => {
-      const key = `${effect.consumableName}:${effect.effect}`;
-      if (consumedGroups.has(key)) {
-        consumedGroups.get(key)!.count++;
-      } else {
-        consumedGroups.set(key, { count: 1, effect: effect.effect });
-      }
+      const existing = consumableEffectMap.get(effect.consumableName) || { attack: 0, health: 0, speed: 0, count: 0 };
+      existing.attack += effect.attackBonus || 0;
+      existing.health += effect.healthBonus || 0;
+      existing.speed += effect.speedBonus || 0;
+      existing.count += 1;
+      consumableEffectMap.set(effect.consumableName, existing);
     });
     
-    // Add stacked bonuses
-    consumedGroups.forEach(({ count, effect }, key) => {
-      const consumableName = key.split(':')[0];
-      const displayEffect = count > 1 ? `${effect} (×${count})` : effect;
+    // Add stacked entries for each consumable type
+    consumableEffectMap.forEach((totals, consumableName) => {
+      let effectParts: string[] = [];
+      if (totals.attack > 0) effectParts.push(`+${totals.attack} ATK`);
+      if (totals.health > 0) effectParts.push(`+${totals.health} HP`);
+      if (totals.speed > 0) effectParts.push(`+${totals.speed} SPD`);
+      
+      const effectText = effectParts.join(' ');
+      const countText = totals.count > 1 ? ` (×${totals.count})` : '';
+      const displayEffect = `${effectText}${countText} (preview)`;
+      
       bonuses.push({ 
         source: consumableName, 
         effect: displayEffect, 
-        color: 'text-orange-600', 
+        color: 'text-orange-500', 
         type: 'consumable' 
       });
     });
@@ -396,14 +425,17 @@ export const getBonusProviders = (piece: GamePiece, allPieces: GamePiece[]): str
 
 // Main analysis function
 export const analyzeTank = (pieces: GamePiece[]): TankAnalysis => {
-  const fishPieces = pieces.filter(piece => piece.type === 'fish');
+  // Only analyze pieces that are actually placed on the grid
+  const placedPieces = pieces.filter(piece => piece.position);
+  
+  const fishPieces = placedPieces.filter(piece => piece.type === 'fish');
   const allRelevantPieces = pieces.filter(piece => 
     piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
-  );
+  ).filter(piece => piece.position);
   
-  // Apply bonuses
-  const enhancedFish = applyBonusesToPieces(fishPieces, pieces);
-  const enhancedAll = applyBonusesToPieces(allRelevantPieces, pieces);
+  // Apply bonuses (including consumable preview effects)
+  const enhancedFish = applyBonusesToPieces(fishPieces, placedPieces);
+  const enhancedAll = applyBonusesToPieces(allRelevantPieces, placedPieces);
   
   // Calculate base stats
   const baseAttack = fishPieces.reduce((total, piece) => total + piece.stats.attack, 0);

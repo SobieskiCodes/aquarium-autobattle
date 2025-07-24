@@ -1,7 +1,7 @@
 import React from 'react';
 import { GamePiece, Position } from '../types/game';
 import { getTypeColor } from '../data/pieces';
-import { calculatePieceBonuses, getBonusProviders } from '../utils/tankAnalysis';
+import { calculatePieceBonuses, getBonusProviders, applyBonusesToPieces } from '../utils/tankAnalysis';
 
 interface TankGridProps {
   pieces: GamePiece[];
@@ -13,6 +13,7 @@ interface TankGridProps {
   onDragEnd?: () => void;
   currentDraggedPiece?: GamePiece | null;
   hoveredCardPiece?: GamePiece | null;
+  isBattlePhase?: boolean;
 }
 
 export const TankGrid: React.FC<TankGridProps> = ({
@@ -24,7 +25,8 @@ export const TankGrid: React.FC<TankGridProps> = ({
   onDragStart,
   onDragEnd,
   currentDraggedPiece,
-  hoveredCardPiece
+  hoveredCardPiece,
+  isBattlePhase = false
 }) => {
   const GRID_WIDTH = 8;
   const GRID_HEIGHT = 6;
@@ -84,9 +86,33 @@ export const TankGrid: React.FC<TankGridProps> = ({
   const handlePieceHover = (piece: GamePiece, event: React.MouseEvent) => {
     setHoveredPiece(piece);
     const rect = event.currentTarget.getBoundingClientRect();
+    const containerRect = event.currentTarget.closest('.relative')?.getBoundingClientRect();
+    
+    // Position tooltip near mouse but ensure it stays in viewport
+    let x = event.clientX + 10;
+    let y = event.clientY - 10;
+    
+    // Adjust if tooltip would go off screen
+    const tooltipWidth = 320; // approximate tooltip width
+    const tooltipHeight = 200; // approximate tooltip height
+    
+    if (x + tooltipWidth > window.innerWidth) {
+      x = event.clientX - tooltipWidth - 10;
+    }
+    
+    if (y + tooltipHeight > window.innerHeight) {
+      y = event.clientY - tooltipHeight - 10;
+    }
+    
+    // Convert to relative positioning if we have a container
+    if (containerRect) {
+      x = x - containerRect.left;
+      y = y - containerRect.top;
+    }
+    
     setTooltipPosition({
-      x: rect.right + 10,
-      y: rect.top
+      x: Math.max(10, x),
+      y: Math.max(10, y)
     });
   };
 
@@ -190,49 +216,49 @@ export const TankGrid: React.FC<TankGridProps> = ({
       {/* Tooltip */}
       {hoveredPiece && tooltipPosition && (
         <div
-          className="absolute z-50 bg-gray-900 text-white p-3 rounded-lg shadow-xl border border-gray-700 max-w-xs pointer-events-none"
+          className="fixed z-50 bg-gray-900 text-white p-3 rounded-lg shadow-xl border border-gray-700 max-w-xs pointer-events-none"
           style={{
             left: tooltipPosition.x,
-            top: tooltipPosition.y,
-            transform: 'translateY(-50%)'
+            top: tooltipPosition.y
           }}
         >
           <div className="text-sm font-bold mb-1">{hoveredPiece.name}</div>
           {(() => {
-            const bonuses = calculatePieceBonuses(hoveredPiece, pieces);
-            const bonusAttack = bonuses.filter(b => b.effect.includes('ATK')).reduce((sum, b) => {
-              const match = b.effect.match(/\+(\d+) ATK/);
-              return sum + (match ? parseInt(match[1]) : 0);
-            }, 0);
-            const bonusHealth = bonuses.filter(b => b.effect.includes('HP')).reduce((sum, b) => {
-              const match = b.effect.match(/\+(\d+) HP/);
-              return sum + (match ? parseInt(match[1]) : 0);
-            }, 0);
-            const bonusSpeed = bonuses.some(b => b.effect.includes('Double Speed')) ? hoveredPiece.stats.speed : 0;
+            // Apply bonuses to get enhanced piece for display
+            const enhancedPieces = applyBonusesToPieces([hoveredPiece], pieces);
+            const enhancedPiece = enhancedPieces[0] as any;
             
-            const finalAttack = hoveredPiece.stats.attack + bonusAttack;
-            const finalHealth = hoveredPiece.stats.health + bonusHealth;
-            const finalSpeed = hoveredPiece.stats.speed + bonusSpeed;
+            // Get original stats
+            const originalStats = enhancedPiece.originalStats || {
+              attack: hoveredPiece.stats.attack,
+              health: hoveredPiece.stats.health,
+              speed: hoveredPiece.stats.speed
+            };
+            
+            // Calculate bonuses
+            const attackBonus = enhancedPiece.stats.attack - originalStats.attack;
+            const healthBonus = enhancedPiece.stats.health - originalStats.health;
+            const speedBonus = enhancedPiece.stats.speed - originalStats.speed;
             
             return (
               <div className="text-xs text-gray-300 mb-2">
                 <div className="flex gap-4">
                   <span>
-                    ATK: <span className="text-red-400 font-bold">{finalAttack}</span>
-                    {bonusAttack > 0 && <span className="text-green-400"> (+{bonusAttack})</span>}
+                    ATK: <span className="text-red-400 font-bold">{enhancedPiece.stats.attack}</span>
+                    {attackBonus > 0 && <span className="text-green-400"> (+{attackBonus})</span>}
                   </span>
                   <span>
-                    HP: <span className="text-green-400 font-bold">{finalHealth}</span>
-                    {bonusHealth > 0 && <span className="text-green-400"> (+{bonusHealth})</span>}
+                    HP: <span className="text-green-400 font-bold">{enhancedPiece.stats.health}</span>
+                    {healthBonus > 0 && <span className="text-green-400"> (+{healthBonus})</span>}
                   </span>
                   <span>
-                    SPD: <span className="text-blue-400 font-bold">{finalSpeed}</span>
-                    {bonusSpeed > 0 && <span className="text-cyan-400"> (+{bonusSpeed})</span>}
+                    SPD: <span className="text-blue-400 font-bold">{enhancedPiece.stats.speed}</span>
+                    {speedBonus > 0 && <span className="text-cyan-400"> (+{speedBonus})</span>}
                   </span>
                 </div>
-                {(bonusAttack > 0 || bonusHealth > 0 || bonusSpeed > 0) && (
+                {(attackBonus > 0 || healthBonus > 0 || speedBonus > 0) && (
                   <div className="text-xs text-gray-400 mt-1">
-                    Base: {hoveredPiece.stats.attack}/{hoveredPiece.stats.health}/{hoveredPiece.stats.speed}
+                    Base: {originalStats.attack}/{originalStats.health}/{originalStats.speed}
                   </div>
                 )}
               </div>
@@ -249,11 +275,11 @@ export const TankGrid: React.FC<TankGridProps> = ({
           )}
           
           {(() => {
-            const bonuses = calculatePieceBonuses(hoveredPiece, pieces);
-            const adjacencyBonuses = bonuses.filter(b => b.type === 'adjacency' || b.type === 'ability');
-            const consumableBonuses = bonuses.filter(b => b.type === 'consumable');
+            const allBonuses = calculatePieceBonuses(hoveredPiece, pieces);
+            const adjacencyBonuses = allBonuses.filter(b => b.type === 'adjacency' || b.type === 'ability');
+            const consumableBonuses = allBonuses.filter(b => b.type === 'consumable');
             
-            return bonuses.length > 0 && (
+            return allBonuses.length > 0 && (
             <div className="text-xs border-t border-gray-700 pt-2">
               {adjacencyBonuses.length > 0 && (
                 <div className="mb-2">
@@ -273,7 +299,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
                   </div>
                   {consumableBonuses.map((bonus, index) => (
                     <div key={index} className={bonus.color}>
-                      • {bonus.effect} (from {bonus.source})
+                      • {bonus.source} {bonus.effect}
                     </div>
                   ))}
                 </div>

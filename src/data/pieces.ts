@@ -133,7 +133,22 @@ export const PIECE_LIBRARY: GamePiece[] = [
     stats: { attack: 0, health: 1, speed: 0, maxHealth: 1 },
     tags: ['food', 'consumable'],
     cost: 2,
-    abilities: ['+1 ATK & +1 HP to adjacent fish this battle']
+    abilities: ['+1 ATK & +1 HP to adjacent fish this battle'],
+    attackBonus: 1,
+    healthBonus: 1
+  },
+  {
+    id: 'blood-worm',
+    name: 'Blood Worm',
+    type: 'consumable',
+    rarity: 'common',
+    shape: [{ x: 0, y: 0 }],
+    stats: { attack: 0, health: 1, speed: 0, maxHealth: 1 },
+    tags: ['food', 'consumable'],
+    cost: 3,
+    abilities: ['+1 ATK & +2 HP to adjacent fish this battle'],
+    attackBonus: 1,
+    healthBonus: 2
   }
 ];
 

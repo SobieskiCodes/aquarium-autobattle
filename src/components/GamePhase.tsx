@@ -14,7 +14,7 @@ interface GamePhaseProps {
   onPlacePiece: (piece: any, position: any) => void;
   onMovePiece: (piece: any, position: any) => void;
   onRerollShop: () => void;
-  onStartBattle: () => void;
+  onEnterBattlePrep: () => void;
   onCompleteBattle: (result: 'player' | 'opponent' | 'draw') => void;
   onSelectPiece: (piece: any) => void;
   onCancelPlacement: () => void;
@@ -29,7 +29,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   onPlacePiece,
   onMovePiece,
   onRerollShop,
-  onStartBattle,
+  onEnterBattlePrep,
   onCompleteBattle,
   onSelectPiece,
   onCancelPlacement,
@@ -104,7 +104,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             </div>
           )}
           <button
-            onClick={onStartBattle}
+            onClick={onEnterBattlePrep}
             disabled={gameState.playerTank.pieces.length === 0}
             className={`
               flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
@@ -115,7 +115,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             `}
           >
             <Play size={16} />
-            {gameState.round === 15 ? 'Final Battle!' : 'Battle!'}
+            {gameState.round === 15 ? 'Final Battle!' : 'Battle Preparation'}
           </button>
         </div>
       </div>
@@ -126,11 +126,17 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           
           {/* Board Stats Summary */}
           {gameState.playerTank.pieces.length > 0 && (
+            (() => {
+              const placedPieces = gameState.playerTank.pieces.filter(p => p.position);
+              const analysis = analyzeTank(placedPieces);
+              return (
             <TankSummary
-              analysis={analyzeTank(gameState.playerTank.pieces)}
+              analysis={analysis}
               waterQuality={gameState.playerTank.waterQuality}
               className="mb-4"
             />
+              );
+            })()
           )}
           
           <TankGrid
@@ -232,10 +238,13 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
 
   switch (gameState.phase) {
     case 'shop':
+      // SHOP SCREEN: Buy pieces, place on grid, has shop at bottom
       return renderShopPhase();
     case 'placement':
       return renderPlacementPhase();
     case 'battle':
+      // BATTLE PREPARATION SCREEN: Stats comparison, "Start Battle" button
+      // This is NOT the actual battle animation - that happens within BattleView
       return renderBattlePhase();
     default:
       return renderShopPhase();
