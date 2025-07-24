@@ -225,59 +225,66 @@ export const PieceCard: React.FC<PieceCardProps> = ({
         ))}
       </div>
 
-      {/* Abilities */}
+      {/* Abilities Button with Hover Tooltip */}
       {piece.abilities && piece.abilities.length > 0 && (
-        <div className="text-xs text-gray-600 flex-1 flex flex-col min-h-0">
-          <div className="font-medium mb-1 text-gray-800">Abilities:</div>
-          <ul className="space-y-0.5 text-xs flex-1 overflow-y-auto">
-            {piece.abilities.slice(0, isInShop ? 2 : 3).map((ability, index) => (
-              <li key={index} className="leading-tight text-xs">
-                • <span dangerouslySetInnerHTML={{ __html: ability.replace(/~~(.+?)~~/g, '<del>$1</del>') }} />
-              </li>
-            ))}
-            {piece.type === 'consumable' && (
-              <li className="text-orange-600 font-medium text-xs">⚡ Consumed at battle start if placed</li>
-            )}
-           {!piece.position && showSellOption && piece.type === 'consumable' && (
-             <li className="text-red-600 font-medium text-xs">⚠️ Will disappear if not placed before battle!</li>
-           )}
-          </ul>
+        <div className="relative group flex-1 flex flex-col justify-end">
+          <button className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-medium py-2 px-3 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-200 shadow-sm">
+            📋 View Abilities ({piece.abilities.length})
+          </button>
           
-          {/* Show consumed items summary */}
-          {hasConsumedItems && (
-            <div className="mt-1 pt-1 border-t border-gray-200 min-h-0">
-              <div className="text-xs font-medium text-orange-600 mb-1">
-                Consumed Items ({consumedCount}):
+          {/* Hover Tooltip */}
+          <div className="absolute bottom-full left-0 right-0 mb-2 bg-gray-900 text-white p-3 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 max-w-xs">
+            <div className="text-xs font-bold mb-2 text-blue-300">Abilities:</div>
+            <ul className="space-y-1 text-xs">
+              {piece.abilities.map((ability, index) => (
+                <li key={index} className="leading-tight">
+                  • <span dangerouslySetInnerHTML={{ __html: ability.replace(/~~(.+?)~~/g, '<del class="opacity-60">$1</del>') }} />
+                </li>
+              ))}
+              {piece.type === 'consumable' && (
+                <li className="text-orange-400 font-medium mt-2">
+                  ⚡ Consumed at battle start if placed
+                </li>
+              )}
+              {!piece.position && showSellOption && piece.type === 'consumable' && (
+                <li className="text-red-400 font-medium">
+                  ⚠️ Will disappear if not placed before battle!
+                </li>
+              )}
+            </ul>
+            
+            {/* Show consumed items summary in tooltip */}
+            {hasConsumedItems && (
+              <div className="mt-2 pt-2 border-t border-gray-700">
+                <div className="text-xs font-medium text-orange-400 mb-1">
+                  Consumed Items ({consumedCount}):
+                </div>
+                {(() => {
+                  // Group consumed effects by consumable name
+                  const consumedGroups = new Map<string, number>();
+                  enhancedPiece.consumedEffects?.forEach(effect => {
+                    const count = consumedGroups.get(effect.consumableName) || 0;
+                    consumedGroups.set(effect.consumableName, count + 1);
+                  });
+                  
+                  const groupedEntries = Array.from(consumedGroups.entries());
+                  
+                  return (
+                    <div className="text-xs text-orange-300">
+                      {groupedEntries.map(([name, count], index) => (
+                        <div key={index}>
+                          • {name}{count > 1 ? ` (×${count})` : ''}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
-              {(() => {
-                // Group consumed effects by consumable name
-                const consumedGroups = new Map<string, number>();
-                enhancedPiece.consumedEffects?.forEach(effect => {
-                  const count = consumedGroups.get(effect.consumableName) || 0;
-                  consumedGroups.set(effect.consumableName, count + 1);
-                });
-                
-                const groupedEntries = Array.from(consumedGroups.entries());
-                const displayEntries = groupedEntries.slice(0, 2);
-                const remainingCount = groupedEntries.length > 2 ? groupedEntries.length - 2 : 0;
-                
-                return (
-                  <div className="text-xs text-orange-700">
-                    {displayEntries.map(([name, count], index) => (
-                      <div key={index} className="truncate">
-                        • {name}{count > 1 ? ` (×${count})` : ''}
-                      </div>
-                    ))}
-                    {remainingCount > 0 && (
-                      <div className="text-xs text-gray-500">
-                        +{remainingCount} more type{remainingCount > 1 ? 's' : ''}...
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-          )}
+            )}
+            
+            {/* Tooltip Arrow */}
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+          </div>
         </div>
       )}
     </div>

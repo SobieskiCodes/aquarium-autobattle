@@ -88,7 +88,7 @@ export const Shop: React.FC<ShopProps> = ({
       
       {/* Shop Items */}
       <div className="flex-1 p-4 min-h-0">
-        <div className="grid grid-cols-2 gap-4 h-full">
+        <div className="grid grid-cols-2 gap-3 h-full">
           {/* First 5 shop slots */}
           {pieces.map((piece, index) => (
             <div key={piece ? piece.id : `empty-${index}`} className="relative">
@@ -130,7 +130,7 @@ export const Shop: React.FC<ShopProps> = ({
                   />
                 </div>
               ) : (
-                <div className="h-40 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 bg-gray-50">
+                <div className="h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 bg-gray-50">
                   <div className="text-2xl mb-1">📦</div>
                   <span className="text-sm font-medium">Sold Out</span>
                 </div>
@@ -149,7 +149,7 @@ export const Shop: React.FC<ShopProps> = ({
               </div>
             </div>
             
-            <div className="h-40 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-3 flex flex-col justify-between">
+            <div className="h-32 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-3 flex flex-col justify-between">
               <div className="space-y-2">
                 <div className="text-xs font-bold text-purple-800">💰 Economy Tips</div>
                 <div className="text-xs text-purple-700 space-y-1">
