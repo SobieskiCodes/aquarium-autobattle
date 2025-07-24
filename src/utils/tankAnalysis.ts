@@ -426,14 +426,17 @@ export const getBonusProviders = (piece: GamePiece, allPieces: GamePiece[]): str
 
 // Main analysis function
 export const analyzeTank = (pieces: GamePiece[]): TankAnalysis => {
-  const fishPieces = pieces.filter(piece => piece.type === 'fish');
+  // Only analyze pieces that are actually placed on the grid
+  const placedPieces = pieces.filter(piece => piece.position);
+  
+  const fishPieces = placedPieces.filter(piece => piece.type === 'fish');
   const allRelevantPieces = pieces.filter(piece => 
     piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
-  );
+  ).filter(piece => piece.position);
   
   // Apply bonuses
-  const enhancedFish = applyBonusesToPieces(fishPieces, pieces);
-  const enhancedAll = applyBonusesToPieces(allRelevantPieces, pieces);
+  const enhancedFish = applyBonusesToPieces(fishPieces, placedPieces);
+  const enhancedAll = applyBonusesToPieces(allRelevantPieces, placedPieces);
   
   // Calculate base stats
   const baseAttack = fishPieces.reduce((total, piece) => total + piece.stats.attack, 0);
