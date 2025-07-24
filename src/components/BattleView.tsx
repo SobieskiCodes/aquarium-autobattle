@@ -447,7 +447,7 @@ export const BattleView: React.FC<BattleViewProps> = ({
                 className="flex items-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-lg font-bold hover:bg-gray-100 hover:shadow-md transition-all"
               >
                 <ArrowRight size={20} />
-                Continue to Next Round
+                {currentRound >= 15 ? 'Complete Campaign!' : 'Continue to Next Round'}
               </button>
             ) : (
               <div className="px-6 py-3 bg-white/20 rounded-lg">
