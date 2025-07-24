@@ -114,17 +114,6 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
     adjacentPositions.forEach(pos => {
       const adjacentPiece = grid[pos.y][pos.x];
       if (adjacentPiece && adjacentPiece.id !== piece.id) {
-        // Consumable preview effects (not actually consumed yet)
-        if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
-          const attackBonus = adjacentPiece.attackBonus || 0;
-          const healthBonus = adjacentPiece.healthBonus || 0;
-          const speedBonus = adjacentPiece.speedBonus || 0;
-          
-          bonusAttack += attackBonus;
-          bonusHealth += healthBonus;
-          bonusSpeed += speedBonus;
-        }
-        
         // Check for sponge filter amplification first
         const hasSpongeFilter = allPieces.some(p => 
           p.id.includes('sponge-filter') && p.position &&
@@ -153,6 +142,20 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
           const bonus = hasSpongeFilter ? 2 : 1; // Amplified by sponge filter
           bonusHealth += bonus;
         }
+      }
+    });
+    
+    // Apply consumable bonuses (stacking) - do this after other bonuses
+    adjacentPositions.forEach(pos => {
+      const adjacentPiece = grid[pos.y][pos.x];
+      if (adjacentPiece && adjacentPiece.id !== piece.id && adjacentPiece.type === 'consumable' && piece.type === 'fish') {
+        const attackBonus = adjacentPiece.attackBonus || 0;
+        const healthBonus = adjacentPiece.healthBonus || 0;
+        const speedBonus = adjacentPiece.speedBonus || 0;
+        
+        bonusAttack += attackBonus;
+        bonusHealth += healthBonus;
+        bonusSpeed += speedBonus;
       }
     });
     
@@ -316,51 +319,37 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]):
   // Add consumed effects to bonuses (stack duplicates)
   const enhancedPiece = piece as EnhancedGamePiece;
   if (enhancedPiece.consumedEffects) {
-    // Group consumed effects by consumable name (not by effect, since effects should be identical for same consumable type)
-    const consumedGroups = new Map<string, { count: number; attackBonus: number; healthBonus: number; speedBonus: number }>();
+    // Stack all consumed effects by type, not by individual consumable
+    let totalConsumedAttack = 0;
+    let totalConsumedHealth = 0;
+    let totalConsumedSpeed = 0;
+    const consumableNames = new Set<string>();
     
     enhancedPiece.consumedEffects.forEach(effect => {
-      const consumableName = effect.consumableName;
-      if (consumedGroups.has(consumableName)) {
-        const existing = consumedGroups.get(consumableName)!;
-        existing.count++;
-        // Accumulate bonuses
-        existing.attackBonus += effect.attackBonus || 0;
-        existing.healthBonus += effect.healthBonus || 0;
-        existing.speedBonus += effect.speedBonus || 0;
-      } else {
-        // Parse the effect to extract bonuses (fallback if not stored separately)
-        const attackMatch = effect.effect.match(/\+(\d+) ATK/);
-        const healthMatch = effect.effect.match(/\+(\d+) HP/);
-        const speedMatch = effect.effect.match(/\+(\d+) SPD/);
-        
-        consumedGroups.set(consumableName, {
-          count: 1,
-          attackBonus: effect.attackBonus || (attackMatch ? parseInt(attackMatch[1]) : 0),
-          healthBonus: healthMatch ? parseInt(healthMatch[1]) : 0,
-          speedBonus: speedMatch ? parseInt(speedMatch[1]) : 0
-        });
-      }
+      totalConsumedAttack += effect.attackBonus || 0;
+      totalConsumedHealth += effect.healthBonus || 0;
+      totalConsumedSpeed += effect.speedBonus || 0;
+      consumableNames.add(effect.consumableName);
     });
     
-    // Add stacked bonuses
-    consumedGroups.forEach(({ count, attackBonus, healthBonus, speedBonus }, consumableName) => {
-      // Build effect string from accumulated bonuses
+    // Add single stacked bonus entry if any consumed effects exist
+    if (totalConsumedAttack > 0 || totalConsumedHealth > 0 || totalConsumedSpeed > 0) {
       let effectParts: string[] = [];
-      if (attackBonus > 0) effectParts.push(`+${attackBonus} ATK`);
-      if (healthBonus > 0) effectParts.push(`+${healthBonus} HP`);
-      if (speedBonus > 0) effectParts.push(`+${speedBonus} SPD`);
+      if (totalConsumedAttack > 0) effectParts.push(`+${totalConsumedAttack} ATK`);
+      if (totalConsumedHealth > 0) effectParts.push(`+${totalConsumedHealth} HP`);
+      if (totalConsumedSpeed > 0) effectParts.push(`+${totalConsumedSpeed} SPD`);
       
       const effectText = effectParts.join(' ');
-      const displayEffect = `${effectText} ×${count} (${consumableName})`;
+      const consumableList = Array.from(consumableNames).join(', ');
+      const displayEffect = `${effectText} (from ${consumableList})`;
       
       bonuses.push({ 
-        source: consumableName, 
+        source: 'Consumed Items', 
         effect: displayEffect, 
         color: 'text-orange-600', 
         type: 'consumable' 
       });
-    });
+    }
   }
   
   return bonuses;
