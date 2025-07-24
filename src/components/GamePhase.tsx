@@ -66,9 +66,9 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   };
 
   const renderShopPhase = () => (
-    <div className="flex gap-4 h-[calc(100vh-180px)] max-h-[800px]">
+    <div className="flex gap-4 h-[calc(100vh-160px)] max-h-[900px]">
       {/* Left Sidebar - Shop */}
-      <div className="w-72 flex-shrink-0 overflow-y-auto">
+      <div className="w-80 flex-shrink-0 overflow-y-auto">
         <Shop
           pieces={gameState.shop}
           gold={gameState.gold}
