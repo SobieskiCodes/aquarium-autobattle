@@ -695,7 +695,7 @@ export const useGame = () => {
       if (prev.gold < rerollCost) return prev;
       
       // Generate new shop but preserve locked item
-      const newShop = getRandomShop(5);
+      const newShop = getRandomShop(6);
       if (prev.lockedShopIndex !== null && prev.shop[prev.lockedShopIndex]) {
         newShop[prev.lockedShopIndex] = prev.shop[prev.lockedShopIndex];
       }
@@ -921,13 +921,13 @@ export const useGame = () => {
         rerollsThisRound: 0, // Reset reroll count for new round
         shop: (() => {
           // Generate new shop but preserve locked item
-          const newShop = getRandomShop(5);
+          const newShop = getRandomShop(6);
           if (prev.lockedShopIndex !== null && prev.shop[prev.lockedShopIndex]) {
             newShop[prev.lockedShopIndex] = prev.shop[prev.lockedShopIndex];
           }
           return newShop;
         })(),
-        opponentShop: getRandomShop(5),
+        opponentShop: getRandomShop(6),
         battleEvents: [],
         goldHistory: [...prev.goldHistory, ...transactions]
       };

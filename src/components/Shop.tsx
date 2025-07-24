@@ -88,8 +88,8 @@ export const Shop: React.FC<ShopProps> = ({
       
       {/* Shop Items */}
       <div className="flex-1 p-4 min-h-0">
-        <div className="grid grid-cols-2 gap-3 h-full">
-          {/* First 5 shop slots */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* All 6 shop slots */}
           {pieces.map((piece, index) => (
             <div key={piece ? piece.id : `empty-${index}`} className="relative">
               {/* Slot Header */}
@@ -137,42 +137,6 @@ export const Shop: React.FC<ShopProps> = ({
               )}
             </div>
           ))}
-          
-          {/* 6th Slot - Utility Card */}
-          <div className="relative">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded text-xs font-bold flex items-center justify-center">
-                  ⚡
-                </div>
-                <span className="text-sm font-medium text-gray-700">Game Info</span>
-              </div>
-            </div>
-            
-            <div className="h-32 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-3 flex flex-col justify-between">
-              <div className="space-y-2">
-                <div className="text-xs font-bold text-purple-800">💰 Economy Tips</div>
-                <div className="text-xs text-purple-700 space-y-1">
-                  <div>• Save gold for interest (+{Math.min(Math.floor(gold / 10), 5)}g next)</div>
-                  <div>• Reroll cost: {currentRerollCost}g ({rerollsThisRound}/∞)</div>
-                  {rerollsThisRound >= 5 && (
-                    <div className="text-red-600 font-medium">• Rerolls getting expensive!</div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex gap-1">
-                <div className="flex-1 bg-white/50 rounded px-2 py-1 text-center">
-                  <div className="text-xs text-gray-600">Interest</div>
-                  <div className="text-sm font-bold text-green-600">+{nextInterest}g</div>
-                </div>
-                <div className="flex-1 bg-white/50 rounded px-2 py-1 text-center">
-                  <div className="text-xs text-gray-600">Rerolls</div>
-                  <div className="text-sm font-bold text-blue-600">{rerollsThisRound}</div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
       

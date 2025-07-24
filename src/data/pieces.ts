@@ -152,7 +152,7 @@ export const PIECE_LIBRARY: GamePiece[] = [
   }
 ];
 
-export function getRandomShop(count: number = 5): (GamePiece | null)[] {
+export function getRandomShop(count: number = 6): (GamePiece | null)[] {
   const shop: (GamePiece | null)[] = [];
   
   for (let i = 0; i < count; i++) {
