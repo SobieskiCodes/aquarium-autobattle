@@ -1,7 +1,7 @@
 import React from 'react';
 import { GamePiece, Position } from '../types/game';
 import { getTypeColor } from '../data/pieces';
-import { calculatePieceBonuses, getBonusProviders } from '../utils/tankAnalysis';
+import { calculatePieceBonuses, getBonusProviders, applyBonusesToPieces } from '../utils/tankAnalysis';
 
 interface TankGridProps {
   pieces: GamePiece[];
@@ -224,76 +224,39 @@ export const TankGrid: React.FC<TankGridProps> = ({
         >
           <div className="text-sm font-bold mb-1">{hoveredPiece.name}</div>
           {(() => {
-            // Get adjacency and ability bonuses
-            const allBonuses = calculatePieceBonuses(hoveredPiece, pieces);
-            const bonuses = allBonuses.filter(b => b.type !== 'consumable'); // Filter out consumable bonuses since we'll show them separately
+            // Apply bonuses to get enhanced piece for display
+            const enhancedPieces = applyBonusesToPieces([hoveredPiece], pieces);
+            const enhancedPiece = enhancedPieces[0] as any;
             
-            // Show consumed effects if they exist (with actual item names)
-            const enhancedPiece = hoveredPiece as any; // EnhancedGamePiece type
-            if (enhancedPiece.consumedEffects) {
-              // Group consumed effects by consumable name
-              const consumedGroups = new Map<string, number>();
-              
-              enhancedPiece.consumedEffects.forEach(effect => {
-                const count = consumedGroups.get(effect.consumableName) || 0;
-                consumedGroups.set(effect.consumableName, count + 1);
-              });
-              
-              // Add each consumed item type as a separate bonus line with actual names
-              consumedGroups.forEach((count, consumableName) => {
-                bonuses.push({ 
-                  source: consumableName, 
-                  effect: `×${count} (consumed)`, 
-                  color: 'text-orange-500', 
-                  type: 'consumable' 
-                });
-              });
-            }
-            
-            // Get the original stats before any enhancements
+            // Get original stats
             const originalStats = enhancedPiece.originalStats || {
               attack: hoveredPiece.stats.attack,
               health: hoveredPiece.stats.health,
               speed: hoveredPiece.stats.speed
             };
             
-            const bonusAttack = bonuses.filter(b => b.effect.includes('ATK')).reduce((sum, b) => {
-              const match = b.effect.match(/\+(\d+) ATK/);
-              return sum + (match ? parseInt(match[1]) : 0);
-            }, 0);
-            const bonusHealth = bonuses.filter(b => b.effect.includes('HP')).reduce((sum, b) => {
-              const match = b.effect.match(/\+(\d+) HP/);
-              return sum + (match ? parseInt(match[1]) : 0);
-            }, 0);
-            const bonusSpeed = bonuses.some(b => b.effect.includes('Double Speed')) ? originalStats.speed : 0;
-            
-            // Calculate final stats from original stats + all bonuses
-            const finalAttack = originalStats.attack + bonusAttack + (hoveredPiece.stats.attack - originalStats.attack);
-            const finalHealth = originalStats.health + bonusHealth + (hoveredPiece.stats.health - originalStats.health);
-            const finalSpeed = originalStats.speed + bonusSpeed + (hoveredPiece.stats.speed - originalStats.speed);
-            
-            // Calculate total bonuses (including consumed items)
-            const totalAttackBonus = finalAttack - originalStats.attack;
-            const totalHealthBonus = finalHealth - originalStats.health;
-            const totalSpeedBonus = finalSpeed - originalStats.speed;
+            // Calculate bonuses
+            const attackBonus = enhancedPiece.stats.attack - originalStats.attack;
+            const healthBonus = enhancedPiece.stats.health - originalStats.health;
+            const speedBonus = enhancedPiece.stats.speed - originalStats.speed;
             
             return (
               <div className="text-xs text-gray-300 mb-2">
                 <div className="flex gap-4">
                   <span>
-                    ATK: <span className="text-red-400 font-bold">{hoveredPiece.stats.attack}</span>
-                    {hoveredPiece.stats.attack > originalStats.attack && <span className="text-green-400"> (+{hoveredPiece.stats.attack - originalStats.attack})</span>}
+                    ATK: <span className="text-red-400 font-bold">{enhancedPiece.stats.attack}</span>
+                    {attackBonus > 0 && <span className="text-green-400"> (+{attackBonus})</span>}
                   </span>
                   <span>
-                    HP: <span className="text-green-400 font-bold">{hoveredPiece.stats.health}</span>
-                    {hoveredPiece.stats.health > originalStats.health && <span className="text-green-400"> (+{hoveredPiece.stats.health - originalStats.health})</span>}
+                    HP: <span className="text-green-400 font-bold">{enhancedPiece.stats.health}</span>
+                    {healthBonus > 0 && <span className="text-green-400"> (+{healthBonus})</span>}
                   </span>
                   <span>
-                    SPD: <span className="text-blue-400 font-bold">{hoveredPiece.stats.speed}</span>
-                    {hoveredPiece.stats.speed > originalStats.speed && <span className="text-cyan-400"> (+{hoveredPiece.stats.speed - originalStats.speed})</span>}
+                    SPD: <span className="text-blue-400 font-bold">{enhancedPiece.stats.speed}</span>
+                    {speedBonus > 0 && <span className="text-cyan-400"> (+{speedBonus})</span>}
                   </span>
                 </div>
-                {(hoveredPiece.stats.attack > originalStats.attack || hoveredPiece.stats.health > originalStats.health || hoveredPiece.stats.speed > originalStats.speed) && (
+                {(attackBonus > 0 || healthBonus > 0 || speedBonus > 0) && (
                   <div className="text-xs text-gray-400 mt-1">
                     Base: {originalStats.attack}/{originalStats.health}/{originalStats.speed}
                   </div>
@@ -312,11 +275,11 @@ export const TankGrid: React.FC<TankGridProps> = ({
           )}
           
           {(() => {
-            const bonuses = calculatePieceBonuses(hoveredPiece, pieces);
-            const adjacencyBonuses = bonuses.filter(b => b.type === 'adjacency' || b.type === 'ability');
-            const consumableBonuses = bonuses.filter(b => b.type === 'consumable');
+            const allBonuses = calculatePieceBonuses(hoveredPiece, pieces);
+            const adjacencyBonuses = allBonuses.filter(b => b.type === 'adjacency' || b.type === 'ability');
+            const consumableBonuses = allBonuses.filter(b => b.type === 'consumable');
             
-            return bonuses.length > 0 && (
+            return allBonuses.length > 0 && (
             <div className="text-xs border-t border-gray-700 pt-2">
               {adjacencyBonuses.length > 0 && (
                 <div className="mb-2">
