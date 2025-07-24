@@ -85,101 +85,102 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
 
       {/* Center Content Area - Tank */}
       <div className="flex-1 space-y-3 overflow-y-auto min-w-0 max-w-3xl">
-      <div className="bg-gradient-to-r from-teal-500 to-blue-600 text-white p-3 rounded-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                <span className="text-sm">🏆</span>
-              </div>
-              <div>
-          <div>
-            <h1 className="text-xl font-bold">
-              Game Round {gameState.round}/15
-              {gameState.round === 15 && (
-                <span className="ml-2 text-yellow-300 text-base">🏁 Final Round!</span>
-              )}
-            </h1>
+        <div className="bg-gradient-to-r from-teal-500 to-blue-600 text-white p-3 rounded-lg">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <p className="text-sm opacity-90">Shop & Build Phase</p>
-              <div className="text-sm opacity-75">
-                Pieces: {gameState.playerTank.pieces.length} | 
-                Placed: {gameState.playerTank.pieces.filter(p => p.position).length}
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                  <span className="text-sm">🏆</span>
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold">
+                    Game Round {gameState.round}/15
+                    {gameState.round === 15 && (
+                      <span className="ml-2 text-yellow-300 text-base">🏁 Final Round!</span>
+                    )}
+                  </h1>
+                  <div className="flex items-center gap-4">
+                    <p className="text-sm opacity-90">Shop & Build Phase</p>
+                    <div className="text-sm opacity-75">
+                      Pieces: {gameState.playerTank.pieces.length} | 
+                      Placed: {gameState.playerTank.pieces.filter(p => p.position).length}
+                    </div>
+                    {gameState.lossStreak > 0 && (
+                      <div className="bg-red-500/20 px-2 py-1 rounded text-xs font-bold">
+                        Loss Streak: {gameState.lossStreak} (+{Math.min(gameState.lossStreak * 2, 10)} bonus gold next loss)
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              {gameState.lossStreak > 0 && (
-                <div className="bg-red-500/20 px-2 py-1 rounded text-xs font-bold">
-                  Loss Streak: {gameState.lossStreak} (+{Math.min(gameState.lossStreak * 2, 10)} bonus gold next loss)
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {/* Shop Lock Status */}
+              {gameState.lockedShopIndex !== null && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-yellow-800">
+                      <Lock size={16} />
+                      <span className="text-sm font-medium">Shop slot {gameState.lockedShopIndex + 1} is locked</span>
+                    </div>
+                    <button
+                      onClick={onClearShopLock}
+                      className="text-xs text-yellow-700 hover:text-yellow-900 underline"
+                    >
+                      Clear lock
+                    </button>
+                  </div>
                 </div>
               )}
-            </div>
+              
+              <button
+                onClick={onEnterBattlePrep}
+                disabled={gameState.playerTank.pieces.length === 0}
+                className={`
+                  flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all text-sm
+                  ${gameState.playerTank.pieces.length > 0
+                    ? 'bg-white text-teal-600 hover:bg-gray-100 hover:shadow-md'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }
+                `}
+              >
+                <Play size={16} />
+                {gameState.round === 15 ? 'Final Battle!' : 'Battle Preparation'}
+              </button>
             </div>
           </div>
-          
-          {/* Shop Lock Status */}
-          {gameState.lockedShopIndex !== null && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-yellow-800">
-                  <Lock size={16} />
-                  <span className="text-sm font-medium">Shop slot {gameState.lockedShopIndex + 1} is locked</span>
-                </div>
-                <button
-                  onClick={onClearShopLock}
-                  className="text-xs text-yellow-700 hover:text-yellow-900 underline"
-                >
-                  Clear lock
-                </button>
-              </div>
-            </div>
-          )}
-          <button
-            onClick={onEnterBattlePrep}
-            disabled={gameState.playerTank.pieces.length === 0}
-            className={`
-              flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all text-sm
-              ${gameState.playerTank.pieces.length > 0
-                ? 'bg-white text-teal-600 hover:bg-gray-100 hover:shadow-md'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }
-            `}
-          >
-            <Play size={16} />
-            {gameState.round === 15 ? 'Final Battle!' : 'Battle Preparation'}
-          </button>
         </div>
-      </div>
-      </div>
 
         <div className="space-y-2">
           <div className="space-y-3">
-          <h2 className="text-lg font-bold text-gray-900">Your Tank</h2>
-          
-          {/* Board Stats Summary */}
-          {gameState.playerTank.pieces.length > 0 && (
-            (() => {
-              const placedPieces = gameState.playerTank.pieces.filter(p => p.position);
-              const analysis = analyzeTank(placedPieces);
-              return (
-            <TankSummary
-              analysis={analysis}
+            <h2 className="text-lg font-bold text-gray-900">Your Tank</h2>
+            
+            {/* Board Stats Summary */}
+            {gameState.playerTank.pieces.length > 0 && (
+              (() => {
+                const placedPieces = gameState.playerTank.pieces.filter(p => p.position);
+                const analysis = analyzeTank(placedPieces);
+                return (
+                  <TankSummary
+                    analysis={analysis}
+                    waterQuality={gameState.playerTank.waterQuality}
+                    className="mb-2"
+                  />
+                );
+              })()
+            )}
+            
+            <TankGrid
+              pieces={gameState.playerTank.pieces}
+              onPiecePlace={onPlacePiece}
+              onPieceMove={onMovePiece}
               waterQuality={gameState.playerTank.waterQuality}
-              className="mb-2"
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              currentDraggedPiece={draggedPiece}
+              hoveredCardPiece={hoveredCardPiece}
             />
-              );
-            })()
-          )}
-          
-          <TankGrid
-            pieces={gameState.playerTank.pieces}
-            onPiecePlace={onPlacePiece}
-            onPieceMove={onMovePiece}
-            waterQuality={gameState.playerTank.waterQuality}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            currentDraggedPiece={draggedPiece}
-            hoveredCardPiece={hoveredCardPiece}
-          />
-          
           </div>
         </div>
       </div>
