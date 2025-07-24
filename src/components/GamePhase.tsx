@@ -127,7 +127,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           {/* Board Stats Summary */}
           {gameState.playerTank.pieces.length > 0 && (
             <TankSummary
-              analysis={analyzeTank(gameState.playerTank.pieces)}
+              analysis={analyzeTank(gameState.playerTank.pieces.filter(p => p.position))}
               waterQuality={gameState.playerTank.waterQuality}
               className="mb-4"
             />
