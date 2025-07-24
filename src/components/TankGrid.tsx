@@ -288,19 +288,19 @@ export const TankGrid: React.FC<TankGridProps> = ({
               <div className="text-xs text-gray-300 mb-2">
                 <div className="flex gap-4">
                   <span>
-                    ATK: <span className="text-red-400 font-bold">{finalAttack}</span>
-                    {totalAttackBonus > 0 && <span className="text-green-400"> (+{totalAttackBonus})</span>}
+                    ATK: <span className="text-red-400 font-bold">{hoveredPiece.stats.attack}</span>
+                    {hoveredPiece.stats.attack > originalStats.attack && <span className="text-green-400"> (+{hoveredPiece.stats.attack - originalStats.attack})</span>}
                   </span>
                   <span>
-                    HP: <span className="text-green-400 font-bold">{finalHealth}</span>
-                    {totalHealthBonus > 0 && <span className="text-green-400"> (+{totalHealthBonus})</span>}
+                    HP: <span className="text-green-400 font-bold">{hoveredPiece.stats.health}</span>
+                    {hoveredPiece.stats.health > originalStats.health && <span className="text-green-400"> (+{hoveredPiece.stats.health - originalStats.health})</span>}
                   </span>
                   <span>
-                    SPD: <span className="text-blue-400 font-bold">{finalSpeed}</span>
-                    {totalSpeedBonus > 0 && <span className="text-cyan-400"> (+{totalSpeedBonus})</span>}
+                    SPD: <span className="text-blue-400 font-bold">{hoveredPiece.stats.speed}</span>
+                    {hoveredPiece.stats.speed > originalStats.speed && <span className="text-cyan-400"> (+{hoveredPiece.stats.speed - originalStats.speed})</span>}
                   </span>
                 </div>
-                {(totalAttackBonus > 0 || totalHealthBonus > 0 || totalSpeedBonus > 0) && (
+                {(hoveredPiece.stats.attack > originalStats.attack || hoveredPiece.stats.health > originalStats.health || hoveredPiece.stats.speed > originalStats.speed) && (
                   <div className="text-xs text-gray-400 mt-1">
                     Base: {originalStats.attack}/{originalStats.health}/{originalStats.speed}
                   </div>
