@@ -150,11 +150,14 @@ const INITIAL_STATE: GameState = {
 
 // Helper function to apply consumable effects to pieces
 const applyConsumableEffects = (pieces: GamePiece[]): GamePiece[] => {
+  console.log('🧪 APPLYING CONSUMABLE EFFECTS to pieces:', pieces.length);
   let battlePieces = [...pieces];
   const consumables = battlePieces.filter(p => p.type === 'consumable');
+  console.log('🍤 Found consumables:', consumables.map(c => c.name));
   
   // Apply each consumable's effect to adjacent fish
   consumables.forEach(consumable => {
+    console.log(`🔄 Processing consumable: ${consumable.name} at position:`, consumable.position);
     if (consumable.position) {
       // Get all adjacent positions for all tiles of the consumable
       const adjacentPositions: Position[] = [];
@@ -205,11 +208,16 @@ const applyConsumableEffects = (pieces: GamePiece[]): GamePiece[] => {
             const healthBonus = consumable.healthBonus || 0;
             const speedBonus = consumable.speedBonus || 0;
 
-            console.log(`Applying ${consumable.name} bonuses:`, {
+            console.log(`✨ Applying ${consumable.name} bonuses to ${p.name}:`, {
               attackBonus,
               healthBonus, 
               speedBonus,
-              consumableData: consumable
+              beforeStats: p.stats,
+              afterStats: {
+                attack: p.stats.attack + attackBonus,
+                health: p.stats.health + healthBonus,
+                speed: p.stats.speed + speedBonus
+              }
             });
 
             // Create consumed effect record
@@ -251,7 +259,9 @@ const applyConsumableEffects = (pieces: GamePiece[]): GamePiece[] => {
   });
   
   // Remove consumables after applying effects
-  return battlePieces.filter(p => p.type !== 'consumable');
+  const finalPieces = battlePieces.filter(p => p.type !== 'consumable');
+  console.log('🗑️ Removed consumables, final pieces:', finalPieces.length, 'remaining');
+  return finalPieces;
 };
 
 // AI opponent logic
@@ -449,6 +459,7 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
   
   // Apply consumable effects to opponent pieces
   const battlePieces = applyConsumableEffects(newPieces);
+  console.log('🤖 OPPONENT FINAL BATTLE PIECES after consumables:', battlePieces.length);
   
   return {
     pieces: battlePieces,
@@ -711,13 +722,21 @@ export const useGame = () => {
     setGameState(prev => {
       // This transitions from Shop Screen to Battle Preparation Screen
       // Simulate opponent's turn first
+      console.log('🚀 STARTING BATTLE PREPARATION');
+      console.log('👤 PLAYER pieces before battle prep:', prev.playerTank.pieces.length);
       const opponentResult = simulateOpponentTurn(
         prev.opponentGold, 
         prev.round, 
         prev.opponentTank.pieces
       );
+      console.log('🤖 OPPONENT result after turn:', {
+        pieces: opponentResult.pieces.length,
+        gold: opponentResult.remainingGold,
+        waterQuality: opponentResult.waterQuality
+      });
       
       // Apply consumable effects to player pieces before battle
+      console.log('👤 APPLYING PLAYER CONSUMABLES');
       const battlePieces = applyConsumableEffects(prev.playerTank.pieces);
       
       // Update grid to remove consumables
