@@ -152,7 +152,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="space-y-3">
             <h2 className="text-lg font-bold text-gray-900">Your Tank</h2>
             
@@ -185,7 +185,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             </div>
             
             {/* Game Tips Panel */}
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-4 h-[400px] flex flex-col">
+            <div className="mt-4 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded text-sm font-bold flex items-center justify-center">
                   💡
@@ -193,7 +193,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
                 <h3 className="text-lg font-bold text-purple-800">Game Tips</h3>
               </div>
               
-              <div className="grid md:grid-cols-2 gap-4 flex-1">
+              <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="text-sm font-bold text-purple-800">💰 Economy</div>
                   <div className="text-sm text-purple-700 space-y-1">
@@ -215,7 +215,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
                 </div>
               </div>
               
-              <div className="flex gap-2 mt-4 pt-3 border-t border-purple-200">
+              <div className="flex gap-2 mt-3">
                 <div className="flex-1 bg-white/50 rounded px-3 py-2 text-center">
                   <div className="text-xs text-gray-600">Next Interest</div>
                   <div className="text-sm font-bold text-green-600">+{Math.min(Math.floor(gameState.gold / 10), 5)}g</div>
