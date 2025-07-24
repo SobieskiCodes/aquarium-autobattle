@@ -15,25 +15,25 @@ export const TankSummary: React.FC<TankSummaryProps> = ({
   className = ""
 }) => {
   return (
-    <div className={`p-3 bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg border border-blue-200 relative group ${className}`}>
+    <div className={`p-2 bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg border border-blue-200 relative group ${className}`}>
       <h3 className="font-bold text-gray-900 mb-2 text-sm">Tank Summary</h3>
-      <div className="grid grid-cols-3 gap-3 text-sm relative">
+      <div className="grid grid-cols-3 gap-2 text-sm relative">
         <div className="text-center">
-          <div className="text-xl font-bold text-red-600 cursor-help flex items-center justify-center gap-1">
+          <div className="text-lg font-bold text-red-600 cursor-help flex items-center justify-center gap-1">
             <span>{analysis.baseAttack}</span>
             {analysis.bonusAttack > 0 && <span className="text-green-500">(+{analysis.bonusAttack})</span>}
           </div>
           <div className="text-gray-600 text-xs">Total Attack</div>
         </div>
         <div className="text-center">
-          <div className="text-xl font-bold text-green-600 cursor-help flex items-center justify-center gap-1">
+          <div className="text-lg font-bold text-green-600 cursor-help flex items-center justify-center gap-1">
             <span>{analysis.baseHealth}</span>
             {analysis.bonusHealth > 0 && <span className="text-green-500">(+{analysis.bonusHealth})</span>}
           </div>
           <div className="text-gray-600 text-xs">Tank Health</div>
         </div>
         <div className="text-center">
-          <div className="text-xl font-bold text-blue-600 cursor-help flex items-center justify-center gap-1">
+          <div className="text-lg font-bold text-blue-600 cursor-help flex items-center justify-center gap-1">
             <span>{analysis.baseAverageSpeed}</span>
             {analysis.bonusAverageSpeed > 0 && <span className="text-green-500">(+{analysis.bonusAverageSpeed})</span>}
           </div>

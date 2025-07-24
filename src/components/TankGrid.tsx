@@ -329,8 +329,8 @@ export const TankGrid: React.FC<TankGridProps> = ({
               <div
                 key={`${x}-${y}`}
                 className={`
-                  aspect-square border rounded-lg flex items-center justify-center text-xs font-bold
-                  transition-all duration-200 min-h-[40px]
+                  aspect-square border rounded flex items-center justify-center text-xs font-bold
+                  transition-all duration-200 min-h-[32px] max-h-[48px]
                   ${cell 
                     ? 'border-gray-400 text-white shadow-md cursor-move'
                     : 'border-gray-300 bg-white/30 hover:bg-white/50'
@@ -359,15 +359,15 @@ export const TankGrid: React.FC<TankGridProps> = ({
                     onDragStart={(e) => handleDragStart(e, cell)}
                     onDragEnd={handleDragEnd}
                   >
-                    <div className="text-xs leading-tight">{cell.name.split(' ')[0]}</div>
-                    <div className="text-xs opacity-80">
+                    <div className="text-xs leading-none">{cell.name.split(' ')[0]}</div>
+                    <div className="text-xs opacity-80 leading-none">
                       {cell.stats.attack}/{cell.stats.health}
                     </div>
                   </div>
                 )}
                 {isPreview && !cell && currentDraggedPiece && (
                   <div className="text-center text-gray-600">
-                    <div className="text-xs leading-tight opacity-70">
+                    <div className="text-xs leading-none opacity-70">
                       {currentDraggedPiece.name.split(' ')[0]}
                     </div>
                   </div>

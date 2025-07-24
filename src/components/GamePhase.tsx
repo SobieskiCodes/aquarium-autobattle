@@ -84,7 +84,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 space-y-4 overflow-y-auto min-w-0">
+      <div className="flex-1 space-y-3 overflow-y-auto min-w-0 max-w-4xl">
       <div className="bg-gradient-to-r from-teal-500 to-blue-600 text-white p-3 rounded-lg">
         <div className="flex items-center justify-between">
           <div>
@@ -138,8 +138,8 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
         </div>
       </div>
 
-        <div className="space-y-4">
-          <div className="space-y-4">
+        <div className="space-y-3">
+          <div className="space-y-3">
           <h2 className="text-lg font-bold text-gray-900">Your Tank</h2>
           
           {/* Board Stats Summary */}
@@ -151,7 +151,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             <TankSummary
               analysis={analysis}
               waterQuality={gameState.playerTank.waterQuality}
-              className="mb-3"
+              className="mb-2"
             />
               );
             })()
@@ -170,10 +170,10 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
           <h2 className="text-lg font-bold text-gray-900">Tank Pieces</h2>
           {gameState.playerTank.pieces.length > 0 ? (
-            <div className="bg-white rounded-lg shadow-lg p-3 max-h-[300px] overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-lg p-3 max-h-[240px] overflow-y-auto">
               {/* Unplaced pieces warning */}
               {(() => {
                 const unplacedPieces = gameState.playerTank.pieces.filter(piece => !piece.position);
@@ -195,9 +195,9 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
                 return null;
               })()}
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 justify-items-center">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 justify-items-center">
               {gameState.playerTank.pieces.map((piece, index) => (
-                <div key={`${piece.id}-${index}`} className="min-h-0 w-full max-w-[240px]">
+                <div key={`${piece.id}-${index}`} className="min-h-0 w-full max-w-[200px]">
                   <PieceCard
                     piece={piece}
                     onSelect={onSelectPiece}
