@@ -66,9 +66,9 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   };
 
   const renderShopPhase = () => (
-    <div className="flex gap-6 h-[calc(100vh-200px)]">
+    <div className="flex gap-4 h-[calc(100vh-180px)] max-h-[800px]">
       {/* Left Sidebar - Shop */}
-      <div className="w-80 flex-shrink-0 space-y-4 overflow-y-auto">
+      <div className="w-72 flex-shrink-0 overflow-y-auto">
         <Shop
           pieces={gameState.shop}
           gold={gameState.gold}
@@ -84,14 +84,14 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 space-y-6 overflow-y-auto">
-      <div className="bg-gradient-to-r from-teal-500 to-blue-600 text-white p-4 rounded-lg">
+      <div className="flex-1 space-y-4 overflow-y-auto min-w-0">
+      <div className="bg-gradient-to-r from-teal-500 to-blue-600 text-white p-3 rounded-lg">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-xl font-bold">
               Game Round {gameState.round}/15
               {gameState.round === 15 && (
-                <span className="ml-2 text-yellow-300 text-lg">🏁 Final Round!</span>
+                <span className="ml-2 text-yellow-300 text-base">🏁 Final Round!</span>
               )}
             </h1>
             <div className="flex items-center gap-4">
@@ -106,7 +106,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           
           {/* Shop Lock Status */}
           {gameState.lockedShopIndex !== null && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-yellow-800">
                   <Lock size={16} />
@@ -125,7 +125,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             onClick={onEnterBattlePrep}
             disabled={gameState.playerTank.pieces.length === 0}
             className={`
-              flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
+              flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all text-sm
               ${gameState.playerTank.pieces.length > 0
                 ? 'bg-white text-teal-600 hover:bg-gray-100 hover:shadow-md'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -138,9 +138,9 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
         </div>
       </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div className="space-y-4">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Your Tank</h2>
+          <h2 className="text-lg font-bold text-gray-900">Your Tank</h2>
           
           {/* Board Stats Summary */}
           {gameState.playerTank.pieces.length > 0 && (
@@ -151,7 +151,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             <TankSummary
               analysis={analysis}
               waterQuality={gameState.playerTank.waterQuality}
-              className="mb-4"
+              className="mb-3"
             />
               );
             })()
@@ -171,22 +171,22 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           </div>
 
           <div className="space-y-4">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Tank Pieces</h2>
+          <h2 className="text-lg font-bold text-gray-900">Tank Pieces</h2>
           {gameState.playerTank.pieces.length > 0 ? (
-            <div className="bg-white rounded-lg shadow-lg p-4 max-h-[400px] overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-lg p-3 max-h-[300px] overflow-y-auto">
               {/* Unplaced pieces warning */}
               {(() => {
                 const unplacedPieces = gameState.playerTank.pieces.filter(piece => !piece.position);
                 if (unplacedPieces.length > 0) {
                   return (
-                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
                       <div className="flex items-center gap-2 text-yellow-800">
                         <span className="text-lg">⚠️</span>
-                        <span className="font-medium">
+                        <span className="font-medium text-sm">
                           {unplacedPieces.length} piece{unplacedPieces.length > 1 ? 's' : ''} not placed on grid yet!
                         </span>
                       </div>
-                      <div className="text-sm text-yellow-700 mt-1">
+                      <div className="text-xs text-yellow-700 mt-1">
                         Drag them to the tank grid to use them in battle.
                       </div>
                     </div>
@@ -195,9 +195,9 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
                 return null;
               })()}
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 justify-items-center">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 justify-items-center">
               {gameState.playerTank.pieces.map((piece, index) => (
-                <div key={`${piece.id}-${index}`} className="min-h-0 w-full max-w-[280px]">
+                <div key={`${piece.id}-${index}`} className="min-h-0 w-full max-w-[240px]">
                   <PieceCard
                     piece={piece}
                     onSelect={onSelectPiece}
@@ -213,7 +213,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-lg p-6 text-center text-gray-500">
+            <div className="bg-white rounded-lg shadow-lg p-4 text-center text-gray-500">
               <p>No pieces in your tank yet.</p>
               <p className="text-sm">Purchase some from the shop below!</p>
             </div>

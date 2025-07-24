@@ -199,7 +199,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
 
   return (
     <div className="relative">
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-2 flex items-center gap-2 text-sm">
         <span className="text-sm font-medium text-gray-700">Water Quality:</span>
         <div className="flex-1 bg-gray-200 rounded-full h-2">
           <div 
@@ -311,7 +311,7 @@ export const TankGrid: React.FC<TankGridProps> = ({
       )}
 
       <div 
-        className="grid grid-cols-8 gap-1 p-4 rounded-lg border-2 border-cyan-300 shadow-lg"
+        className="grid grid-cols-8 gap-1 p-3 rounded-lg border-2 border-cyan-300 shadow-lg"
         style={{ 
           backgroundColor: getWaterQualityGradient(),
           backgroundImage: `
