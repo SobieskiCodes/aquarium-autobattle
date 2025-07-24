@@ -126,11 +126,23 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           
           {/* Board Stats Summary */}
           {gameState.playerTank.pieces.length > 0 && (
+            (() => {
+              const placedPieces = gameState.playerTank.pieces.filter(p => p.position);
+              console.log('Shop phase - placed pieces:', placedPieces.map(p => ({
+                name: p.name,
+                baseStats: { attack: p.stats.attack, health: p.stats.health },
+                consumedEffects: (p as any).consumedEffects
+              })));
+              const analysis = analyzeTank(placedPieces);
+              console.log('Shop phase - tank analysis:', analysis);
+              return (
             <TankSummary
-             analysis={analyzeTank(gameState.playerTank.pieces)}
+              analysis={analysis}
               waterQuality={gameState.playerTank.waterQuality}
               className="mb-4"
             />
+              );
+            })()
           )}
           
           <TankGrid

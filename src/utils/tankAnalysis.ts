@@ -426,8 +426,16 @@ export const getBonusProviders = (piece: GamePiece, allPieces: GamePiece[]): str
 
 // Main analysis function
 export const analyzeTank = (pieces: GamePiece[]): TankAnalysis => {
+  console.log('analyzeTank called with pieces:', pieces.map(p => ({
+    name: p.name,
+    position: p.position,
+    baseStats: { attack: p.stats.attack, health: p.stats.health },
+    consumedEffects: (p as any).consumedEffects
+  })));
+  
   // Only analyze pieces that are actually placed on the grid
   const placedPieces = pieces.filter(piece => piece.position);
+  console.log('Placed pieces for analysis:', placedPieces.length);
   
   const fishPieces = placedPieces.filter(piece => piece.type === 'fish');
   const allRelevantPieces = pieces.filter(piece => 
@@ -437,6 +445,13 @@ export const analyzeTank = (pieces: GamePiece[]): TankAnalysis => {
   // Apply bonuses
   const enhancedFish = applyBonusesToPieces(fishPieces, placedPieces);
   const enhancedAll = applyBonusesToPieces(allRelevantPieces, placedPieces);
+  
+  console.log('Enhanced fish after bonuses:', enhancedFish.map(p => ({
+    name: p.name,
+    originalStats: (p as any).originalStats,
+    enhancedStats: p.stats,
+    consumedEffects: (p as any).consumedEffects
+  })));
   
   // Calculate base stats
   const baseAttack = fishPieces.reduce((total, piece) => total + piece.stats.attack, 0);
