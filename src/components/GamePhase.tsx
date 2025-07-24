@@ -84,7 +84,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
       </div>
 
       {/* Center Content Area - Tank */}
-      <div className="flex-1 space-y-3 min-w-0 max-w-3xl h-full flex flex-col">
+      <div className="flex-1 space-y-3 min-w-0 max-w-3xl">
         <div className="bg-gradient-to-r from-teal-500 to-blue-600 text-white p-3 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -152,7 +152,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           </div>
         </div>
 
-        <div className="space-y-2 flex-1 flex flex-col">
+        <div className="space-y-2">
           <div className="space-y-3">
             <h2 className="text-lg font-bold text-gray-900">Your Tank</h2>
             
@@ -171,7 +171,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
               })()
             )}
             
-            <div className="flex-1 flex items-center justify-center">
+            <div>
               <TankGrid
                 pieces={gameState.playerTank.pieces}
                 onPiecePlace={onPlacePiece}
