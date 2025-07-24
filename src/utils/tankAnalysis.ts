@@ -319,37 +319,36 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]):
   // Add consumed effects to bonuses (stack duplicates)
   const enhancedPiece = piece as EnhancedGamePiece;
   if (enhancedPiece.consumedEffects) {
-    // Stack all consumed effects by type, not by individual consumable
-    let totalConsumedAttack = 0;
-    let totalConsumedHealth = 0;
-    let totalConsumedSpeed = 0;
-    const consumableNames = new Set<string>();
+    // For shop phase, we want to show preview effects stacked by consumable type
+    const consumableEffectMap = new Map<string, { attack: number; health: number; speed: number; count: number }>();
     
     enhancedPiece.consumedEffects.forEach(effect => {
-      totalConsumedAttack += effect.attackBonus || 0;
-      totalConsumedHealth += effect.healthBonus || 0;
-      totalConsumedSpeed += effect.speedBonus || 0;
-      consumableNames.add(effect.consumableName);
+      const existing = consumableEffectMap.get(effect.consumableName) || { attack: 0, health: 0, speed: 0, count: 0 };
+      existing.attack += effect.attackBonus || 0;
+      existing.health += effect.healthBonus || 0;
+      existing.speed += effect.speedBonus || 0;
+      existing.count += 1;
+      consumableEffectMap.set(effect.consumableName, existing);
     });
     
-    // Add single stacked bonus entry if any consumed effects exist
-    if (totalConsumedAttack > 0 || totalConsumedHealth > 0 || totalConsumedSpeed > 0) {
+    // Add stacked entries for each consumable type
+    consumableEffectMap.forEach((totals, consumableName) => {
       let effectParts: string[] = [];
-      if (totalConsumedAttack > 0) effectParts.push(`+${totalConsumedAttack} ATK`);
-      if (totalConsumedHealth > 0) effectParts.push(`+${totalConsumedHealth} HP`);
-      if (totalConsumedSpeed > 0) effectParts.push(`+${totalConsumedSpeed} SPD`);
+      if (totals.attack > 0) effectParts.push(`+${totals.attack} ATK`);
+      if (totals.health > 0) effectParts.push(`+${totals.health} HP`);
+      if (totals.speed > 0) effectParts.push(`+${totals.speed} SPD`);
       
       const effectText = effectParts.join(' ');
-      const consumableList = Array.from(consumableNames).join(', ');
-      const displayEffect = `${effectText} (from ${consumableList})`;
+      const countText = totals.count > 1 ? ` (×${totals.count})` : '';
+      const displayEffect = `${effectText}${countText} (preview)`;
       
       bonuses.push({ 
-        source: 'Consumed Items', 
+        source: consumableName, 
         effect: displayEffect, 
-        color: 'text-orange-600', 
+        color: 'text-orange-500', 
         type: 'consumable' 
       });
-    }
+    });
   }
   
   return bonuses;
