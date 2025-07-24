@@ -326,7 +326,7 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]):
         
         consumedGroups.set(consumableName, {
           count: 1,
-          attackBonus: attackMatch ? parseInt(attackMatch[1]) : 0,
+          effect: `×${count}`, 
           healthBonus: healthMatch ? parseInt(healthMatch[1]) : 0,
           speedBonus: speedMatch ? parseInt(speedMatch[1]) : 0
         });
