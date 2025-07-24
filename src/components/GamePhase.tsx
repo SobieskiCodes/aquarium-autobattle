@@ -154,23 +154,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
 
         <div className="space-y-3">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Your Tank</h2>
-              <button
-                onClick={onEnterBattlePrep}
-                disabled={gameState.playerTank.pieces.length === 0}
-                className={`
-                  flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
-                  ${gameState.playerTank.pieces.length > 0
-                    ? 'bg-gradient-to-r from-teal-500 to-blue-600 text-white hover:from-teal-600 hover:to-blue-700 shadow-md hover:shadow-lg'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }
-                `}
-              >
-                <Play size={18} />
-                {gameState.round === 15 ? 'Final Battle!' : 'Battle Preparation'}
-              </button>
-            </div>
+            <h2 className="text-lg font-bold text-gray-900">Your Tank</h2>
             
             {/* Board Stats Summary */}
             {gameState.playerTank.pieces.length > 0 && (
