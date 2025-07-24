@@ -395,6 +395,12 @@ const simulateOpponentTurn = (opponentGold: number, round: number, currentPieces
     // Always try to spend at least the minimum amount
     if (totalSpent >= targetSpending && totalSpent >= minSpending) continue;
     
+    // Log opponent purchase
+    console.log(`🤖 OPPONENT BUYS: ${piece.name} (${piece.type}) for ${piece.cost}g - Remaining gold: ${gold - piece.cost}g`);
+    if (piece.type === 'consumable') {
+      console.log(`🍤 OPPONENT BOUGHT CONSUMABLE: ${piece.name} - Watch out for buffs!`);
+    }
+    
     // Find available positions for this piece
     const availablePositions: Position[] = [];
     for (let y = 0; y < 6; y++) {
