@@ -114,6 +114,17 @@ export const applyBonusesToPieces = (pieces: GamePiece[], allPieces: GamePiece[]
     adjacentPositions.forEach(pos => {
       const adjacentPiece = grid[pos.y][pos.x];
       if (adjacentPiece && adjacentPiece.id !== piece.id) {
+        // Consumable preview effects (not actually consumed yet)
+        if (adjacentPiece.type === 'consumable' && piece.type === 'fish') {
+          const attackBonus = adjacentPiece.attackBonus || 0;
+          const healthBonus = adjacentPiece.healthBonus || 0;
+          const speedBonus = adjacentPiece.speedBonus || 0;
+          
+          bonusAttack += attackBonus;
+          bonusHealth += healthBonus;
+          bonusSpeed += speedBonus;
+        }
+        
         // Check for sponge filter amplification first
         const hasSpongeFilter = allPieces.some(p => 
           p.id.includes('sponge-filter') && p.position &&
@@ -278,7 +289,7 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]):
         if (healthBonus > 0) effectText += `+${healthBonus} HP `;
         if (speedBonus > 0) effectText += `+${speedBonus} SPD `;
         
-        bonuses.push({ source: adjacentPiece.name, effect: effectText.trim(), color: 'text-orange-500', type: 'consumable' });
+        bonuses.push({ source: adjacentPiece.name, effect: `${effectText.trim()} (preview)`, color: 'text-orange-500', type: 'consumable' });
       }
     }
   });
@@ -426,32 +437,17 @@ export const getBonusProviders = (piece: GamePiece, allPieces: GamePiece[]): str
 
 // Main analysis function
 export const analyzeTank = (pieces: GamePiece[]): TankAnalysis => {
-  console.log('analyzeTank called with pieces:', pieces.map(p => ({
-    name: p.name,
-    position: p.position,
-    baseStats: { attack: p.stats.attack, health: p.stats.health },
-    consumedEffects: (p as any).consumedEffects
-  })));
-  
   // Only analyze pieces that are actually placed on the grid
   const placedPieces = pieces.filter(piece => piece.position);
-  console.log('Placed pieces for analysis:', placedPieces.length);
   
   const fishPieces = placedPieces.filter(piece => piece.type === 'fish');
   const allRelevantPieces = pieces.filter(piece => 
     piece.type === 'fish' || piece.type === 'plant' || piece.type === 'equipment'
   ).filter(piece => piece.position);
   
-  // Apply bonuses
+  // Apply bonuses (including consumable preview effects)
   const enhancedFish = applyBonusesToPieces(fishPieces, placedPieces);
   const enhancedAll = applyBonusesToPieces(allRelevantPieces, placedPieces);
-  
-  console.log('Enhanced fish after bonuses:', enhancedFish.map(p => ({
-    name: p.name,
-    originalStats: (p as any).originalStats,
-    enhancedStats: p.stats,
-    consumedEffects: (p as any).consumedEffects
-  })));
   
   // Calculate base stats
   const baseAttack = fishPieces.reduce((total, piece) => total + piece.stats.attack, 0);

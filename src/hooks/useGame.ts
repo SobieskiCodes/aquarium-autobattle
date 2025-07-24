@@ -587,10 +587,7 @@ export const useGame = () => {
       // Calculate new water quality
       let waterQuality = 5;
       
-      // Apply consumable effects to adjacent fish immediately
-      const piecesWithConsumables = applyConsumableEffectsInShop(newPieces);
-      
-      const allPieces = piecesWithConsumables;
+      const allPieces = newPieces;
       
       // Plants and filters improve water quality
       const plantsAndFilters = allPieces.filter(p => 
@@ -608,7 +605,7 @@ export const useGame = () => {
         ...prev,
         playerTank: {
           ...prev.playerTank,
-          pieces: piecesWithConsumables,
+          pieces: allPieces,
           grid: newGrid,
           waterQuality
         },
