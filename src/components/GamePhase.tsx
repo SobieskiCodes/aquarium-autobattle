@@ -3,7 +3,7 @@ import { GameState } from '../types/game';
 import { Shop } from './Shop';
 import { TankGrid } from './TankGrid';
 import { BattleView } from './BattleView';
-import { PieceCard } from './PieceCard';
+import { CompactPieceCard } from './CompactPieceCard';
 import { TankSummary } from './TankSummary';
 import { analyzeTank } from '../utils/tankAnalysis';
 import { Play, ArrowRight, Lock } from 'lucide-react';
@@ -66,9 +66,9 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
   };
 
   const renderShopPhase = () => (
-    <div className="flex gap-4 h-[calc(100vh-160px)] max-h-[900px]">
+    <div className="flex gap-3 h-[calc(100vh-160px)] max-h-[800px]">
       {/* Left Sidebar - Shop */}
-      <div className="w-96 flex-shrink-0 overflow-y-auto">
+      <div className="w-96 flex-shrink-0 overflow-y-auto min-w-0">
         <Shop
           pieces={gameState.shop}
           gold={gameState.gold}
@@ -83,10 +83,16 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
         />
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 space-y-3 overflow-y-auto min-w-0 max-w-4xl">
+      {/* Center Content Area - Tank */}
+      <div className="flex-1 space-y-3 overflow-y-auto min-w-0 max-w-3xl">
       <div className="bg-gradient-to-r from-teal-500 to-blue-600 text-white p-3 rounded-lg">
         <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                <span className="text-sm">🏆</span>
+              </div>
+              <div>
           <div>
             <h1 className="text-xl font-bold">
               Game Round {gameState.round}/15
@@ -96,11 +102,16 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
             </h1>
             <div className="flex items-center gap-4">
               <p className="text-sm opacity-90">Shop & Build Phase</p>
+              <div className="text-sm opacity-75">
+                Pieces: {gameState.playerTank.pieces.length} | 
+                Placed: {gameState.playerTank.pieces.filter(p => p.position).length}
+              </div>
               {gameState.lossStreak > 0 && (
                 <div className="bg-red-500/20 px-2 py-1 rounded text-xs font-bold">
                   Loss Streak: {gameState.lossStreak} (+{Math.min(gameState.lossStreak * 2, 10)} bonus gold next loss)
                 </div>
               )}
+            </div>
             </div>
           </div>
           
@@ -138,7 +149,7 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
         </div>
       </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="space-y-3">
           <h2 className="text-lg font-bold text-gray-900">Your Tank</h2>
           
@@ -169,55 +180,65 @@ export const GamePhase: React.FC<GamePhaseProps> = ({
           />
           
           </div>
+        </div>
+      </div>
 
-          <div className="space-y-3">
-          <h2 className="text-lg font-bold text-gray-900">Tank Pieces</h2>
-          {gameState.playerTank.pieces.length > 0 ? (
-            <div className="bg-white rounded-lg shadow-lg p-3 max-h-[240px] overflow-y-auto">
-              {/* Unplaced pieces warning */}
-              {(() => {
-                const unplacedPieces = gameState.playerTank.pieces.filter(piece => !piece.position);
-                if (unplacedPieces.length > 0) {
-                  return (
-                    <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <div className="flex items-center gap-2 text-yellow-800">
-                        <span className="text-lg">⚠️</span>
-                        <span className="font-medium text-sm">
-                          {unplacedPieces.length} piece{unplacedPieces.length > 1 ? 's' : ''} not placed on grid yet!
-                        </span>
-                      </div>
-                      <div className="text-xs text-yellow-700 mt-1">
-                        Drag them to the tank grid to use them in battle.
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 justify-items-center">
-              {gameState.playerTank.pieces.map((piece, index) => (
-                <div key={`${piece.id}-${index}`} className="min-h-0 w-full max-w-[200px]">
-                  <PieceCard
-                    piece={piece}
-                    onSelect={onSelectPiece}
-                    onSell={onSellPiece}
-                    isSelected={gameState.selectedPiece?.id === piece.id}
-                    showSellOption={true}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onHover={setHoveredCardPiece}
-                  />
-                </div>
-              ))}
+      {/* Right Sidebar - Tank Pieces Inventory */}
+      <div className="w-80 flex-shrink-0 overflow-y-auto min-w-0">
+        <div className="bg-gradient-to-b from-white to-gray-50 rounded-lg shadow-lg border border-gray-200 h-full flex flex-col">
+          {/* Inventory Header */}
+          <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-3 rounded-t-lg flex-shrink-0">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                <span className="text-sm">🎒</span>
+              </div>
+              <h2 className="text-lg font-bold">Tank Pieces</h2>
+              <div className="ml-auto text-sm bg-white/20 px-2 py-1 rounded-full">
+                {gameState.playerTank.pieces.length} items
               </div>
             </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow-lg p-4 text-center text-gray-500">
-              <p>No pieces in your tank yet.</p>
-              <p className="text-sm">Purchase some from the shop below!</p>
-            </div>
-          )}
+            
+            {(() => {
+              const unplacedPieces = gameState.playerTank.pieces.filter(piece => !piece.position);
+              const placedPieces = gameState.playerTank.pieces.filter(piece => piece.position);
+              return (
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="text-green-200">✓ Placed: {placedPieces.length}</span>
+                    {unplacedPieces.length > 0 && (
+                      <span className="text-yellow-200">⚠ Unplaced: {unplacedPieces.length}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+          
+          {/* Inventory Items */}
+          <div className="flex-1 p-2 min-h-0">
+            {gameState.playerTank.pieces.length > 0 ? (
+              <div className="space-y-1 h-full overflow-y-auto">
+                {gameState.playerTank.pieces.map((piece, index) => (
+                  <div key={`${piece.id}-${index}`}>
+                    <CompactPieceCard
+                      piece={piece}
+                      onSelect={onSelectPiece}
+                      onSell={onSellPiece}
+                      isSelected={gameState.selectedPiece?.id === piece.id}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                      onHover={setHoveredCardPiece}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-gray-500 p-4">
+                <div className="text-4xl mb-2">🐠</div>
+                <p className="text-center font-medium">No pieces yet</p>
+                <p className="text-sm text-center">Purchase from shop to get started!</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
