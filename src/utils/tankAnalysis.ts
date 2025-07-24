@@ -277,7 +277,6 @@ export const calculatePieceBonuses = (piece: GamePiece, allPieces: GamePiece[]):
         if (attackBonus > 0) effectText += `+${attackBonus} ATK `;
         if (healthBonus > 0) effectText += `+${healthBonus} HP `;
         if (speedBonus > 0) effectText += `+${speedBonus} SPD `;
-        effectText += '(battle)';
         
         bonuses.push({ source: adjacentPiece.name, effect: effectText.trim(), color: 'text-orange-500', type: 'consumable' });
       }
