@@ -84,26 +84,18 @@ export const PieceCard: React.FC<PieceCardProps> = ({
   const hasConsumedItems = consumedCount > 0;
 
   return (
-    <div 
+    <div
       className={`
-        relative
-        ${isLocked ? 'ring-2 ring-yellow-400 ring-opacity-50' : ''}
-      `}
-    >
-      <div
-      className={`
-        relative p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 flex flex-col
+        relative p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 flex flex-col
+        shadow-sm hover:shadow-md
         ${isSelected 
-          ? 'border-blue-500 bg-blue-50 transform scale-105' 
-          : 'border-gray-300 bg-white hover:border-gray-400 hover:shadow-md'
+          ? 'border-blue-500 bg-blue-50 transform scale-[1.02]' 
+          : 'border-gray-300 bg-white hover:border-gray-400'
         }
-       ${isInShop && !canAfford ? 'opacity-50' : ''}
-       ${isInShop && !canAfford ? 'cursor-not-allowed' : ''}
-        ${isLocked ? 'bg-yellow-50' : ''}
+        ${isInShop && !canAfford ? 'opacity-60 cursor-not-allowed' : ''}
         ${isDragging ? 'opacity-50 transform rotate-2' : ''}
-        ${isInShop ? 'h-32' : 'h-48'}
+        ${isInShop ? 'min-h-[140px]' : 'h-48'}
       `}
-     onClick={canAfford && piece.type !== 'consumable' ? handleClick : undefined}
       onClick={canAfford ? handleClick : undefined}
       draggable={canAfford && (isInShop || showSellOption)}
       onDragStart={handleDragStart}
@@ -115,17 +107,10 @@ export const PieceCard: React.FC<PieceCardProps> = ({
         borderTopWidth: '4px'
       }}
     >
-      {/* Lock indicator */}
-      {isLocked && (
-        <div className="absolute top-1 left-1 w-4 h-4 bg-yellow-500 text-white rounded-full flex items-center justify-center">
-          <Lock size={8} />
-        </div>
-      )}
-      
       {/* Piece Name & Type */}
-      <div className="mb-1 flex-shrink-0">
+      <div className="mb-2 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <h3 className={`font-bold text-xs flex items-center gap-1 ${!piece.position && showSellOption ? 'text-yellow-800' : 'text-gray-900'}`}>
+          <h3 className={`font-bold text-sm flex items-center gap-1 ${!piece.position && showSellOption ? 'text-yellow-800' : 'text-gray-900'}`}>
             {piece.name}
             {!piece.position && showSellOption && <span className="ml-1 text-yellow-600">⚠️</span>}
             {hasConsumedItems && (
@@ -141,10 +126,10 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           {showSellOption && onSell && (
             <button
               onClick={handleSell}
-              className="w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm ml-1 flex-shrink-0"
+              className="w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm ml-1 flex-shrink-0"
               title={`Sell for ${sellValue}g (75% of ${piece.cost}g cost)`}
             >
-              <X size={8} />
+              <X size={10} />
             </button>
           )}
         </div>
@@ -154,9 +139,9 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       </div>
 
       {/* Stats */}
-      <div className="flex items-center gap-1 mb-1 text-xs flex-shrink-0">
+      <div className="flex items-center gap-2 mb-2 text-sm flex-shrink-0">
         <div className="flex items-center gap-1 text-red-600" title={hasConsumedItems ? `Base: ${enhancedPiece.originalStats?.attack || piece.stats.attack}` : undefined}>
-          <Sword size={10} />
+          <Sword size={12} />
           <span>
             {piece.stats.attack}
             {hasConsumedItems && enhancedPiece.originalStats && piece.stats.attack > enhancedPiece.originalStats.attack && (
@@ -167,7 +152,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-1 text-green-600" title={hasConsumedItems ? `Base: ${enhancedPiece.originalStats?.health || piece.stats.health}` : undefined}>
-          <Heart size={10} />
+          <Heart size={12} />
           <span>
             {piece.stats.health}
             {hasConsumedItems && enhancedPiece.originalStats && piece.stats.health > enhancedPiece.originalStats.health && (
@@ -178,7 +163,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-1 text-blue-600" title={hasConsumedItems ? `Base: ${enhancedPiece.originalStats?.speed || piece.stats.speed}` : undefined}>
-          <Zap size={10} />
+          <Zap size={12} />
           <span>
             {piece.stats.speed}
             {hasConsumedItems && enhancedPiece.originalStats && piece.stats.speed > enhancedPiece.originalStats.speed && (
@@ -190,25 +175,25 @@ export const PieceCard: React.FC<PieceCardProps> = ({
         </div>
         {isInShop && (
           <div className="flex items-center gap-1 text-yellow-600 ml-auto">
-            <DollarSign size={10} />
-            <span className="font-bold">{piece.cost}</span>
+            <DollarSign size={12} />
+            <span className="font-bold text-sm">{piece.cost}g</span>
           </div>
         )}
         {showSellOption && (
           <div className="flex items-center gap-1 text-green-600 ml-auto text-xs">
             <span>Sell:</span>
-            <DollarSign size={8} />
+            <DollarSign size={10} />
             <span className="font-bold">{sellValue}</span>
           </div>
         )}
       </div>
 
       {/* Tags */}
-      <div className="flex flex-wrap gap-1 mb-1 flex-shrink-0">
+      <div className="flex flex-wrap gap-1 mb-2 flex-shrink-0">
         {piece.tags.slice(0, isInShop ? 2 : 3).map(tag => (
           <span
             key={tag}
-            className="px-1 py-0.5 text-xs bg-gray-100 text-gray-700 rounded leading-none"
+            className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full leading-none font-medium"
           >
             {tag}
           </span>
@@ -216,16 +201,16 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       </div>
 
       {/* Shape Preview */}
-      <div className="mb-1 flex-shrink-0">
+      <div className="mb-2 flex-shrink-0">
         {!isInShop && <div className="text-xs text-gray-600 mb-1">Shape:</div>}
-        <div className="grid grid-cols-3 gap-0.5 w-fit mx-auto">
+        <div className="grid grid-cols-3 gap-0.5 w-fit">
           {Array(3).fill(null).map((_, y) =>
             Array(3).fill(null).map((_, x) => {
               const isOccupied = piece.shape.some(pos => pos.x === x && pos.y === y);
               return (
                 <div
                   key={`${x}-${y}`}
-                  className={`w-1 h-1 border ${
+                  className={`w-1.5 h-1.5 border ${
                     isOccupied 
                       ? 'bg-current border-current' 
                       : 'bg-gray-100 border-gray-200'
@@ -239,10 +224,10 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       </div>
 
       {/* Abilities */}
-      {piece.abilities && piece.abilities.length > 0 && !isInShop && (
+      {piece.abilities && piece.abilities.length > 0 && (
         <div className="text-xs text-gray-600 mt-1 flex-1 flex flex-col">
           <div className="font-medium mb-1">Abilities:</div>
-          <ul className="space-y-0.5 text-xs flex-1">
+          <ul className="space-y-0.5 text-xs flex-1 max-h-16 overflow-y-auto">
             {piece.abilities.slice(0, 2).map((ability, index) => (
               <li key={index} className="leading-tight text-xs">
                 • <span dangerouslySetInnerHTML={{ __html: ability.replace(/~~(.+?)~~/g, '<del>$1</del>') }} />
@@ -293,7 +278,6 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           )}
         </div>
       )}
-    </div>
     </div>
   );
 };
