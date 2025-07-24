@@ -94,7 +94,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
         }
         ${isInShop && !canAfford ? 'opacity-60 cursor-not-allowed' : ''}
         ${isDragging ? 'opacity-50 transform rotate-2' : ''}
-        ${isInShop ? 'h-32' : 'h-48'}
+        ${isInShop ? 'h-40' : 'h-48'}
       `}
       onClick={canAfford ? handleClick : undefined}
       draggable={canAfford && (isInShop || showSellOption)}
@@ -107,9 +107,10 @@ export const PieceCard: React.FC<PieceCardProps> = ({
         borderTopWidth: '4px'
       }}
     >
-      {/* Piece Name & Type */}
+      {/* Header with Name, Type, and Shape */}
       <div className="mb-2 flex-shrink-0">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
           <h3 className={`font-bold text-xs flex items-center gap-1 ${!piece.position && showSellOption ? 'text-yellow-800' : 'text-gray-900'}`}>
             {piece.name}
             {!piece.position && showSellOption && <span className="ml-1 text-yellow-600">⚠️</span>}
@@ -122,6 +123,33 @@ export const PieceCard: React.FC<PieceCardProps> = ({
               </span>
             )}
           </h3>
+            <p className="text-xs capitalize leading-none mt-1" style={{ color: getTypeColor(piece.type) }}>
+              {piece.type} • {piece.rarity}
+            </p>
+          </div>
+          
+          {/* Shape Preview - moved to top right */}
+          <div className="flex-shrink-0 ml-2">
+            <div className="grid grid-cols-3 gap-0.5 w-fit">
+              {Array(3).fill(null).map((_, y) =>
+                Array(3).fill(null).map((_, x) => {
+                  const isOccupied = piece.shape.some(pos => pos.x === x && pos.y === y);
+                  return (
+                    <div
+                      key={`${x}-${y}`}
+                      className={`w-1 h-1 border ${
+                        isOccupied 
+                          ? 'bg-current border-current' 
+                          : 'bg-gray-100 border-gray-200'
+                      }`}
+                      style={{ color: getTypeColor(piece.type) }}
+                    />
+                  );
+                })
+              )}
+            </div>
+          </div>
+          
           {/* Sell Button */}
           {showSellOption && onSell && (
             <button
@@ -133,9 +161,6 @@ export const PieceCard: React.FC<PieceCardProps> = ({
             </button>
           )}
         </div>
-        <p className="text-xs capitalize leading-none mt-1" style={{ color: getTypeColor(piece.type) }}>
-          {piece.type} • {piece.rarity}
-        </p>
       </div>
 
       {/* Stats */}
@@ -200,37 +225,14 @@ export const PieceCard: React.FC<PieceCardProps> = ({
         ))}
       </div>
 
-      {/* Shape Preview */}
-      <div className="mb-2 flex-shrink-0">
-        {!isInShop && <div className="text-xs text-gray-600 mb-1">Shape:</div>}
-        <div className="grid grid-cols-3 gap-0.5 w-fit">
-          {Array(3).fill(null).map((_, y) =>
-            Array(3).fill(null).map((_, x) => {
-              const isOccupied = piece.shape.some(pos => pos.x === x && pos.y === y);
-              return (
-                <div
-                  key={`${x}-${y}`}
-                  className={`w-1.5 h-1.5 border ${
-                    isOccupied 
-                      ? 'bg-current border-current' 
-                      : 'bg-gray-100 border-gray-200'
-                  }`}
-                  style={{ color: getTypeColor(piece.type) }}
-                />
-              );
-            })
-          )}
-        </div>
-      </div>
-
       {/* Abilities */}
       {piece.abilities && piece.abilities.length > 0 && (
         <div className="text-xs text-gray-600 flex-1 flex flex-col min-h-0">
-          {!isInShop && <div className="font-medium mb-1">Abilities:</div>}
+          <div className="font-medium mb-1 text-gray-800">Abilities:</div>
           <ul className="space-y-0.5 text-xs flex-1 overflow-y-auto">
-            {piece.abilities.slice(0, isInShop ? 1 : 2).map((ability, index) => (
+            {piece.abilities.slice(0, isInShop ? 2 : 3).map((ability, index) => (
               <li key={index} className="leading-tight text-xs">
-                {isInShop ? '' : '• '}<span dangerouslySetInnerHTML={{ __html: ability.replace(/~~(.+?)~~/g, '<del>$1</del>') }} />
+                • <span dangerouslySetInnerHTML={{ __html: ability.replace(/~~(.+?)~~/g, '<del>$1</del>') }} />
               </li>
             ))}
             {piece.type === 'consumable' && (
